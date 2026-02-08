@@ -8,6 +8,8 @@ export interface Category {
 export interface Ingredient {
   name: string;
   cost: number;
+  inventoryItemId?: string;
+  quantityUsed?: number; // quantity consumed from inventory per unit sold
 }
 
 export interface Product {
