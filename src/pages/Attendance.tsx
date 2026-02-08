@@ -1,12 +1,137 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ClipboardCheck, Plus, Calendar, Clock, Save } from 'lucide-react';
+import { ClipboardCheck, Plus, Calendar, Clock, Save, Share2, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getAttendance, setAttendance, getWorkers, getCurrentUser } from '@/lib/store';
+import { getAttendance, setAttendance, getWorkers, getCurrentUser, getSales } from '@/lib/store';
 import { AttendanceRecord } from '@/lib/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+
+
+const WorkerReportsSection = ({ workers, records }: { workers: { id: string; name: string; role: string; salary: number; password: string }[]; records: AttendanceRecord[] }) => {
+  const sales = getSales();
+  const today = new Date().toISOString().split('T')[0];
+  const currentMonth = new Date().toISOString().slice(0, 7);
+
+  const getWorkerReport = (workerId: string, startDate: string, isMonthly: boolean) => {
+    const filteredRecords = isMonthly
+      ? records.filter(r => r.workerId === workerId && r.date.startsWith(startDate))
+      : records.filter(r => r.workerId === workerId && r.date === startDate);
+    const filteredSales = isMonthly
+      ? sales.filter(s => s.workerId === workerId && s.date.startsWith(startDate))
+      : sales.filter(s => s.workerId === workerId && s.date === startDate);
+
+    const presentDays = filteredRecords.filter(r => r.type === 'present').length;
+    const absentDays = filteredRecords.filter(r => r.type === 'absent').length;
+    const leaveDays = filteredRecords.filter(r => r.type === 'leave').length;
+    const totalHours = Math.round(filteredRecords.reduce((sum, r) => sum + (r.hoursWorked || 0), 0) * 10) / 10;
+    const totalSales = filteredSales.reduce((sum, s) => sum + s.total, 0);
+    const salesCount = filteredSales.length;
+    const itemsSold = filteredSales.reduce((sum, s) => sum + s.items.reduce((c, i) => c + i.quantity, 0), 0);
+
+    return { presentDays, absentDays, leaveDays, totalHours, totalSales, salesCount, itemsSold };
+  };
+
+  const generateReportText = (period: string, isMonthly: boolean) => {
+    const dateKey = isMonthly ? currentMonth : today;
+    let text = `📋 تقرير ${period} - بن العميد\n`;
+    text += `التاريخ: ${isMonthly ? currentMonth : today}\n`;
+    text += `────────────────\n`;
+    workers.forEach(w => {
+      const r = getWorkerReport(w.id, dateKey, isMonthly);
+      text += `\n👤 ${w.name}\n`;
+      text += `  حضور: ${r.presentDays} يوم | غياب: ${r.absentDays} | إجازة: ${r.leaveDays}\n`;
+      text += `  ساعات العمل: ${r.totalHours} ساعة\n`;
+      text += `  المبيعات: ${r.salesCount} طلب - ${r.totalSales} ج.م (${r.itemsSold} منتج)\n`;
+    });
+    text += `\n────────────────\nتنفيذ شركة InstaTech للبرمجيات 📱 01227080430`;
+    return text;
+  };
+
+  const shareReport = (period: string, isMonthly: boolean, method: 'whatsapp' | 'email') => {
+    const text = generateReportText(period, isMonthly);
+    if (method === 'whatsapp') {
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    } else {
+      window.open(`mailto:?subject=${encodeURIComponent(`تقرير ${period} - بن العميد`)}&body=${encodeURIComponent(text)}`, '_blank');
+    }
+  };
+
+  const ReportTab = ({ period, isMonthly }: { period: string; isMonthly: boolean }) => {
+    const dateKey = isMonthly ? currentMonth : today;
+    return (
+      <div className="space-y-3">
+        {workers.map((w, i) => {
+          const r = getWorkerReport(w.id, dateKey, isMonthly);
+          return (
+            <motion.div
+              key={w.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className="glass-card rounded-xl p-4 space-y-3"
+            >
+              <p className="font-bold text-foreground">{w.name}</p>
+              <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                <div className="bg-success/10 rounded-lg p-2">
+                  <p className="font-bold text-success text-lg">{r.presentDays}</p>
+                  <p className="text-muted-foreground">حضور</p>
+                </div>
+                <div className="bg-destructive/10 rounded-lg p-2">
+                  <p className="font-bold text-destructive text-lg">{r.absentDays}</p>
+                  <p className="text-muted-foreground">غياب</p>
+                </div>
+                <div className="bg-warning/10 rounded-lg p-2">
+                  <p className="font-bold text-warning text-lg">{r.leaveDays}</p>
+                  <p className="text-muted-foreground">إجازة</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-center text-xs">
+                <div className="bg-info/10 rounded-lg p-2">
+                  <p className="font-bold text-info">{r.totalHours} ساعة</p>
+                  <p className="text-muted-foreground">ساعات العمل</p>
+                </div>
+                <div className="bg-accent/10 rounded-lg p-2">
+                  <p className="font-bold text-accent">{r.totalSales} ج.م</p>
+                  <p className="text-muted-foreground">{r.salesCount} طلب ({r.itemsSold} منتج)</p>
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+        <div className="flex gap-2">
+          <Button variant="outline" className="flex-1" onClick={() => shareReport(period, isMonthly, 'whatsapp')}>
+            <Share2 size={16} className="ml-2" />
+            واتساب
+          </Button>
+          <Button variant="outline" className="flex-1" onClick={() => shareReport(period, isMonthly, 'email')}>
+            <Share2 size={16} className="ml-2" />
+            إيميل
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div>
+      <h2 className="font-bold text-foreground mb-3 flex items-center gap-2">
+        <BarChart3 size={18} />
+        تقارير العمال
+      </h2>
+      <Tabs defaultValue="daily" dir="rtl">
+        <TabsList className="w-full grid grid-cols-2 mb-3">
+          <TabsTrigger value="daily">يومي</TabsTrigger>
+          <TabsTrigger value="monthly">شهري</TabsTrigger>
+        </TabsList>
+        <TabsContent value="daily"><ReportTab period="يومي" isMonthly={false} /></TabsContent>
+        <TabsContent value="monthly"><ReportTab period="شهري" isMonthly={true} /></TabsContent>
+      </Tabs>
+    </div>
+  );
+};
 
 const Attendance = () => {
   const user = getCurrentUser();
@@ -189,6 +314,9 @@ const Attendance = () => {
           ))}
         </div>
       </div>
+
+      {/* Worker Reports Section */}
+      <WorkerReportsSection workers={workers} records={records} />
 
       {/* Add Attendance Dialog */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
