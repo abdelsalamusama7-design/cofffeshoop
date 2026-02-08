@@ -115,9 +115,9 @@ const Reports = () => {
           ) : (
             <div className="space-y-2">
               {Object.values(data.productBreakdown).sort((a, b) => b.total - a.total).map((p, i) => (
-                <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-secondary">
+                <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-secondary gap-1">
                   <span className="text-sm font-medium text-foreground">{p.name}</span>
-                  <div className="flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-3 text-sm flex-wrap">
                     <span className="text-muted-foreground">{p.quantity} وحدة</span>
                     <span className="font-bold text-foreground">{p.total} ج.م</span>
                     {user?.role === 'admin' && (

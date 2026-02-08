@@ -99,10 +99,39 @@
   html {
     direction: rtl;
     font-family: 'Cairo', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    overscroll-behavior: none;
   }
 
   body {
     @apply bg-background text-foreground;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Prevent pull-to-refresh in WebView */
+  body {
+    overflow-y: auto;
+  }
+
+  /* Better touch targets */
+  button, a, input, select, textarea {
+    min-height: 44px;
+  }
+
+  /* Hide scrollbar for cleaner WebView look */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  * {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
 

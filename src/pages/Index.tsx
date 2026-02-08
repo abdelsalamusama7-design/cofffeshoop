@@ -69,7 +69,7 @@ const Dashboard = () => {
       {/* Categories */}
       <div>
         <h2 className="text-lg font-bold text-foreground mb-4">الأقسام</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+        <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-3">
           {categories.map((cat, i) => {
             const Icon = iconMap[cat.icon] || Coffee;
             const gradient = colorMap[cat.color] || 'from-amber-500 to-orange-600';
@@ -119,8 +119,8 @@ const Dashboard = () => {
       {/* Quick actions */}
       <div>
         <h2 className="text-lg font-bold text-foreground mb-4">إجراءات سريعة</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Link to="/sales" className="glass-card rounded-2xl p-5 flex items-center gap-3 hover:shadow-xl transition-all">
+        <div className="grid grid-cols-2 gap-3">
+          <Link to="/sales" className="glass-card rounded-2xl p-4 flex items-center gap-3 hover:shadow-xl transition-all">
             <div className="w-12 h-12 rounded-xl cafe-gradient flex items-center justify-center">
               <ShoppingCart size={22} className="text-primary-foreground" />
             </div>
