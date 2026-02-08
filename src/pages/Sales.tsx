@@ -250,6 +250,9 @@ const Sales = () => {
                   إيميل
                 </Button>
               </div>
+              <Button onClick={() => { setShowReceipt(false); toast.success('تم حفظ الإيصال بنجاح'); }} className="w-full cafe-gradient text-primary-foreground hover:opacity-90 mt-2">
+                تم
+              </Button>
             </div>
           )}
         </DialogContent>
