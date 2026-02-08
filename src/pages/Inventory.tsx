@@ -18,7 +18,7 @@ const Inventory = () => {
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [editItem, setEditItem] = useState<InventoryItem | null>(null);
-
+  const [editCategory, setEditCategory] = useState<Category | null>(null);
   const [newItem, setNewItem] = useState({ name: '', unit: '', quantity: 0, costPerUnit: 0 });
   const [newProduct, setNewProduct] = useState({ name: '', categoryId: '', sellPrice: 0, costPrice: 0 });
   const [newCategory, setNewCategory] = useState({ name: '', icon: 'Coffee', color: 'cafe-warm' });
@@ -85,6 +85,27 @@ const Inventory = () => {
     setNewCategory({ name: '', icon: 'Coffee', color: 'cafe-warm' });
     setShowAddCategory(false);
     toast.success('تمت إضافة القسم');
+  };
+
+  const updateCategory = () => {
+    if (!editCategory) return;
+    const updated = cats.map(c => c.id === editCategory.id ? editCategory : c);
+    setCats(updated);
+    setCategories(updated);
+    setEditCategory(null);
+    toast.success('تم تعديل القسم');
+  };
+
+  const deleteCategory = (id: string) => {
+    const hasProducts = productsList.some(p => p.categoryId === id);
+    if (hasProducts) {
+      toast.error('لا يمكن حذف قسم يحتوي على منتجات');
+      return;
+    }
+    const updated = cats.filter(c => c.id !== id);
+    setCats(updated);
+    setCategories(updated);
+    toast.success('تم حذف القسم');
   };
 
   return (
@@ -188,19 +209,29 @@ const Inventory = () => {
             </Button>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid gap-3">
             {cats.map((cat, i) => (
               <motion.div
                 key={cat.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="glass-card rounded-xl p-4 text-center"
+                className="glass-card rounded-xl p-4 flex items-center justify-between"
               >
-                <p className="font-semibold text-foreground">{cat.name}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {productsList.filter(p => p.categoryId === cat.id).length} منتج
-                </p>
+                <div>
+                  <p className="font-semibold text-foreground">{cat.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {productsList.filter(p => p.categoryId === cat.id).length} منتج
+                  </p>
+                </div>
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="icon" onClick={() => setEditCategory(cat)}>
+                    <Pencil size={16} />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => deleteCategory(cat.id)} className="text-destructive">
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
               </motion.div>
             ))}
           </div>
@@ -278,6 +309,22 @@ const Inventory = () => {
               حفظ
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Category Dialog */}
+      <Dialog open={!!editCategory} onOpenChange={() => setEditCategory(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>تعديل القسم</DialogTitle></DialogHeader>
+          {editCategory && (
+            <div className="space-y-3">
+              <Input value={editCategory.name} onChange={e => setEditCategory({ ...editCategory, name: e.target.value })} placeholder="اسم القسم" />
+              <Button onClick={updateCategory} className="w-full cafe-gradient text-primary-foreground">
+                <Save size={16} className="ml-2" />
+                تحديث
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
