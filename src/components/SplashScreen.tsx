@@ -49,6 +49,16 @@ const SplashScreen = ({ onFinish }: { onFinish: () => void }) => {
           animate={{ scaleX: [0, 1, 0.5, 1] }}
           transition={{ delay: 1, duration: 1.2, repeat: Infinity }}
         />
+        <motion.div
+          className="mt-8 text-center space-y-1"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.2, duration: 0.5 }}
+        >
+          <p className="text-sidebar-foreground/50 text-xs">تنفيذ وتصميم</p>
+          <p className="text-sidebar-foreground/70 text-sm font-semibold">شركة InstaTech للبرمجيات</p>
+          <p className="text-sidebar-foreground/50 text-xs direction-ltr" dir="ltr">📱 01227080430</p>
+        </motion.div>
       </motion.div>
     </motion.div>
   );
