@@ -8,6 +8,8 @@ import { InventoryItem, Product, Category } from '@/lib/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import IngredientsEditor from '@/components/IngredientsEditor';
+import { Ingredient } from '@/lib/types';
 
 const Inventory = () => {
   const user = getCurrentUser();
@@ -21,7 +23,7 @@ const Inventory = () => {
   const [editCategory, setEditCategory] = useState<Category | null>(null);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [newItem, setNewItem] = useState({ name: '', unit: '', quantity: 0, costPerUnit: 0 });
-  const [newProduct, setNewProduct] = useState({ name: '', categoryId: '', sellPrice: 0, costPrice: 0 });
+  const [newProduct, setNewProduct] = useState<{ name: string; categoryId: string; sellPrice: number; costPrice: number; ingredients: Ingredient[] }>({ name: '', categoryId: '', sellPrice: 0, costPrice: 0, ingredients: [] });
   const [newCategory, setNewCategory] = useState({ name: '', icon: 'Coffee', color: 'cafe-warm' });
 
   if (user?.role !== 'admin') {
@@ -61,11 +63,19 @@ const Inventory = () => {
 
   const saveProduct = () => {
     if (!newProduct.name || !newProduct.categoryId) return;
-    const product: Product = { id: Date.now().toString(), ...newProduct };
+    const costFromIngredients = newProduct.ingredients.reduce((s, i) => s + i.cost, 0);
+    const product: Product = {
+      id: Date.now().toString(),
+      name: newProduct.name,
+      categoryId: newProduct.categoryId,
+      sellPrice: newProduct.sellPrice,
+      costPrice: costFromIngredients || newProduct.costPrice,
+      ingredients: newProduct.ingredients.length > 0 ? newProduct.ingredients : undefined,
+    };
     const updated = [...productsList, product];
     setProductsList(updated);
     setProducts(updated);
-    setNewProduct({ name: '', categoryId: '', sellPrice: 0, costPrice: 0 });
+    setNewProduct({ name: '', categoryId: '', sellPrice: 0, costPrice: 0, ingredients: [] });
     setShowAddProduct(false);
     toast.success('تمت إضافة المنتج');
   };
@@ -79,7 +89,12 @@ const Inventory = () => {
 
   const updateProduct = () => {
     if (!editProduct) return;
-    const updated = productsList.map(p => p.id === editProduct.id ? editProduct : p);
+    const costFromIngredients = (editProduct.ingredients || []).reduce((s, i) => s + i.cost, 0);
+    const finalProduct = {
+      ...editProduct,
+      costPrice: costFromIngredients || editProduct.costPrice,
+    };
+    const updated = productsList.map(p => p.id === finalProduct.id ? finalProduct : p);
     setProductsList(updated);
     setProducts(updated);
     setEditProduct(null);
@@ -291,7 +306,7 @@ const Inventory = () => {
 
       {/* Add Product Dialog */}
       <Dialog open={showAddProduct} onOpenChange={setShowAddProduct}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>إضافة منتج</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <Input placeholder="اسم المنتج" value={newProduct.name} onChange={e => setNewProduct({ ...newProduct, name: e.target.value })} />
@@ -303,8 +318,31 @@ const Inventory = () => {
               <option value="">اختر القسم</option>
               {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
+
+            <IngredientsEditor
+              ingredients={newProduct.ingredients}
+              onChange={ingredients => setNewProduct({ ...newProduct, ingredients, costPrice: ingredients.reduce((s, i) => s + i.cost, 0) })}
+            />
+
             <Input type="number" placeholder="سعر البيع" value={newProduct.sellPrice || ''} onChange={e => setNewProduct({ ...newProduct, sellPrice: +e.target.value })} />
-            <Input type="number" placeholder="سعر التكلفة" value={newProduct.costPrice || ''} onChange={e => setNewProduct({ ...newProduct, costPrice: +e.target.value })} />
+
+            {newProduct.ingredients.length > 0 && newProduct.sellPrice > 0 && (
+              <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">التكلفة الإجمالية:</span>
+                  <span className="font-bold text-foreground">{newProduct.ingredients.reduce((s, i) => s + i.cost, 0)} ج.م</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">الربح:</span>
+                  <span className="font-bold text-primary">{(newProduct.sellPrice - newProduct.ingredients.reduce((s, i) => s + i.cost, 0)).toFixed(1)} ج.م</span>
+                </div>
+              </div>
+            )}
+
+            {newProduct.ingredients.length === 0 && (
+              <Input type="number" placeholder="سعر التكلفة (يدوي)" value={newProduct.costPrice || ''} onChange={e => setNewProduct({ ...newProduct, costPrice: +e.target.value })} />
+            )}
+
             <Button onClick={saveProduct} className="w-full cafe-gradient text-primary-foreground">
               <Save size={16} className="ml-2" />
               حفظ
@@ -315,26 +353,52 @@ const Inventory = () => {
 
       {/* Edit Product Dialog */}
       <Dialog open={!!editProduct} onOpenChange={() => setEditProduct(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>تعديل المنتج</DialogTitle></DialogHeader>
-          {editProduct && (
-            <div className="space-y-3">
-              <Input value={editProduct.name} onChange={e => setEditProduct({ ...editProduct, name: e.target.value })} placeholder="اسم المنتج" />
-              <select
-                value={editProduct.categoryId}
-                onChange={e => setEditProduct({ ...editProduct, categoryId: e.target.value })}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
-              >
-                {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-              <Input type="number" value={editProduct.sellPrice} onChange={e => setEditProduct({ ...editProduct, sellPrice: +e.target.value })} placeholder="سعر البيع" />
-              <Input type="number" value={editProduct.costPrice} onChange={e => setEditProduct({ ...editProduct, costPrice: +e.target.value })} placeholder="سعر التكلفة" />
-              <Button onClick={updateProduct} className="w-full cafe-gradient text-primary-foreground">
-                <Save size={16} className="ml-2" />
-                تحديث
-              </Button>
-            </div>
-          )}
+          {editProduct && (() => {
+            const ings = editProduct.ingredients || [];
+            const costFromIngs = ings.reduce((s, i) => s + i.cost, 0);
+            const profit = editProduct.sellPrice - (costFromIngs || editProduct.costPrice);
+            return (
+              <div className="space-y-3">
+                <Input value={editProduct.name} onChange={e => setEditProduct({ ...editProduct, name: e.target.value })} placeholder="اسم المنتج" />
+                <select
+                  value={editProduct.categoryId}
+                  onChange={e => setEditProduct({ ...editProduct, categoryId: e.target.value })}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
+                >
+                  {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+
+                <IngredientsEditor
+                  ingredients={ings}
+                  onChange={ingredients => setEditProduct({ ...editProduct, ingredients, costPrice: ingredients.reduce((s, i) => s + i.cost, 0) })}
+                />
+
+                <Input type="number" value={editProduct.sellPrice} onChange={e => setEditProduct({ ...editProduct, sellPrice: +e.target.value })} placeholder="سعر البيع" />
+
+                {ings.length === 0 && (
+                  <Input type="number" value={editProduct.costPrice} onChange={e => setEditProduct({ ...editProduct, costPrice: +e.target.value })} placeholder="سعر التكلفة (يدوي)" />
+                )}
+
+                <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">التكلفة الإجمالية:</span>
+                    <span className="font-bold text-foreground">{costFromIngs || editProduct.costPrice} ج.م</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">الربح:</span>
+                    <span className={`font-bold ${profit >= 0 ? 'text-primary' : 'text-destructive'}`}>{profit.toFixed(1)} ج.م</span>
+                  </div>
+                </div>
+
+                <Button onClick={updateProduct} className="w-full cafe-gradient text-primary-foreground">
+                  <Save size={16} className="ml-2" />
+                  تحديث
+                </Button>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
