@@ -19,6 +19,7 @@ const Inventory = () => {
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [editItem, setEditItem] = useState<InventoryItem | null>(null);
   const [editCategory, setEditCategory] = useState<Category | null>(null);
+  const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [newItem, setNewItem] = useState({ name: '', unit: '', quantity: 0, costPerUnit: 0 });
   const [newProduct, setNewProduct] = useState({ name: '', categoryId: '', sellPrice: 0, costPrice: 0 });
   const [newCategory, setNewCategory] = useState({ name: '', icon: 'Coffee', color: 'cafe-warm' });
@@ -74,6 +75,15 @@ const Inventory = () => {
     setProductsList(updated);
     setProducts(updated);
     toast.success('تم حذف المنتج');
+  };
+
+  const updateProduct = () => {
+    if (!editProduct) return;
+    const updated = productsList.map(p => p.id === editProduct.id ? editProduct : p);
+    setProductsList(updated);
+    setProducts(updated);
+    setEditProduct(null);
+    toast.success('تم تعديل المنتج');
   };
 
   const saveCategory = () => {
@@ -191,9 +201,14 @@ const Inventory = () => {
                       </p>
                     )}
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => deleteProduct(product.id)} className="text-destructive">
-                    <Trash2 size={16} />
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => setEditProduct(product)}>
+                      <Pencil size={16} />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => deleteProduct(product.id)} className="text-destructive">
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
                 </motion.div>
               );
             })}
@@ -295,6 +310,31 @@ const Inventory = () => {
               حفظ
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Product Dialog */}
+      <Dialog open={!!editProduct} onOpenChange={() => setEditProduct(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>تعديل المنتج</DialogTitle></DialogHeader>
+          {editProduct && (
+            <div className="space-y-3">
+              <Input value={editProduct.name} onChange={e => setEditProduct({ ...editProduct, name: e.target.value })} placeholder="اسم المنتج" />
+              <select
+                value={editProduct.categoryId}
+                onChange={e => setEditProduct({ ...editProduct, categoryId: e.target.value })}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
+              >
+                {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <Input type="number" value={editProduct.sellPrice} onChange={e => setEditProduct({ ...editProduct, sellPrice: +e.target.value })} placeholder="سعر البيع" />
+              <Input type="number" value={editProduct.costPrice} onChange={e => setEditProduct({ ...editProduct, costPrice: +e.target.value })} placeholder="سعر التكلفة" />
+              <Button onClick={updateProduct} className="w-full cafe-gradient text-primary-foreground">
+                <Save size={16} className="ml-2" />
+                تحديث
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
