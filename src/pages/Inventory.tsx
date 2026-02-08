@@ -146,6 +146,29 @@ const Inventory = () => {
 
         {/* Inventory Tab */}
         <TabsContent value="inventory" className="space-y-4">
+          {/* Inventory Value Summary */}
+          {(() => {
+            const totalCostValue = inventory.reduce((sum, item) => sum + item.quantity * item.costPerUnit, 0);
+            const productsSellValue = productsList.reduce((sum, p) => {
+              // Calculate potential sell value based on inventory items linked via ingredients
+              return sum + p.sellPrice;
+            }, 0);
+            const totalProductsCost = productsList.reduce((sum, p) => sum + p.costPrice, 0);
+            const totalProfit = productsSellValue - totalProductsCost;
+            return (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="glass-card rounded-xl p-4 text-center">
+                  <p className="text-xs text-muted-foreground mb-1">قيمة المخزون بالتكلفة</p>
+                  <p className="text-xl font-bold text-foreground">{totalCostValue.toFixed(0)} ج.م</p>
+                </div>
+                <div className="glass-card rounded-xl p-4 text-center">
+                  <p className="text-xs text-muted-foreground mb-1">الربح المتوقع من المنتجات</p>
+                  <p className="text-xl font-bold text-primary">{totalProfit.toFixed(0)} ج.م</p>
+                </div>
+              </div>
+            );
+          })()}
+
           <div className="flex justify-end">
             <Button onClick={() => setShowAddItem(true)} className="cafe-gradient text-primary-foreground">
               <Plus size={18} className="ml-2" />
