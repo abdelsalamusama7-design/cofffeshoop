@@ -158,7 +158,7 @@ const Attendance = () => {
                 <p className="font-bold text-foreground">{summary.worker.name}</p>
                 <p className="text-sm font-medium text-accent">المرتب: {summary.netSalary} ج.م</p>
               </div>
-              <div className="grid grid-cols-4 gap-2 text-center text-sm">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-sm">
                 <div className="bg-success/10 rounded-lg p-2">
                   <p className="font-bold text-success">{summary.presentDays}</p>
                   <p className="text-xs text-muted-foreground">حضور</p>

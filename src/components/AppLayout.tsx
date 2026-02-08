@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -45,22 +45,9 @@ const AppLayout = ({ children }: LayoutProps) => {
   };
 
   return (
-    <div className="flex min-h-screen">
-      {/* Mobile toggle */}
-      <button
-        onClick={() => setMobileOpen(!mobileOpen)}
-        className="fixed top-4 left-4 z-50 md:hidden rounded-lg bg-primary p-2 text-primary-foreground shadow-lg"
-      >
-        {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-      </button>
-
-      {/* Sidebar */}
-      <aside className={`
-        fixed inset-y-0 right-0 z-40 w-64 bg-sidebar text-sidebar-foreground
-        transform transition-transform duration-300 md:translate-x-0
-        ${mobileOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
-        flex flex-col
-      `}>
+    <div className="flex flex-col md:flex-row min-h-screen min-h-[100dvh]">
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex fixed inset-y-0 right-0 z-40 w-64 bg-sidebar text-sidebar-foreground flex-col">
         <div className="flex items-center gap-3 p-6 border-b border-sidebar-border">
           <div className="w-10 h-10 rounded-xl gold-gradient flex items-center justify-center">
             <Coffee size={22} className="text-accent-foreground" />
@@ -78,7 +65,6 @@ const AppLayout = ({ children }: LayoutProps) => {
               <Link
                 key={item.path}
                 to={item.path}
-                onClick={() => setMobileOpen(false)}
                 className={`
                   flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all
                   ${isActive
@@ -105,8 +91,21 @@ const AppLayout = ({ children }: LayoutProps) => {
         </div>
       </aside>
 
+      {/* Mobile Top Bar */}
+      <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-sidebar text-sidebar-foreground flex items-center justify-between px-4 h-14" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        <button onClick={handleLogout} className="p-2 rounded-lg text-sidebar-foreground/70">
+          <LogOut size={20} />
+        </button>
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-sidebar-foreground">كافيه مانجر</span>
+          <div className="w-8 h-8 rounded-lg gold-gradient flex items-center justify-center">
+            <Coffee size={16} className="text-accent-foreground" />
+          </div>
+        </div>
+      </header>
+
       {/* Main content */}
-      <main className="flex-1 md:mr-64">
+      <main className="flex-1 md:mr-64 pt-14 md:pt-0 pb-20 md:pb-0">
         <motion.div
           key={location.pathname}
           initial={{ opacity: 0, y: 10 }}
@@ -118,13 +117,28 @@ const AppLayout = ({ children }: LayoutProps) => {
         </motion.div>
       </main>
 
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 bg-foreground/30 z-30 md:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
+      {/* Mobile Bottom Navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-sidebar border-t border-sidebar-border" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="flex items-center justify-around h-16">
+          {filteredNav.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex flex-col items-center justify-center gap-1 flex-1 py-2 transition-all ${
+                  isActive
+                    ? 'text-sidebar-primary'
+                    : 'text-sidebar-foreground/50'
+                }`}
+              >
+                <item.icon size={22} />
+                <span className="text-[10px] font-medium">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 };

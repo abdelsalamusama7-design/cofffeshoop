@@ -131,10 +131,10 @@ const Sales = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Products Grid */}
         <div className="lg:col-span-2">
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             {filteredProducts.map(product => {
               const inCart = cart.find(i => i.productId === product.id);
               return (
@@ -163,7 +163,7 @@ const Sales = () => {
         </div>
 
         {/* Cart */}
-        <div className="glass-card rounded-2xl p-5 h-fit sticky top-4">
+        <div className="glass-card rounded-2xl p-4 h-fit sticky top-4">
           <h2 className="font-bold text-foreground mb-4 flex items-center gap-2">
             <ShoppingCart size={20} />
             سلة المبيعات
