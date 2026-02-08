@@ -686,7 +686,7 @@ const Reports = () => {
 
       {/* Report tabs */}
       <Tabs defaultValue="sales" dir="rtl">
-        <TabsList className="w-full grid grid-cols-5 h-auto">
+        <TabsList className="w-full grid grid-cols-4 h-auto">
           <TabsTrigger value="sales" className="text-xs py-2 px-1">
             <ShoppingCart size={14} className="ml-1 hidden sm:inline" />
             المبيعات
@@ -699,10 +699,6 @@ const Reports = () => {
             <Users size={14} className="ml-1 hidden sm:inline" />
             أداء العمال
           </TabsTrigger>
-          <TabsTrigger value="expenses" className="text-xs py-2 px-1">
-            <Wallet size={14} className="ml-1 hidden sm:inline" />
-            المصروفات
-          </TabsTrigger>
           <TabsTrigger value="attendance" className="text-xs py-2 px-1">
             <ClipboardCheck size={14} className="ml-1 hidden sm:inline" />
             الحضور
@@ -711,9 +707,17 @@ const Reports = () => {
         <TabsContent value="sales"><SalesReport /></TabsContent>
         <TabsContent value="profits"><ProfitsReport /></TabsContent>
         <TabsContent value="workers"><WorkerPerformanceReport /></TabsContent>
-        <TabsContent value="expenses"><ExpensesReport /></TabsContent>
         <TabsContent value="attendance"><AttendanceReport /></TabsContent>
       </Tabs>
+
+      {/* Expenses Section - separate */}
+      <div className="space-y-2">
+        <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+          <Wallet size={20} className="text-accent" />
+          المصروفات
+        </h2>
+        <ExpensesReport />
+      </div>
     </div>
   );
 };
