@@ -76,3 +76,12 @@ export interface WorkerTransaction {
   note: string;
   date: string;
 }
+
+export interface Expense {
+  id: string;
+  name: string;
+  amount: number;
+  category: string;
+  note: string;
+  date: string;
+}

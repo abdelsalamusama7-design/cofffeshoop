@@ -1,4 +1,4 @@
-import { Product, Sale, Category, InventoryItem, Worker, AttendanceRecord, WorkerTransaction } from './types';
+import { Product, Sale, Category, InventoryItem, Worker, AttendanceRecord, WorkerTransaction, Expense } from './types';
 
 const STORAGE_KEYS = {
   products: 'cafe_products',
@@ -9,6 +9,7 @@ const STORAGE_KEYS = {
   categories: 'cafe_categories',
   currentUser: 'cafe_current_user',
   transactions: 'cafe_transactions',
+  expenses: 'cafe_expenses',
 };
 
 function get<T>(key: string, fallback: T): T {
@@ -63,6 +64,19 @@ export const addTransaction = (t: WorkerTransaction) => {
   const txns = getTransactions();
   txns.push(t);
   set(STORAGE_KEYS.transactions, txns);
+};
+
+// Expenses
+export const getExpenses = (): Expense[] => get(STORAGE_KEYS.expenses, []);
+export const setExpenses = (e: Expense[]) => set(STORAGE_KEYS.expenses, e);
+export const addExpense = (e: Expense) => {
+  const expenses = getExpenses();
+  expenses.push(e);
+  set(STORAGE_KEYS.expenses, expenses);
+};
+export const deleteExpense = (id: string) => {
+  const expenses = getExpenses().filter(e => e.id !== id);
+  set(STORAGE_KEYS.expenses, expenses);
 };
 
 // Default data
