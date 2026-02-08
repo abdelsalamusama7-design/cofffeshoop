@@ -61,5 +61,6 @@ export interface AttendanceRecord {
   checkIn?: string;
   checkOut?: string;
   type: 'present' | 'absent' | 'leave';
+  shift?: 'morning' | 'evening';
   hoursWorked?: number;
 }
