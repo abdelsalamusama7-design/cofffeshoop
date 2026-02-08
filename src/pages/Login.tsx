@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Lock, User } from 'lucide-react';
+import { Lock, User, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getWorkers, setCurrentUser } from '@/lib/store';
@@ -11,6 +11,7 @@ const Login = () => {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = (e: React.FormEvent) => {
@@ -58,12 +59,19 @@ const Login = () => {
             <div className="relative">
               <Lock size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 placeholder="كلمة المرور"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="pr-10 text-right"
+                className="pr-10 pl-10 text-right"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
             {error && (
               <p className="text-sm text-destructive text-center">{error}</p>
@@ -73,10 +81,6 @@ const Login = () => {
             </Button>
           </form>
 
-          <div className="text-center text-xs text-muted-foreground space-y-1">
-            <p>المدير: المدير / admin123</p>
-            <p>العامل: أحمد / 1234</p>
-          </div>
         </div>
       </motion.div>
     </div>
