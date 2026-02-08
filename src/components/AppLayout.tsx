@@ -8,6 +8,7 @@ import {
   BarChart3,
   Users,
   ClipboardCheck,
+  Wallet,
   LogOut,
   Bell,
   AlertTriangle,
@@ -27,6 +28,7 @@ const navItems = [
   { path: '/reports', label: 'التقارير', icon: BarChart3 },
   { path: '/workers', label: 'العمال', icon: Users },
   { path: '/attendance', label: 'الحضور', icon: ClipboardCheck },
+  { path: '/expenses', label: 'المصروفات', icon: Wallet },
 ];
 
 const AppLayout = ({ children }: LayoutProps) => {
