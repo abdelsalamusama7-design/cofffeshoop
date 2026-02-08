@@ -1,4 +1,4 @@
-import { Product, Sale, Category, InventoryItem, Worker, AttendanceRecord } from './types';
+import { Product, Sale, Category, InventoryItem, Worker, AttendanceRecord, WorkerTransaction } from './types';
 
 const STORAGE_KEYS = {
   products: 'cafe_products',
@@ -8,6 +8,7 @@ const STORAGE_KEYS = {
   attendance: 'cafe_attendance',
   categories: 'cafe_categories',
   currentUser: 'cafe_current_user',
+  transactions: 'cafe_transactions',
 };
 
 function get<T>(key: string, fallback: T): T {
@@ -54,6 +55,15 @@ export const setAttendance = (a: AttendanceRecord[]) => set(STORAGE_KEYS.attenda
 // Current User
 export const getCurrentUser = (): Worker | null => get(STORAGE_KEYS.currentUser, null);
 export const setCurrentUser = (u: Worker | null) => set(STORAGE_KEYS.currentUser, u);
+
+// Worker Transactions (advances & bonuses)
+export const getTransactions = (): WorkerTransaction[] => get(STORAGE_KEYS.transactions, []);
+export const setTransactions = (t: WorkerTransaction[]) => set(STORAGE_KEYS.transactions, t);
+export const addTransaction = (t: WorkerTransaction) => {
+  const txns = getTransactions();
+  txns.push(t);
+  set(STORAGE_KEYS.transactions, txns);
+};
 
 // Default data
 const defaultCategories: Category[] = [

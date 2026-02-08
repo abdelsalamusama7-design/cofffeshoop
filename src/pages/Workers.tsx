@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Plus, Trash2, Key, Save, Calendar, Share2, Mail, MessageCircle, TrendingUp } from 'lucide-react';
+import { Users, Plus, Trash2, Key, Save, Mail, MessageCircle, TrendingUp, HandCoins, Gift, CircleDollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getWorkers, setWorkers, getCurrentUser, getAttendance, getSales } from '@/lib/store';
-import { Worker } from '@/lib/types';
+import { getWorkers, setWorkers, getCurrentUser, getAttendance, getSales, getTransactions, addTransaction } from '@/lib/store';
+import { Worker, WorkerTransaction } from '@/lib/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
 const Workers = () => {
@@ -14,8 +15,13 @@ const Workers = () => {
   const [workersList, setWorkersList] = useState(getWorkers());
   const [showAdd, setShowAdd] = useState(false);
   const [showChangePass, setShowChangePass] = useState<string | null>(null);
+  const [showTransaction, setShowTransaction] = useState<string | null>(null);
   const [newWorker, setNewWorker] = useState({ name: '', password: '', salary: 0 });
   const [newPass, setNewPass] = useState('');
+  const [txnType, setTxnType] = useState<'advance' | 'bonus'>('advance');
+  const [txnAmount, setTxnAmount] = useState('');
+  const [txnNote, setTxnNote] = useState('');
+  const [transactions, setTransactionsState] = useState(getTransactions());
 
   if (user?.role !== 'admin') {
     return (
@@ -62,6 +68,28 @@ const Workers = () => {
     toast.success('تم تغيير كلمة المرور');
   };
 
+  const handleAddTransaction = () => {
+    if (!showTransaction || !txnAmount) return;
+    const worker = workersList.find(w => w.id === showTransaction);
+    if (!worker) return;
+    const txn: WorkerTransaction = {
+      id: Date.now().toString(),
+      workerId: worker.id,
+      workerName: worker.name,
+      type: txnType,
+      amount: +txnAmount,
+      note: txnNote,
+      date: new Date().toISOString().split('T')[0],
+    };
+    addTransaction(txn);
+    setTransactionsState(getTransactions());
+    setShowTransaction(null);
+    setTxnAmount('');
+    setTxnNote('');
+    setTxnType('advance');
+    toast.success(txnType === 'advance' ? 'تم تسجيل السلفة' : 'تم تسجيل المكافأة');
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -92,7 +120,12 @@ const Workers = () => {
                 </p>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-1">
+              {worker.role !== 'admin' && (
+                <Button variant="ghost" size="icon" onClick={() => setShowTransaction(worker.id)} title="سلفة / مكافأة">
+                  <CircleDollarSign size={16} />
+                </Button>
+              )}
               <Button variant="ghost" size="icon" onClick={() => setShowChangePass(worker.id)} title="تغيير كلمة المرور">
                 <Key size={16} />
               </Button>
@@ -107,7 +140,7 @@ const Workers = () => {
       </div>
 
       {/* Salary Reports Section */}
-      <SalaryReportsSection workers={workersList} />
+      <SalaryReportsSection workers={workersList} transactions={transactions} />
 
       {/* Add Worker Dialog */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
@@ -138,65 +171,110 @@ const Workers = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Transaction Dialog */}
+      <Dialog open={!!showTransaction} onOpenChange={() => setShowTransaction(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>تسجيل سلفة / مكافأة</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              العامل: {workersList.find(w => w.id === showTransaction)?.name}
+            </p>
+            <Select value={txnType} onValueChange={v => setTxnType(v as 'advance' | 'bonus')}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="advance">
+                  <span className="flex items-center gap-2"><HandCoins size={14} /> سلفة (خصم)</span>
+                </SelectItem>
+                <SelectItem value="bonus">
+                  <span className="flex items-center gap-2"><Gift size={14} /> مكافأة (إضافة)</span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              type="number"
+              placeholder="المبلغ"
+              value={txnAmount}
+              onChange={e => setTxnAmount(e.target.value)}
+            />
+            <Input
+              placeholder="ملاحظة (اختياري)"
+              value={txnNote}
+              onChange={e => setTxnNote(e.target.value)}
+            />
+            <Button onClick={handleAddTransaction} className="w-full cafe-gradient text-primary-foreground">
+              <Save size={16} className="ml-2" />
+              حفظ
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
 /* ===================== Salary Reports ===================== */
-const SalaryReportsSection = ({ workers }: { workers: Worker[] }) => {
+const SalaryReportsSection = ({ workers, transactions }: { workers: Worker[]; transactions: WorkerTransaction[] }) => {
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
   const today = new Date();
 
   const report = useMemo(() => {
     const attendance = getAttendance();
     const sales = getSales();
+    const todayStr = today.toISOString().split('T')[0];
+    const monthStr = todayStr.substring(0, 7);
 
     return workers
       .filter(w => w.role !== 'admin')
       .map(worker => {
-        // Filter attendance by period
         let filteredAttendance = attendance.filter(a => a.workerId === worker.id);
         let filteredSales = sales.filter(s => s.workerId === worker.id);
-        let periodDays = 1;
-
-        const todayStr = today.toISOString().split('T')[0];
-        const monthStr = todayStr.substring(0, 7);
+        let filteredTxns = transactions.filter(t => t.workerId === worker.id);
 
         if (period === 'daily') {
           filteredAttendance = filteredAttendance.filter(a => a.date === todayStr);
           filteredSales = filteredSales.filter(s => s.date === todayStr);
-          periodDays = 1;
+          filteredTxns = filteredTxns.filter(t => t.date === todayStr);
         } else if (period === 'weekly') {
           const weekAgo = new Date(today);
           weekAgo.setDate(weekAgo.getDate() - 7);
           const weekAgoStr = weekAgo.toISOString().split('T')[0];
           filteredAttendance = filteredAttendance.filter(a => a.date >= weekAgoStr && a.date <= todayStr);
           filteredSales = filteredSales.filter(s => s.date >= weekAgoStr && s.date <= todayStr);
-          periodDays = 7;
+          filteredTxns = filteredTxns.filter(t => t.date >= weekAgoStr && t.date <= todayStr);
         } else {
           filteredAttendance = filteredAttendance.filter(a => a.date.startsWith(monthStr));
           filteredSales = filteredSales.filter(s => s.date.startsWith(monthStr));
-          periodDays = 30;
+          filteredTxns = filteredTxns.filter(t => t.date.startsWith(monthStr));
         }
 
         const presentDays = filteredAttendance.filter(a => a.type === 'present').length;
         const absentDays = filteredAttendance.filter(a => a.type === 'absent').length;
         const totalSales = filteredSales.reduce((sum, s) => sum + s.total, 0);
+        const advances = filteredTxns.filter(t => t.type === 'advance').reduce((sum, t) => sum + t.amount, 0);
+        const bonuses = filteredTxns.filter(t => t.type === 'bonus').reduce((sum, t) => sum + t.amount, 0);
         const dailySalary = worker.salary / 30;
-        const salaryDue = Math.round(dailySalary * presentDays);
+        const baseSalary = Math.round(dailySalary * presentDays);
+        const netSalary = baseSalary - advances + bonuses;
 
         return {
           worker,
           presentDays,
           absentDays,
           totalSales,
-          salaryDue,
-          periodDays,
+          baseSalary,
+          advances,
+          bonuses,
+          netSalary,
         };
       });
-  }, [workers, period]);
+  }, [workers, period, transactions]);
 
-  const totalSalariesDue = report.reduce((sum, r) => sum + r.salaryDue, 0);
+  const totalNet = report.reduce((sum, r) => sum + r.netSalary, 0);
 
   const periodLabel = period === 'daily' ? 'اليوم' : period === 'weekly' ? 'هذا الأسبوع' : 'هذا الشهر';
 
@@ -207,25 +285,25 @@ const SalaryReportsSection = ({ workers }: { workers: Worker[] }) => {
 
     report.forEach(r => {
       text += `👤 ${r.worker.name}\n`;
-      text += `  ✅ أيام الحضور: ${r.presentDays}\n`;
-      text += `  ❌ أيام الغياب: ${r.absentDays}\n`;
+      text += `  ✅ حضور: ${r.presentDays} | ❌ غياب: ${r.absentDays}\n`;
       text += `  💰 المبيعات: ${r.totalSales} ج.م\n`;
-      text += `  💵 المرتب المستحق: ${r.salaryDue} ج.م\n\n`;
+      text += `  💵 المرتب الأساسي: ${r.baseSalary} ج.م\n`;
+      if (r.advances > 0) text += `  🔻 سلف: -${r.advances} ج.م\n`;
+      if (r.bonuses > 0) text += `  🔺 مكافآت: +${r.bonuses} ج.م\n`;
+      text += `  💰 الصافي: ${r.netSalary} ج.م\n\n`;
     });
 
     text += `━━━━━━━━━━━━━━━━━━\n`;
-    text += `💰 إجمالي المرتبات المستحقة: ${totalSalariesDue} ج.م\n`;
+    text += `💰 إجمالي الصافي: ${totalNet} ج.م\n`;
     return text;
   };
 
   const shareViaWhatsApp = () => {
-    const text = generateReportText();
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent(generateReportText())}`, '_blank');
   };
 
   const shareViaEmail = () => {
-    const text = generateReportText();
-    window.open(`mailto:?subject=${encodeURIComponent(`تقرير المرتبات - ${periodLabel}`)}&body=${encodeURIComponent(text)}`, '_blank');
+    window.open(`mailto:?subject=${encodeURIComponent(`تقرير المرتبات - ${periodLabel}`)}&body=${encodeURIComponent(generateReportText())}`, '_blank');
   };
 
   return (
@@ -261,8 +339,8 @@ const SalaryReportsSection = ({ workers }: { workers: Worker[] }) => {
         animate={{ opacity: 1, y: 0 }}
         className="glass-card rounded-xl p-4 text-center"
       >
-        <p className="text-sm text-muted-foreground">إجمالي المرتبات المستحقة - {periodLabel}</p>
-        <p className="text-3xl font-bold text-primary mt-1">{totalSalariesDue} ج.م</p>
+        <p className="text-sm text-muted-foreground">إجمالي المرتبات الصافية - {periodLabel}</p>
+        <p className="text-3xl font-bold text-primary mt-1">{totalNet} ج.م</p>
       </motion.div>
 
       {/* Per Worker Cards */}
@@ -282,23 +360,31 @@ const SalaryReportsSection = ({ workers }: { workers: Worker[] }) => {
                 </div>
                 <div>
                   <p className="font-semibold text-foreground">{r.worker.name}</p>
-                  <p className="text-xs text-muted-foreground">المرتب الأساسي: {r.worker.salary} ج.م/شهر</p>
+                  <p className="text-xs text-muted-foreground">الأساسي: {r.worker.salary} ج.م/شهر</p>
                 </div>
               </div>
-              <p className="text-lg font-bold text-primary">{r.salaryDue} ج.م</p>
+              <p className="text-lg font-bold text-primary">{r.netSalary} ج.م</p>
             </div>
-            <div className="grid grid-cols-3 gap-2 text-center text-sm">
+            <div className="grid grid-cols-5 gap-1.5 text-center text-sm">
               <div className="bg-muted/50 rounded-lg p-2">
-                <p className="text-muted-foreground text-xs">حضور</p>
-                <p className="font-bold text-foreground">{r.presentDays} يوم</p>
+                <p className="text-muted-foreground text-[10px]">حضور</p>
+                <p className="font-bold text-foreground text-xs">{r.presentDays}</p>
               </div>
               <div className="bg-muted/50 rounded-lg p-2">
-                <p className="text-muted-foreground text-xs">غياب</p>
-                <p className="font-bold text-destructive">{r.absentDays} يوم</p>
+                <p className="text-muted-foreground text-[10px]">غياب</p>
+                <p className="font-bold text-destructive text-xs">{r.absentDays}</p>
               </div>
               <div className="bg-muted/50 rounded-lg p-2">
-                <p className="text-muted-foreground text-xs">مبيعات</p>
-                <p className="font-bold text-foreground">{r.totalSales} ج.م</p>
+                <p className="text-muted-foreground text-[10px]">مرتب</p>
+                <p className="font-bold text-foreground text-xs">{r.baseSalary}</p>
+              </div>
+              <div className="bg-muted/50 rounded-lg p-2">
+                <p className="text-muted-foreground text-[10px]">سلف</p>
+                <p className="font-bold text-destructive text-xs">-{r.advances}</p>
+              </div>
+              <div className="bg-muted/50 rounded-lg p-2">
+                <p className="text-muted-foreground text-[10px]">مكافآت</p>
+                <p className="font-bold text-foreground text-xs">+{r.bonuses}</p>
               </div>
             </div>
           </motion.div>
