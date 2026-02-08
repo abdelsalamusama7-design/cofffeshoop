@@ -38,8 +38,101 @@ const Reports = () => {
     }
   };
 
+  const downloadPDF = (title: string, text: string) => {
+    const lines = text.split('\n');
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="UTF-8">
+        <title>${title}</title>
+        <style>
+          @media print {
+            @page { margin: 20mm; size: A4; }
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          }
+          body {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            direction: rtl;
+            padding: 40px;
+            color: #1a1a1a;
+            line-height: 1.8;
+            max-width: 800px;
+            margin: 0 auto;
+          }
+          .header {
+            text-align: center;
+            border-bottom: 3px solid #8B4513;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+          }
+          .header h1 {
+            font-size: 24px;
+            color: #8B4513;
+            margin: 0 0 8px 0;
+          }
+          .header .date {
+            color: #666;
+            font-size: 14px;
+          }
+          .line {
+            padding: 6px 0;
+            font-size: 15px;
+            border-bottom: 1px solid #f0f0f0;
+          }
+          .line.section {
+            font-weight: bold;
+            font-size: 16px;
+            color: #8B4513;
+            margin-top: 16px;
+            border-bottom: 2px solid #e8d5c4;
+          }
+          .line.bullet {
+            padding-right: 16px;
+          }
+          .footer {
+            margin-top: 40px;
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+            border-top: 1px solid #eee;
+            padding-top: 16px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>${title}</h1>
+          <div class="date">${new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+        </div>
+        ${lines.map(line => {
+          if (line.includes('────')) return '';
+          if (line.startsWith('•')) return `<div class="line bullet">${line}</div>`;
+          if (line.includes(':') && !line.startsWith(' ') && !line.startsWith('•')) return `<div class="line section">${line}</div>`;
+          if (line.trim() === '') return '<br/>';
+          return `<div class="line">${line}</div>`;
+        }).join('')}
+        <div class="footer">تم إنشاء هذا التقرير تلقائياً • ${new Date().toLocaleTimeString('ar-EG')}</div>
+      </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      setTimeout(() => {
+        printWindow.print();
+      }, 300);
+    }
+  };
+
   const ShareButtons = ({ title, text }: { title: string; text: string }) => (
     <div className="flex gap-2 mt-4">
+      <Button variant="outline" onClick={() => downloadPDF(title, text)} className="flex-1">
+        <Download size={16} className="ml-2" />
+        PDF
+      </Button>
       <Button variant="outline" onClick={() => share(title, text, 'whatsapp')} className="flex-1">
         <Share2 size={16} className="ml-2" />
         واتساب
