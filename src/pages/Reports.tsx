@@ -1,14 +1,15 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { BarChart3, Calendar, Share2, Download, TrendingUp, DollarSign, ShoppingCart } from 'lucide-react';
+import { BarChart3, Calendar, Share2, Download, TrendingUp, DollarSign, ShoppingCart, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getSales, getProducts, getCurrentUser } from '@/lib/store';
+import { getSales, getProducts, getCurrentUser, getWorkers } from '@/lib/store';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Reports = () => {
   const user = getCurrentUser();
   const sales = getSales();
   const products = getProducts();
+  const workers = getWorkers();
 
   const today = new Date().toISOString().split('T')[0];
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
@@ -39,7 +40,22 @@ const Reports = () => {
       });
     });
 
-    return { filtered, totalSales, totalCost, totalItems, profit: totalSales - totalCost, productBreakdown };
+    // Worker performance breakdown
+    const workerBreakdown: Record<string, { name: string; salesCount: number; totalSales: number; totalCost: number; itemsSold: number }> = {};
+    filtered.forEach(sale => {
+      if (!workerBreakdown[sale.workerId]) {
+        workerBreakdown[sale.workerId] = { name: sale.workerName, salesCount: 0, totalSales: 0, totalCost: 0, itemsSold: 0 };
+      }
+      workerBreakdown[sale.workerId].salesCount += 1;
+      workerBreakdown[sale.workerId].totalSales += sale.total;
+      workerBreakdown[sale.workerId].itemsSold += sale.items.reduce((c, i) => c + i.quantity, 0);
+      workerBreakdown[sale.workerId].totalCost += sale.items.reduce((c, item) => {
+        const p = products.find(pr => pr.id === item.productId);
+        return c + (p ? p.costPrice * item.quantity : 0);
+      }, 0);
+    });
+
+    return { filtered, totalSales, totalCost, totalItems, profit: totalSales - totalCost, productBreakdown, workerBreakdown };
   };
 
   const generateReportText = (period: string, data: ReturnType<typeof getReportData>) => {
@@ -129,6 +145,38 @@ const Reports = () => {
             </div>
           )}
         </div>
+
+        {/* Worker Performance - Admin only */}
+        {user?.role === 'admin' && Object.keys(data.workerBreakdown).length > 0 && (
+          <div className="glass-card rounded-xl p-4">
+            <h3 className="font-bold text-foreground mb-3 flex items-center gap-2">
+              <Users size={18} />
+              أداء العمال
+            </h3>
+            <div className="space-y-3">
+              {Object.values(data.workerBreakdown).sort((a, b) => b.totalSales - a.totalSales).map((w, i) => (
+                <div key={i} className="p-3 rounded-lg bg-secondary space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-foreground">{w.name}</span>
+                    <span className="text-xs bg-accent/20 text-accent px-2 py-1 rounded-full font-bold">{w.totalSales} ج.م</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                    <span>{w.salesCount} طلب</span>
+                    <span>{w.itemsSold} منتج</span>
+                    <span className="text-success font-medium">ربح: {w.totalSales - w.totalCost} ج.م</span>
+                  </div>
+                  {/* Performance bar */}
+                  <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-accent rounded-full transition-all"
+                      style={{ width: `${Math.min((w.totalSales / Math.max(data.totalSales, 1)) * 100, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Share/Export */}
         <div className="flex gap-2">
