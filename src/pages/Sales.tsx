@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
 import { ShoppingCart, Plus, Minus, X, Receipt, Share2, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getCategories, getProducts, getCurrentUser, addSale } from '@/lib/store';
+import { getCategories, getProducts, getCurrentUser, addSale, getInventory, setInventory } from '@/lib/store';
 import { SaleItem, Sale } from '@/lib/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
@@ -75,6 +75,26 @@ const Sales = () => {
       time: now.toLocaleTimeString('ar-EG'),
     };
 
+    // Deduct inventory based on ingredients
+    const inventory = getInventory();
+    let updatedInventory = [...inventory];
+
+    cart.forEach(cartItem => {
+      const product = products.find(p => p.id === cartItem.productId);
+      if (product?.ingredients) {
+        product.ingredients.forEach(ing => {
+          if (ing.inventoryItemId && ing.quantityUsed) {
+            updatedInventory = updatedInventory.map(inv =>
+              inv.id === ing.inventoryItemId
+                ? { ...inv, quantity: Math.max(0, inv.quantity - (ing.quantityUsed! * cartItem.quantity)) }
+                : inv
+            );
+          }
+        });
+      }
+    });
+
+    setInventory(updatedInventory);
     addSale(sale);
     setLastSale(sale);
     setShowReceipt(true);
