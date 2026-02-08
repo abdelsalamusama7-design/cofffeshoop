@@ -1,8 +1,11 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { BarChart3, Calendar, Share2, Download, TrendingUp, DollarSign, ShoppingCart, Users } from 'lucide-react';
+import {
+  BarChart3, Calendar, Share2, Download, TrendingUp, DollarSign,
+  ShoppingCart, Users, ClipboardCheck, Wallet, Clock, ArrowUpDown
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getSales, getProducts, getCurrentUser, getWorkers } from '@/lib/store';
+import { getSales, getProducts, getCurrentUser, getWorkers, getAttendance, getTransactions, getInventory } from '@/lib/store';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Reports = () => {
@@ -10,135 +13,102 @@ const Reports = () => {
   const sales = getSales();
   const products = getProducts();
   const workers = getWorkers();
+  const attendance = getAttendance();
+  const transactions = getTransactions();
+  const inventory = getInventory();
 
   const today = new Date().toISOString().split('T')[0];
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
   const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+  const currentMonth = new Date().toISOString().slice(0, 7);
 
-  const getReportData = (startDate: string) => {
-    const filtered = sales.filter(s => s.date >= startDate);
-    const totalSales = filtered.reduce((sum, s) => sum + s.total, 0);
-    const totalCost = filtered.reduce((sum, s) =>
-      sum + s.items.reduce((c, item) => {
-        const p = products.find(pr => pr.id === item.productId);
-        return c + (p ? p.costPrice * item.quantity : 0);
-      }, 0), 0);
-    const totalItems = filtered.reduce((sum, s) => sum + s.items.reduce((c, i) => c + i.quantity, 0), 0);
+  const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
 
-    // Products breakdown
-    const productBreakdown: Record<string, { name: string; quantity: number; total: number; cost: number }> = {};
-    filtered.forEach(sale => {
-      sale.items.forEach(item => {
-        if (!productBreakdown[item.productId]) {
-          const p = products.find(pr => pr.id === item.productId);
-          productBreakdown[item.productId] = { name: item.productName, quantity: 0, total: 0, cost: 0 };
-        }
-        productBreakdown[item.productId].quantity += item.quantity;
-        productBreakdown[item.productId].total += item.total;
-        const p = products.find(pr => pr.id === item.productId);
-        if (p) productBreakdown[item.productId].cost += p.costPrice * item.quantity;
-      });
-    });
+  const startDate = period === 'daily' ? today : period === 'weekly' ? weekAgo : monthAgo;
+  const periodLabel = period === 'daily' ? 'يومي' : period === 'weekly' ? 'أسبوعي' : 'شهري';
 
-    // Worker performance breakdown
-    const workerBreakdown: Record<string, { name: string; salesCount: number; totalSales: number; totalCost: number; itemsSold: number }> = {};
-    filtered.forEach(sale => {
-      if (!workerBreakdown[sale.workerId]) {
-        workerBreakdown[sale.workerId] = { name: sale.workerName, salesCount: 0, totalSales: 0, totalCost: 0, itemsSold: 0 };
-      }
-      workerBreakdown[sale.workerId].salesCount += 1;
-      workerBreakdown[sale.workerId].totalSales += sale.total;
-      workerBreakdown[sale.workerId].itemsSold += sale.items.reduce((c, i) => c + i.quantity, 0);
-      workerBreakdown[sale.workerId].totalCost += sale.items.reduce((c, item) => {
-        const p = products.find(pr => pr.id === item.productId);
-        return c + (p ? p.costPrice * item.quantity : 0);
-      }, 0);
-    });
+  const filteredSales = useMemo(() => sales.filter(s => s.date >= startDate), [sales, startDate]);
 
-    return { filtered, totalSales, totalCost, totalItems, profit: totalSales - totalCost, productBreakdown, workerBreakdown };
-  };
-
-  const generateReportText = (period: string, data: ReturnType<typeof getReportData>) => {
-    let text = `تقرير ${period} - كافيه مانجر\n`;
-    text += `عدد الطلبات: ${data.filtered.length}\n`;
-    text += `إجمالي المبيعات: ${data.totalSales} ج.م\n`;
-    if (user?.role === 'admin') {
-      text += `إجمالي التكلفة: ${data.totalCost} ج.م\n`;
-      text += `صافي الربح: ${data.profit} ج.م\n`;
-    }
-    text += `\nتفاصيل المنتجات:\n`;
-    Object.values(data.productBreakdown).forEach(p => {
-      text += `${p.name}: ${p.quantity} وحدة - ${p.total} ج.م\n`;
-    });
-    return text;
-  };
-
-  const share = (period: string, data: ReturnType<typeof getReportData>, method: 'whatsapp' | 'email') => {
-    const text = generateReportText(period, data);
+  // ===== Share helper =====
+  const share = (title: string, text: string, method: 'whatsapp' | 'email') => {
     if (method === 'whatsapp') {
       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
     } else {
-      window.open(`mailto:?subject=${encodeURIComponent(`تقرير ${period}`)}&body=${encodeURIComponent(text)}`, '_blank');
+      window.open(`mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(text)}`, '_blank');
     }
   };
 
-  const downloadPDF = (period: string, data: ReturnType<typeof getReportData>) => {
-    const text = generateReportText(period, data);
-    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `تقرير_${period}_${today}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  const ShareButtons = ({ title, text }: { title: string; text: string }) => (
+    <div className="flex gap-2 mt-4">
+      <Button variant="outline" onClick={() => share(title, text, 'whatsapp')} className="flex-1">
+        <Share2 size={16} className="ml-2" />
+        واتساب
+      </Button>
+      <Button variant="outline" onClick={() => share(title, text, 'email')} className="flex-1">
+        <Share2 size={16} className="ml-2" />
+        إيميل
+      </Button>
+    </div>
+  );
 
-  const ReportView = ({ title, startDate }: { title: string; startDate: string }) => {
-    const data = getReportData(startDate);
+  // ===== 1. Sales Report =====
+  const SalesReport = () => {
+    const totalSales = filteredSales.reduce((sum, s) => sum + s.total, 0);
+    const totalItems = filteredSales.reduce((sum, s) => sum + s.items.reduce((c, i) => c + i.quantity, 0), 0);
+
+    const productBreakdown: Record<string, { name: string; quantity: number; total: number }> = {};
+    filteredSales.forEach(sale => {
+      sale.items.forEach(item => {
+        if (!productBreakdown[item.productId]) {
+          productBreakdown[item.productId] = { name: item.productName, quantity: 0, total: 0 };
+        }
+        productBreakdown[item.productId].quantity += item.quantity;
+        productBreakdown[item.productId].total += item.total;
+      });
+    });
+
+    let text = `📊 تقرير المبيعات ${periodLabel}\n`;
+    text += `التاريخ: ${today}\n────────────\n`;
+    text += `عدد الطلبات: ${filteredSales.length}\n`;
+    text += `إجمالي المبيعات: ${totalSales} ج.م\n`;
+    text += `عدد المنتجات المباعة: ${totalItems}\n\n`;
+    text += `تفاصيل المنتجات:\n`;
+    Object.values(productBreakdown).sort((a, b) => b.total - a.total).forEach(p => {
+      text += `• ${p.name}: ${p.quantity} وحدة - ${p.total} ج.م\n`;
+    });
+
     return (
       <div className="space-y-4">
-        {/* Summary Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <div className="glass-card rounded-xl p-4 text-center">
-            <ShoppingCart size={24} className="mx-auto text-accent mb-2" />
-            <p className="text-2xl font-bold text-foreground">{data.filtered.length}</p>
+            <ShoppingCart size={22} className="mx-auto text-accent mb-2" />
+            <p className="text-xl font-bold text-foreground">{filteredSales.length}</p>
             <p className="text-xs text-muted-foreground">طلب</p>
           </div>
           <div className="glass-card rounded-xl p-4 text-center">
-            <DollarSign size={24} className="mx-auto text-success mb-2" />
-            <p className="text-2xl font-bold text-foreground">{data.totalSales} ج.م</p>
+            <DollarSign size={22} className="mx-auto text-success mb-2" />
+            <p className="text-xl font-bold text-foreground">{totalSales} ج.م</p>
             <p className="text-xs text-muted-foreground">مبيعات</p>
           </div>
           <div className="glass-card rounded-xl p-4 text-center">
-            <TrendingUp size={24} className="mx-auto text-info mb-2" />
-            <p className="text-2xl font-bold text-foreground">{data.totalItems}</p>
+            <ArrowUpDown size={22} className="mx-auto text-info mb-2" />
+            <p className="text-xl font-bold text-foreground">{totalItems}</p>
             <p className="text-xs text-muted-foreground">منتج مباع</p>
           </div>
-          {user?.role === 'admin' && (
-            <div className="glass-card rounded-xl p-4 text-center">
-              <BarChart3 size={24} className="mx-auto text-warning mb-2" />
-              <p className="text-2xl font-bold text-foreground">{data.profit} ج.م</p>
-              <p className="text-xs text-muted-foreground">صافي الربح</p>
-            </div>
-          )}
         </div>
 
-        {/* Products breakdown */}
         <div className="glass-card rounded-xl p-4">
           <h3 className="font-bold text-foreground mb-3">تفاصيل المنتجات</h3>
-          {Object.values(data.productBreakdown).length === 0 ? (
-            <p className="text-muted-foreground text-sm text-center py-4">لا توجد مبيعات في هذه الفترة</p>
+          {Object.values(productBreakdown).length === 0 ? (
+            <p className="text-muted-foreground text-sm text-center py-4">لا توجد مبيعات</p>
           ) : (
             <div className="space-y-2">
-              {Object.values(data.productBreakdown).sort((a, b) => b.total - a.total).map((p, i) => (
-                <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-secondary gap-1">
+              {Object.values(productBreakdown).sort((a, b) => b.total - a.total).map((p, i) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-secondary">
                   <span className="text-sm font-medium text-foreground">{p.name}</span>
-                  <div className="flex items-center gap-3 text-sm flex-wrap">
+                  <div className="flex items-center gap-3 text-sm">
                     <span className="text-muted-foreground">{p.quantity} وحدة</span>
                     <span className="font-bold text-foreground">{p.total} ج.م</span>
-                    {user?.role === 'admin' && (
-                      <span className="text-success font-medium">ربح: {p.total - p.cost} ج.م</span>
-                    )}
                   </div>
                 </div>
               ))}
@@ -146,53 +116,337 @@ const Reports = () => {
           )}
         </div>
 
-        {/* Worker Performance - Admin only */}
-        {user?.role === 'admin' && Object.keys(data.workerBreakdown).length > 0 && (
+        {/* Sale by sale detail */}
+        {filteredSales.length > 0 && (
           <div className="glass-card rounded-xl p-4">
-            <h3 className="font-bold text-foreground mb-3 flex items-center gap-2">
-              <Users size={18} />
-              أداء العمال
-            </h3>
-            <div className="space-y-3">
-              {Object.values(data.workerBreakdown).sort((a, b) => b.totalSales - a.totalSales).map((w, i) => (
-                <div key={i} className="p-3 rounded-lg bg-secondary space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-foreground">{w.name}</span>
-                    <span className="text-xs bg-accent/20 text-accent px-2 py-1 rounded-full font-bold">{w.totalSales} ج.م</span>
+            <h3 className="font-bold text-foreground mb-3">تفاصيل الطلبات</h3>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {filteredSales.slice().reverse().map((sale, i) => (
+                <div key={sale.id} className="p-3 rounded-lg bg-secondary text-sm">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-foreground">{sale.workerName} - {sale.time}</span>
+                    <span className="font-bold text-foreground">{sale.total} ج.م</span>
                   </div>
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
-                    <span>{w.salesCount} طلب</span>
-                    <span>{w.itemsSold} منتج</span>
-                    <span className="text-success font-medium">ربح: {w.totalSales - w.totalCost} ج.م</span>
-                  </div>
-                  {/* Performance bar */}
-                  <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-accent rounded-full transition-all"
-                      style={{ width: `${Math.min((w.totalSales / Math.max(data.totalSales, 1)) * 100, 100)}%` }}
-                    />
-                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {sale.items.map(it => `${it.productName} x${it.quantity}`).join(' • ')}
+                  </p>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Share/Export */}
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => share(title, data, 'whatsapp')} className="flex-1">
-            <Share2 size={16} className="ml-2" />
-            واتساب
-          </Button>
-          <Button variant="outline" onClick={() => share(title, data, 'email')} className="flex-1">
-            <Share2 size={16} className="ml-2" />
-            إيميل
-          </Button>
-          <Button variant="outline" onClick={() => downloadPDF(title, data)}>
-            <Download size={16} className="ml-2" />
-            تحميل
-          </Button>
+        <ShareButtons title={`تقرير المبيعات ${periodLabel}`} text={text} />
+      </div>
+    );
+  };
+
+  // ===== 2. Profits Report =====
+  const ProfitsReport = () => {
+    const totalSales = filteredSales.reduce((sum, s) => sum + s.total, 0);
+    const totalCost = filteredSales.reduce((sum, s) =>
+      sum + s.items.reduce((c, item) => {
+        const p = products.find(pr => pr.id === item.productId);
+        return c + (p ? p.costPrice * item.quantity : 0);
+      }, 0), 0);
+    const profit = totalSales - totalCost;
+    const margin = totalSales > 0 ? Math.round((profit / totalSales) * 100) : 0;
+
+    const productProfits: { name: string; revenue: number; cost: number; profit: number }[] = [];
+    const map: Record<string, { name: string; revenue: number; cost: number }> = {};
+    filteredSales.forEach(sale => {
+      sale.items.forEach(item => {
+        if (!map[item.productId]) map[item.productId] = { name: item.productName, revenue: 0, cost: 0 };
+        map[item.productId].revenue += item.total;
+        const p = products.find(pr => pr.id === item.productId);
+        if (p) map[item.productId].cost += p.costPrice * item.quantity;
+      });
+    });
+    Object.values(map).forEach(m => productProfits.push({ ...m, profit: m.revenue - m.cost }));
+    productProfits.sort((a, b) => b.profit - a.profit);
+
+    let text = `💰 تقرير الأرباح ${periodLabel}\n`;
+    text += `التاريخ: ${today}\n────────────\n`;
+    text += `إجمالي المبيعات: ${totalSales} ج.م\n`;
+    text += `إجمالي التكلفة: ${totalCost} ج.م\n`;
+    text += `صافي الربح: ${profit} ج.م\n`;
+    text += `هامش الربح: ${margin}%\n\n`;
+    text += `أرباح المنتجات:\n`;
+    productProfits.forEach(p => {
+      text += `• ${p.name}: إيراد ${p.revenue} - تكلفة ${p.cost} = ربح ${p.profit} ج.م\n`;
+    });
+
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="glass-card rounded-xl p-4 text-center">
+            <DollarSign size={22} className="mx-auto text-success mb-2" />
+            <p className="text-xl font-bold text-foreground">{totalSales} ج.م</p>
+            <p className="text-xs text-muted-foreground">إيرادات</p>
+          </div>
+          <div className="glass-card rounded-xl p-4 text-center">
+            <Wallet size={22} className="mx-auto text-destructive mb-2" />
+            <p className="text-xl font-bold text-foreground">{totalCost} ج.م</p>
+            <p className="text-xs text-muted-foreground">تكلفة</p>
+          </div>
+          <div className="glass-card rounded-xl p-4 text-center">
+            <TrendingUp size={22} className="mx-auto text-accent mb-2" />
+            <p className="text-xl font-bold text-foreground">{profit} ج.م</p>
+            <p className="text-xs text-muted-foreground">صافي الربح</p>
+          </div>
+          <div className="glass-card rounded-xl p-4 text-center">
+            <BarChart3 size={22} className="mx-auto text-info mb-2" />
+            <p className="text-xl font-bold text-foreground">{margin}%</p>
+            <p className="text-xs text-muted-foreground">هامش الربح</p>
+          </div>
         </div>
+
+        <div className="glass-card rounded-xl p-4">
+          <h3 className="font-bold text-foreground mb-3">أرباح المنتجات</h3>
+          {productProfits.length === 0 ? (
+            <p className="text-muted-foreground text-sm text-center py-4">لا توجد بيانات</p>
+          ) : (
+            <div className="space-y-2">
+              {productProfits.map((p, i) => (
+                <div key={i} className="p-3 rounded-lg bg-secondary space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-foreground">{p.name}</span>
+                    <span className="font-bold text-success text-sm">{p.profit} ج.م ربح</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <span>إيراد: {p.revenue} ج.م</span>
+                    <span>تكلفة: {p.cost} ج.م</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-success rounded-full" style={{ width: `${Math.min((p.profit / Math.max(productProfits[0]?.profit, 1)) * 100, 100)}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <ShareButtons title={`تقرير الأرباح ${periodLabel}`} text={text} />
+      </div>
+    );
+  };
+
+  // ===== 3. Worker Performance Report =====
+  const WorkerPerformanceReport = () => {
+    const workerData = workers.map(w => {
+      const workerSales = filteredSales.filter(s => s.workerId === w.id);
+      const totalSales = workerSales.reduce((sum, s) => sum + s.total, 0);
+      const itemsSold = workerSales.reduce((sum, s) => sum + s.items.reduce((c, i) => c + i.quantity, 0), 0);
+      const totalCost = workerSales.reduce((sum, s) =>
+        sum + s.items.reduce((c, item) => {
+          const p = products.find(pr => pr.id === item.productId);
+          return c + (p ? p.costPrice * item.quantity : 0);
+        }, 0), 0);
+      return { name: w.name, salesCount: workerSales.length, totalSales, itemsSold, profit: totalSales - totalCost };
+    }).sort((a, b) => b.totalSales - a.totalSales);
+
+    const overallTotal = workerData.reduce((s, w) => s + w.totalSales, 0);
+
+    let text = `👷 تقرير أداء العمال ${periodLabel}\n`;
+    text += `التاريخ: ${today}\n────────────\n`;
+    workerData.forEach(w => {
+      text += `\n👤 ${w.name}\n`;
+      text += `  الطلبات: ${w.salesCount} | المنتجات: ${w.itemsSold}\n`;
+      text += `  المبيعات: ${w.totalSales} ج.م | الربح: ${w.profit} ج.م\n`;
+    });
+
+    return (
+      <div className="space-y-4">
+        {workerData.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">لا توجد بيانات</p>
+        ) : (
+          <div className="space-y-3">
+            {workerData.map((w, i) => (
+              <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                className="glass-card rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {i === 0 && <span className="text-lg">🥇</span>}
+                    {i === 1 && <span className="text-lg">🥈</span>}
+                    {i === 2 && <span className="text-lg">🥉</span>}
+                    <span className="font-bold text-foreground">{w.name}</span>
+                  </div>
+                  <span className="text-sm font-bold bg-accent/20 text-accent px-2 py-1 rounded-full">{w.totalSales} ج.م</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                  <div className="bg-secondary rounded-lg p-2">
+                    <p className="font-bold text-foreground">{w.salesCount}</p>
+                    <p className="text-muted-foreground">طلب</p>
+                  </div>
+                  <div className="bg-secondary rounded-lg p-2">
+                    <p className="font-bold text-foreground">{w.itemsSold}</p>
+                    <p className="text-muted-foreground">منتج</p>
+                  </div>
+                  <div className="bg-secondary rounded-lg p-2">
+                    <p className="font-bold text-success">{w.profit} ج.م</p>
+                    <p className="text-muted-foreground">ربح</p>
+                  </div>
+                </div>
+                <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                  <div className="h-full bg-accent rounded-full" style={{ width: `${Math.min((w.totalSales / Math.max(overallTotal, 1)) * 100, 100)}%` }} />
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+        <ShareButtons title={`تقرير أداء العمال ${periodLabel}`} text={text} />
+      </div>
+    );
+  };
+
+  // ===== 4. Expenses Report =====
+  const ExpensesReport = () => {
+    const filteredTxns = transactions.filter(t => t.date >= startDate);
+    const advances = filteredTxns.filter(t => t.type === 'advance');
+    const bonuses = filteredTxns.filter(t => t.type === 'bonus');
+    const totalAdvances = advances.reduce((s, t) => s + t.amount, 0);
+    const totalBonuses = bonuses.reduce((s, t) => s + t.amount, 0);
+
+    // Inventory cost (total value of current inventory)
+    const inventoryCost = inventory.reduce((s, inv) => s + inv.quantity * inv.costPerUnit, 0);
+
+    // Cost of goods sold in period
+    const cogs = filteredSales.reduce((sum, s) =>
+      sum + s.items.reduce((c, item) => {
+        const p = products.find(pr => pr.id === item.productId);
+        return c + (p ? p.costPrice * item.quantity : 0);
+      }, 0), 0);
+
+    const totalExpenses = totalAdvances + totalBonuses + cogs;
+
+    let text = `💸 تقرير المصروفات ${periodLabel}\n`;
+    text += `التاريخ: ${today}\n────────────\n`;
+    text += `تكلفة البضاعة المباعة: ${cogs} ج.م\n`;
+    text += `سلف العمال: ${totalAdvances} ج.م\n`;
+    text += `مكافآت العمال: ${totalBonuses} ج.م\n`;
+    text += `إجمالي المصروفات: ${totalExpenses} ج.م\n`;
+    text += `\nقيمة المخزون الحالي: ${inventoryCost} ج.م\n`;
+    if (filteredTxns.length > 0) {
+      text += `\nتفاصيل المعاملات:\n`;
+      filteredTxns.forEach(t => {
+        text += `• ${t.workerName}: ${t.type === 'advance' ? 'سلفة' : 'مكافأة'} ${t.amount} ج.م - ${t.note}\n`;
+      });
+    }
+
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="glass-card rounded-xl p-4 text-center">
+            <Wallet size={22} className="mx-auto text-destructive mb-2" />
+            <p className="text-xl font-bold text-foreground">{totalExpenses} ج.م</p>
+            <p className="text-xs text-muted-foreground">إجمالي المصروفات</p>
+          </div>
+          <div className="glass-card rounded-xl p-4 text-center">
+            <ShoppingCart size={22} className="mx-auto text-warning mb-2" />
+            <p className="text-xl font-bold text-foreground">{cogs} ج.م</p>
+            <p className="text-xs text-muted-foreground">تكلفة البضاعة</p>
+          </div>
+          <div className="glass-card rounded-xl p-4 text-center">
+            <DollarSign size={22} className="mx-auto text-info mb-2" />
+            <p className="text-xl font-bold text-foreground">{totalAdvances} ج.م</p>
+            <p className="text-xs text-muted-foreground">سلف</p>
+          </div>
+          <div className="glass-card rounded-xl p-4 text-center">
+            <TrendingUp size={22} className="mx-auto text-success mb-2" />
+            <p className="text-xl font-bold text-foreground">{totalBonuses} ج.م</p>
+            <p className="text-xs text-muted-foreground">مكافآت</p>
+          </div>
+        </div>
+
+        <div className="glass-card rounded-xl p-4">
+          <h3 className="font-bold text-foreground mb-2">قيمة المخزون الحالي</h3>
+          <p className="text-2xl font-bold text-accent">{inventoryCost} ج.م</p>
+        </div>
+
+        {filteredTxns.length > 0 && (
+          <div className="glass-card rounded-xl p-4">
+            <h3 className="font-bold text-foreground mb-3">معاملات العمال</h3>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {filteredTxns.slice().reverse().map((t, i) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-secondary">
+                  <div>
+                    <span className="text-sm font-medium text-foreground">{t.workerName}</span>
+                    <p className="text-xs text-muted-foreground">{t.note} • {t.date}</p>
+                  </div>
+                  <span className={`text-sm font-bold ${t.type === 'advance' ? 'text-destructive' : 'text-success'}`}>
+                    {t.type === 'advance' ? 'سلفة' : 'مكافأة'} {t.amount} ج.م
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <ShareButtons title={`تقرير المصروفات ${periodLabel}`} text={text} />
+      </div>
+    );
+  };
+
+  // ===== 5. Attendance Report =====
+  const AttendanceReport = () => {
+    const filteredAttendance = attendance.filter(r => r.date >= startDate);
+    const workerAttendance = workers.filter(w => w.role === 'worker').map(w => {
+      const records = filteredAttendance.filter(r => r.workerId === w.id);
+      const present = records.filter(r => r.type === 'present').length;
+      const absent = records.filter(r => r.type === 'absent').length;
+      const leave = records.filter(r => r.type === 'leave').length;
+      const totalHours = Math.round(records.reduce((s, r) => s + (r.hoursWorked || 0), 0) * 10) / 10;
+      const dailyRate = w.salary / 30;
+      const deductions = absent * dailyRate;
+      const netSalary = Math.round(w.salary - deductions);
+      return { name: w.name, present, absent, leave, totalHours, salary: w.salary, netSalary };
+    });
+
+    let text = `📋 تقرير الحضور والانصراف ${periodLabel}\n`;
+    text += `التاريخ: ${today}\n────────────\n`;
+    workerAttendance.forEach(w => {
+      text += `\n👤 ${w.name}\n`;
+      text += `  حضور: ${w.present} | غياب: ${w.absent} | إجازة: ${w.leave}\n`;
+      text += `  ساعات العمل: ${w.totalHours} ساعة\n`;
+      text += `  المرتب الصافي: ${w.netSalary} ج.م\n`;
+    });
+
+    return (
+      <div className="space-y-4">
+        {workerAttendance.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">لا يوجد عمال</p>
+        ) : (
+          <div className="space-y-3">
+            {workerAttendance.map((w, i) => (
+              <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                className="glass-card rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-foreground">{w.name}</span>
+                  <span className="text-sm font-medium text-accent">صافي: {w.netSalary} ج.م</span>
+                </div>
+                <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                  <div className="bg-success/10 rounded-lg p-2">
+                    <p className="font-bold text-success text-lg">{w.present}</p>
+                    <p className="text-muted-foreground">حضور</p>
+                  </div>
+                  <div className="bg-destructive/10 rounded-lg p-2">
+                    <p className="font-bold text-destructive text-lg">{w.absent}</p>
+                    <p className="text-muted-foreground">غياب</p>
+                  </div>
+                  <div className="bg-warning/10 rounded-lg p-2">
+                    <p className="font-bold text-warning text-lg">{w.leave}</p>
+                    <p className="text-muted-foreground">إجازة</p>
+                  </div>
+                  <div className="bg-info/10 rounded-lg p-2">
+                    <p className="font-bold text-info text-lg">{w.totalHours}</p>
+                    <p className="text-muted-foreground">ساعة</p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+        <ShareButtons title={`تقرير الحضور ${periodLabel}`} text={text} />
       </div>
     );
   };
@@ -201,7 +455,7 @@ const Reports = () => {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-foreground">التقارير</h1>
-        <ReportView title="يومي" startDate={today} />
+        <SalesReport />
       </div>
     );
   }
@@ -209,15 +463,46 @@ const Reports = () => {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-foreground">التقارير</h1>
-      <Tabs defaultValue="daily" dir="rtl">
-        <TabsList className="w-full grid grid-cols-3">
-          <TabsTrigger value="daily">يومي</TabsTrigger>
-          <TabsTrigger value="weekly">أسبوعي</TabsTrigger>
-          <TabsTrigger value="monthly">شهري</TabsTrigger>
+
+      {/* Period selector */}
+      <div className="grid grid-cols-3 gap-2">
+        {(['daily', 'weekly', 'monthly'] as const).map(p => (
+          <Button key={p} variant={period === p ? 'default' : 'outline'} onClick={() => setPeriod(p)}
+            className={period === p ? 'cafe-gradient text-primary-foreground' : ''}>
+            {p === 'daily' ? 'يومي' : p === 'weekly' ? 'أسبوعي' : 'شهري'}
+          </Button>
+        ))}
+      </div>
+
+      {/* Report tabs */}
+      <Tabs defaultValue="sales" dir="rtl">
+        <TabsList className="w-full grid grid-cols-5 h-auto">
+          <TabsTrigger value="sales" className="text-xs py-2 px-1">
+            <ShoppingCart size={14} className="ml-1 hidden sm:inline" />
+            المبيعات
+          </TabsTrigger>
+          <TabsTrigger value="profits" className="text-xs py-2 px-1">
+            <TrendingUp size={14} className="ml-1 hidden sm:inline" />
+            الأرباح
+          </TabsTrigger>
+          <TabsTrigger value="workers" className="text-xs py-2 px-1">
+            <Users size={14} className="ml-1 hidden sm:inline" />
+            أداء العمال
+          </TabsTrigger>
+          <TabsTrigger value="expenses" className="text-xs py-2 px-1">
+            <Wallet size={14} className="ml-1 hidden sm:inline" />
+            المصروفات
+          </TabsTrigger>
+          <TabsTrigger value="attendance" className="text-xs py-2 px-1">
+            <ClipboardCheck size={14} className="ml-1 hidden sm:inline" />
+            الحضور
+          </TabsTrigger>
         </TabsList>
-        <TabsContent value="daily"><ReportView title="يومي" startDate={today} /></TabsContent>
-        <TabsContent value="weekly"><ReportView title="أسبوعي" startDate={weekAgo} /></TabsContent>
-        <TabsContent value="monthly"><ReportView title="شهري" startDate={monthAgo} /></TabsContent>
+        <TabsContent value="sales"><SalesReport /></TabsContent>
+        <TabsContent value="profits"><ProfitsReport /></TabsContent>
+        <TabsContent value="workers"><WorkerPerformanceReport /></TabsContent>
+        <TabsContent value="expenses"><ExpensesReport /></TabsContent>
+        <TabsContent value="attendance"><AttendanceReport /></TabsContent>
       </Tabs>
     </div>
   );
