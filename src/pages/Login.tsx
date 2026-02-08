@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Coffee, Lock, User } from 'lucide-react';
+import { Lock, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getWorkers, setCurrentUser } from '@/lib/store';
 import { useNavigate } from 'react-router-dom';
-import cafeHero from '@/assets/cafe-hero.jpg';
+import logo from '@/assets/logo.jpg';
 
 const Login = () => {
   const [name, setName] = useState('');
@@ -37,18 +37,11 @@ const Login = () => {
         <div className="glass-card rounded-2xl p-8 space-y-6">
           {/* Header */}
           <div className="text-center space-y-4">
-            <div className="w-20 h-20 mx-auto rounded-2xl cafe-gradient flex items-center justify-center shadow-lg">
-              <Coffee size={36} className="text-primary-foreground" />
-            </div>
+            <img src={logo} alt="بن العميد" className="w-24 h-24 mx-auto rounded-full shadow-lg object-cover" />
             <div>
-              <h1 className="text-3xl font-bold text-foreground">كافيه مانجر</h1>
+              <h1 className="text-3xl font-bold text-foreground">بن العميد</h1>
               <p className="text-muted-foreground mt-1">نظام إدارة الكافيه</p>
             </div>
-          </div>
-
-          {/* Hero image */}
-          <div className="rounded-xl overflow-hidden">
-            <img src={cafeHero} alt="كافيه" className="w-full h-32 object-cover" />
           </div>
 
           {/* Form */}

@@ -9,10 +9,8 @@ import {
   Users,
   ClipboardCheck,
   LogOut,
-  Coffee,
-  Menu,
-  X,
 } from 'lucide-react';
+import logo from '@/assets/logo.jpg';
 import { getCurrentUser, setCurrentUser } from '@/lib/store';
 
 interface LayoutProps {
@@ -49,11 +47,9 @@ const AppLayout = ({ children }: LayoutProps) => {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex fixed inset-y-0 right-0 z-40 w-64 bg-sidebar text-sidebar-foreground flex-col">
         <div className="flex items-center gap-3 p-6 border-b border-sidebar-border">
-          <div className="w-10 h-10 rounded-xl gold-gradient flex items-center justify-center">
-            <Coffee size={22} className="text-accent-foreground" />
-          </div>
+          <img src={logo} alt="بن العميد" className="w-10 h-10 rounded-full object-cover" />
           <div>
-            <h1 className="font-bold text-lg text-sidebar-foreground">كافيه مانجر</h1>
+            <h1 className="font-bold text-lg text-sidebar-foreground">بن العميد</h1>
             <p className="text-xs text-sidebar-foreground/60">{user.name} - {user.role === 'admin' ? 'مدير' : 'عامل'}</p>
           </div>
         </div>
@@ -97,10 +93,8 @@ const AppLayout = ({ children }: LayoutProps) => {
           <LogOut size={20} />
         </button>
         <div className="flex items-center gap-2">
-          <span className="font-bold text-sidebar-foreground">كافيه مانجر</span>
-          <div className="w-8 h-8 rounded-lg gold-gradient flex items-center justify-center">
-            <Coffee size={16} className="text-accent-foreground" />
-          </div>
+          <span className="font-bold text-sidebar-foreground">بن العميد</span>
+          <img src={logo} alt="بن العميد" className="w-8 h-8 rounded-full object-cover" />
         </div>
       </header>
 
