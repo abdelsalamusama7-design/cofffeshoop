@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -9,9 +9,12 @@ import {
   Users,
   ClipboardCheck,
   LogOut,
+  Bell,
+  AlertTriangle,
+  X,
 } from 'lucide-react';
 import logo from '@/assets/logo.jpg';
-import { getCurrentUser, setCurrentUser } from '@/lib/store';
+import { getCurrentUser, setCurrentUser, getInventory } from '@/lib/store';
 
 interface LayoutProps {
   children: ReactNode;
@@ -30,7 +33,13 @@ const AppLayout = ({ children }: LayoutProps) => {
   const location = useLocation();
   const user = getCurrentUser();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
+  const LOW_STOCK_THRESHOLD = 5;
+  const lowStockItems = useMemo(() => {
+    const inventory = getInventory();
+    return inventory.filter(item => item.quantity <= LOW_STOCK_THRESHOLD);
+  }, [location.pathname]);
   if (!user) return <>{children}</>;
 
   const filteredNav = user.role === 'worker'
@@ -46,12 +55,24 @@ const AppLayout = ({ children }: LayoutProps) => {
     <div className="flex flex-col md:flex-row min-h-screen min-h-[100dvh]">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex fixed inset-y-0 right-0 z-40 w-64 bg-sidebar text-sidebar-foreground flex-col">
-        <div className="flex items-center gap-3 p-6 border-b border-sidebar-border">
-          <img src={logo} alt="بن العميد" className="w-10 h-10 rounded-full object-cover" />
-          <div>
-            <h1 className="font-bold text-lg text-sidebar-foreground">بن العميد</h1>
-            <p className="text-xs text-sidebar-foreground/60">{user.name} - {user.role === 'admin' ? 'مدير' : 'عامل'}</p>
+        <div className="flex items-center justify-between p-6 border-b border-sidebar-border">
+          <div className="flex items-center gap-3">
+            <img src={logo} alt="بن العميد" className="w-10 h-10 rounded-full object-cover" />
+            <div>
+              <h1 className="font-bold text-lg text-sidebar-foreground">بن العميد</h1>
+              <p className="text-xs text-sidebar-foreground/60">{user.name} - {user.role === 'admin' ? 'مدير' : 'عامل'}</p>
+            </div>
           </div>
+          {user.role === 'admin' && (
+            <button onClick={() => setShowNotifications(!showNotifications)} className="p-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent relative">
+              <Bell size={20} />
+              {lowStockItems.length > 0 && (
+                <span className="absolute top-1 left-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                  {lowStockItems.length}
+                </span>
+              )}
+            </button>
+          )}
         </div>
 
         <nav className="flex-1 p-4 space-y-1">
@@ -89,14 +110,71 @@ const AppLayout = ({ children }: LayoutProps) => {
 
       {/* Mobile Top Bar */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-sidebar text-sidebar-foreground flex items-center justify-between px-4 h-14" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-        <button onClick={handleLogout} className="p-2 rounded-lg text-sidebar-foreground/70">
-          <LogOut size={20} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button onClick={handleLogout} className="p-2 rounded-lg text-sidebar-foreground/70">
+            <LogOut size={20} />
+          </button>
+          {user.role === 'admin' && (
+            <button onClick={() => setShowNotifications(!showNotifications)} className="p-2 rounded-lg text-sidebar-foreground/70 relative">
+              <Bell size={20} />
+              {lowStockItems.length > 0 && (
+                <span className="absolute top-1 left-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                  {lowStockItems.length}
+                </span>
+              )}
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <span className="font-bold text-sidebar-foreground">بن العميد</span>
           <img src={logo} alt="بن العميد" className="w-8 h-8 rounded-full object-cover" />
         </div>
       </header>
+
+      {/* Notifications Dropdown */}
+      <AnimatePresence>
+        {showNotifications && user.role === 'admin' && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="fixed top-14 left-2 right-2 md:left-auto md:right-auto md:top-4 md:mr-72 z-50 bg-card border border-border rounded-2xl shadow-2xl max-h-80 overflow-auto"
+            style={{ marginTop: 'env(safe-area-inset-top)' }}
+          >
+            <div className="flex items-center justify-between p-3 border-b border-border">
+              <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+                <Bell size={16} />
+                الإشعارات
+              </h3>
+              <button onClick={() => setShowNotifications(false)} className="p-1 rounded-lg hover:bg-muted">
+                <X size={16} className="text-muted-foreground" />
+              </button>
+            </div>
+            {lowStockItems.length === 0 ? (
+              <div className="p-4 text-center text-sm text-muted-foreground">لا توجد تنبيهات</div>
+            ) : (
+              <div className="p-2 space-y-1">
+                {lowStockItems.map(item => (
+                  <Link
+                    key={item.id}
+                    to="/inventory"
+                    onClick={() => setShowNotifications(false)}
+                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-destructive/15 flex items-center justify-center shrink-0">
+                      <AlertTriangle size={16} className="text-destructive" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">⚠️ {item.name}</p>
+                      <p className="text-xs text-muted-foreground">المتبقي: {item.quantity} {item.unit} فقط</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main content */}
       <main className="flex-1 md:mr-64 pt-14 md:pt-0 pb-20 md:pb-0">
