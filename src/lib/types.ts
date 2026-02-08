@@ -64,3 +64,13 @@ export interface AttendanceRecord {
   shift?: 'morning' | 'evening';
   hoursWorked?: number;
 }
+
+export interface WorkerTransaction {
+  id: string;
+  workerId: string;
+  workerName: string;
+  type: 'advance' | 'bonus';
+  amount: number;
+  note: string;
+  date: string;
+}
