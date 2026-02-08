@@ -10,7 +10,7 @@ const SplashScreen = ({ onFinish }: { onFinish: () => void }) => {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.5 }}
       onAnimationComplete={() => {
-        setTimeout(onFinish, 2200);
+        setTimeout(onFinish, 4500);
       }}
     >
       <motion.div
