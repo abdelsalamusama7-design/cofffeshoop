@@ -105,9 +105,15 @@ const AppLayout = ({ children }: LayoutProps) => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="p-4 md:p-8"
+          className="p-4 md:p-8 pb-24"
         >
           {children}
+          {/* Footer */}
+          <div className="mt-8 pt-4 border-t border-border text-center space-y-0.5">
+            <p className="text-xs font-semibold text-muted-foreground">بن العميد</p>
+            <p className="text-[10px] text-muted-foreground/70">تنفيذ شركة InstaTech للبرمجيات</p>
+            <p className="text-[10px] text-muted-foreground/70" dir="ltr">📱 01227080430</p>
+          </div>
         </motion.div>
       </main>
 
