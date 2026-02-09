@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import logo from '@/assets/logo.jpg';
 import { getCurrentUser, setCurrentUser, getInventory } from '@/lib/store';
+import ChatBot from './ChatBot';
 
 interface LayoutProps {
   children: ReactNode;
@@ -219,6 +220,9 @@ const AppLayout = ({ children }: LayoutProps) => {
           })}
         </div>
       </nav>
+
+      {/* AI Chatbot */}
+      <ChatBot />
     </div>
   );
 };
