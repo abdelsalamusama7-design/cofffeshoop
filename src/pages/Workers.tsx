@@ -142,6 +142,9 @@ const Workers = () => {
       {/* Salary Reports Section */}
       <SalaryReportsSection workers={workersList} transactions={transactions} />
 
+      {/* Advances & Bonuses Detail Section */}
+      <AdvancesSection workers={workersList} transactions={transactions} />
+
       {/* Add Worker Dialog */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
         <DialogContent>
@@ -391,6 +394,91 @@ const SalaryReportsSection = ({ workers, transactions }: { workers: Worker[]; tr
         ))}
         {report.length === 0 && (
           <p className="text-center text-muted-foreground py-8">لا يوجد عمال لعرض التقرير</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* ===================== Advances & Bonuses Detail ===================== */
+const AdvancesSection = ({ workers, transactions }: { workers: Worker[]; transactions: WorkerTransaction[] }) => {
+  const [filterWorker, setFilterWorker] = useState<string>('all');
+
+  const filteredTxns = useMemo(() => {
+    let txns = [...transactions].sort((a, b) => b.date.localeCompare(a.date));
+    if (filterWorker !== 'all') txns = txns.filter(t => t.workerId === filterWorker);
+    return txns;
+  }, [transactions, filterWorker]);
+
+  const workersList = workers.filter(w => w.role !== 'admin');
+
+  const totalAdvances = filteredTxns.filter(t => t.type === 'advance').reduce((s, t) => s + t.amount, 0);
+  const totalBonuses = filteredTxns.filter(t => t.type === 'bonus').reduce((s, t) => s + t.amount, 0);
+
+  return (
+    <div className="space-y-4 mt-8">
+      <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+        <HandCoins size={22} className="text-accent" />
+        سجل السلف والمكافآت
+      </h2>
+
+      {/* Filter */}
+      <Select value={filterWorker} onValueChange={setFilterWorker}>
+        <SelectTrigger className="w-full bg-secondary">
+          <SelectValue placeholder="كل العمال" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">كل العمال</SelectItem>
+          {workersList.map(w => (
+            <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="glass-card rounded-xl p-4 text-center">
+          <p className="text-xs text-muted-foreground mb-1">إجمالي السلف</p>
+          <p className="text-xl font-bold text-destructive">{totalAdvances} ج.م</p>
+          <p className="text-[10px] text-muted-foreground mt-1">{filteredTxns.filter(t => t.type === 'advance').length} سلفة</p>
+        </div>
+        <div className="glass-card rounded-xl p-4 text-center">
+          <p className="text-xs text-muted-foreground mb-1">إجمالي المكافآت</p>
+          <p className="text-xl font-bold text-primary">{totalBonuses} ج.م</p>
+          <p className="text-[10px] text-muted-foreground mt-1">{filteredTxns.filter(t => t.type === 'bonus').length} مكافأة</p>
+        </div>
+      </div>
+
+      {/* Transactions List */}
+      <div className="space-y-2">
+        {filteredTxns.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">لا توجد سلف أو مكافآت مسجلة</p>
+        ) : (
+          filteredTxns.map((txn, i) => (
+            <motion.div
+              key={txn.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.03 }}
+              className="glass-card rounded-xl p-3 flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${txn.type === 'advance' ? 'bg-destructive/15' : 'bg-primary/15'}`}>
+                  {txn.type === 'advance' ? <HandCoins size={18} className="text-destructive" /> : <Gift size={18} className="text-primary" />}
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground text-sm">{txn.workerName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {txn.type === 'advance' ? 'سلفة' : 'مكافأة'} • {txn.date}
+                  </p>
+                  {txn.note && <p className="text-xs text-muted-foreground/70 mt-0.5">📝 {txn.note}</p>}
+                </div>
+              </div>
+              <p className={`font-bold text-sm ${txn.type === 'advance' ? 'text-destructive' : 'text-primary'}`}>
+                {txn.type === 'advance' ? '-' : '+'}{txn.amount} ج.م
+              </p>
+            </motion.div>
+          ))
         )}
       </div>
     </div>
