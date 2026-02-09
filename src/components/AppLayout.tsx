@@ -34,6 +34,12 @@ const navItems = [
   { path: '/settings', label: 'الإعدادات', icon: Settings },
 ];
 
+const workerNavItems = [
+  { path: '/', label: 'الرئيسية', icon: LayoutDashboard },
+  { path: '/sales', label: 'المبيعات', icon: ShoppingCart },
+  { path: '/my-dashboard', label: 'حسابي', icon: ClipboardCheck },
+];
+
 const AppLayout = ({ children }: LayoutProps) => {
   const location = useLocation();
   const user = getCurrentUser();
@@ -47,9 +53,7 @@ const AppLayout = ({ children }: LayoutProps) => {
   }, [location.pathname]);
   if (!user) return <>{children}</>;
 
-  const filteredNav = user.role === 'worker'
-    ? navItems.filter(n => ['/', '/sales'].includes(n.path))
-    : navItems;
+  const filteredNav = user.role === 'worker' ? workerNavItems : navItems;
 
   const handleLogout = () => {
     setCurrentUser(null);
