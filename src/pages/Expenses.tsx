@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Wallet, ShoppingCart, DollarSign, TrendingUp, Plus, Trash2, Share2, Download
+  Wallet, ShoppingCart, DollarSign, TrendingUp, Plus, Trash2, Share2, Download,
+  Users, BarChart3, ArrowUpCircle, ArrowDownCircle, Calculator
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getSales, getProducts, getTransactions, getInventory, getExpenses, addExpense, deleteExpense } from '@/lib/store';
+import { getSales, getProducts, getTransactions, getInventory, getExpenses, addExpense, deleteExpense, getWorkers, getAttendance } from '@/lib/store';
 import { Expense } from '@/lib/types';
 
 const Expenses = () => {
@@ -13,10 +14,13 @@ const Expenses = () => {
   const products = getProducts();
   const transactions = getTransactions();
   const inventory = getInventory();
+  const workers = getWorkers();
+  const attendance = getAttendance();
 
   const today = new Date().toISOString().split('T')[0];
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
   const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+  const monthStr = today.substring(0, 7);
 
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [expenses, setExpensesState] = useState<Expense[]>(getExpenses());
@@ -77,6 +81,51 @@ const Expenses = () => {
     expensesByCategory[e.category] = (expensesByCategory[e.category] || 0) + e.amount;
   });
 
+  /* ====== Monthly Auto-Calculated Financial Summary ====== */
+  const monthlySummary = useMemo(() => {
+    const monthSales = sales.filter(s => s.date.startsWith(monthStr));
+    const monthTxns = transactions.filter(t => t.date.startsWith(monthStr));
+    const monthExpenses = expenses.filter(e => e.date.startsWith(monthStr));
+    const monthAttendance = attendance.filter(a => a.date.startsWith(monthStr));
+
+    // Total revenue
+    const totalRevenue = monthSales.reduce((s, sale) => s + sale.total, 0);
+
+    // COGS
+    const monthCogs = monthSales.reduce((sum, s) =>
+      sum + s.items.reduce((c, item) => {
+        const p = products.find(pr => pr.id === item.productId);
+        return c + (p ? p.costPrice * item.quantity : 0);
+      }, 0), 0);
+
+    // Salaries based on attendance
+    const workerSalaries = workers
+      .filter(w => w.role !== 'admin')
+      .reduce((sum, w) => {
+        const presentDays = monthAttendance.filter(a => a.workerId === w.id && a.type === 'present').length;
+        return sum + Math.round((w.salary / 30) * presentDays);
+      }, 0);
+
+    const monthAdvances = monthTxns.filter(t => t.type === 'advance').reduce((s, t) => s + t.amount, 0);
+    const monthBonuses = monthTxns.filter(t => t.type === 'bonus').reduce((s, t) => s + t.amount, 0);
+    const monthCustomExpenses = monthExpenses.reduce((s, e) => s + e.amount, 0);
+
+    const totalMonthExpenses = monthCogs + workerSalaries + monthBonuses + monthCustomExpenses;
+    // Net = Revenue - All Expenses + Advances (advances are deducted from worker, so they come back)
+    const netProfit = totalRevenue - totalMonthExpenses + monthAdvances;
+
+    return {
+      totalRevenue,
+      monthCogs,
+      workerSalaries,
+      monthAdvances,
+      monthBonuses,
+      monthCustomExpenses,
+      totalMonthExpenses,
+      netProfit,
+    };
+  }, [sales, transactions, expenses, attendance, workers, products, monthStr]);
+
   // Share & PDF helpers
   const getReportText = () => {
     let text = `💸 تقرير المصروفات ${periodLabel}\n`;
@@ -87,6 +136,15 @@ const Expenses = () => {
     text += `مصروفات أخرى: ${totalCustomExpenses} ج.م\n`;
     text += `إجمالي المصروفات: ${totalExpenses} ج.م\n`;
     text += `\nقيمة المخزون الحالي: ${inventoryCost} ج.م\n`;
+    text += `\n━━━ ملخص الشهر التلقائي ━━━\n`;
+    text += `إجمالي المبيعات: ${monthlySummary.totalRevenue} ج.م\n`;
+    text += `تكلفة البضاعة: ${monthlySummary.monthCogs} ج.م\n`;
+    text += `المرتبات: ${monthlySummary.workerSalaries} ج.م\n`;
+    text += `المكافآت: ${monthlySummary.monthBonuses} ج.م\n`;
+    text += `السلف (مستردة): ${monthlySummary.monthAdvances} ج.م\n`;
+    text += `مصروفات تشغيلية: ${monthlySummary.monthCustomExpenses} ج.م\n`;
+    text += `إجمالي مصروفات الشهر: ${monthlySummary.totalMonthExpenses} ج.م\n`;
+    text += `💰 صافي الربح: ${monthlySummary.netProfit} ج.م\n`;
     if (Object.keys(expensesByCategory).length > 0) {
       text += `\nتفاصيل المصروفات:\n`;
       Object.entries(expensesByCategory).forEach(([cat, amount]) => {
@@ -122,7 +180,7 @@ const Expenses = () => {
     const text = getReportText();
     const title = `تقرير المصروفات ${periodLabel}`;
     const lines = text.split('\n');
-    const htmlContent = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${title}</title><style>@media print{@page{margin:20mm;size:A4;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;direction:rtl;padding:40px;color:#1a1a1a;line-height:1.8;max-width:800px;margin:0 auto;}.header{text-align:center;border-bottom:3px solid #8B4513;padding-bottom:20px;margin-bottom:30px;}.header h1{font-size:24px;color:#8B4513;margin:0 0 8px 0;}.header .date{color:#666;font-size:14px;}.line{padding:6px 0;font-size:15px;border-bottom:1px solid #f0f0f0;}.line.section{font-weight:bold;font-size:16px;color:#8B4513;margin-top:16px;border-bottom:2px solid #e8d5c4;}.line.bullet{padding-right:16px;}.footer{margin-top:40px;text-align:center;color:#999;font-size:12px;border-top:1px solid #eee;padding-top:16px;}</style></head><body><div class="header"><h1>${title}</h1><div class="date">${new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div></div>${lines.map(line => { if (line.includes('────')) return ''; if (line.startsWith('•')) return `<div class="line bullet">${line}</div>`; if (line.includes(':') && !line.startsWith(' ') && !line.startsWith('•')) return `<div class="line section">${line}</div>`; if (line.trim() === '') return '<br/>'; return `<div class="line">${line}</div>`; }).join('')}<div class="footer">تم إنشاء هذا التقرير تلقائياً • ${new Date().toLocaleTimeString('ar-EG')}</div></body></html>`;
+    const htmlContent = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${title}</title><style>@media print{@page{margin:20mm;size:A4;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;direction:rtl;padding:40px;color:#1a1a1a;line-height:1.8;max-width:800px;margin:0 auto;}.header{text-align:center;border-bottom:3px solid #8B4513;padding-bottom:20px;margin-bottom:30px;}.header h1{font-size:24px;color:#8B4513;margin:0 0 8px 0;}.header .date{color:#666;font-size:14px;}.line{padding:6px 0;font-size:15px;border-bottom:1px solid #f0f0f0;}.line.section{font-weight:bold;font-size:16px;color:#8B4513;margin-top:16px;border-bottom:2px solid #e8d5c4;}.line.bullet{padding-right:16px;}.footer{margin-top:40px;text-align:center;color:#999;font-size:12px;border-top:1px solid #eee;padding-top:16px;}</style></head><body><div class="header"><h1>${title}</h1><div class="date">${new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div></div>${lines.map(line => { if (line.includes('────') || line.includes('━━━')) return ''; if (line.startsWith('•')) return `<div class="line bullet">${line}</div>`; if (line.includes(':') && !line.startsWith(' ') && !line.startsWith('•')) return `<div class="line section">${line}</div>`; if (line.trim() === '') return '<br/>'; return `<div class="line">${line}</div>`; }).join('')}<div class="footer">تم إنشاء هذا التقرير تلقائياً • ${new Date().toLocaleTimeString('ar-EG')}</div></body></html>`;
     const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(htmlContent);
@@ -171,6 +229,69 @@ const Expenses = () => {
           <Wallet size={22} className="mx-auto text-accent mb-2" />
           <p className="text-xl font-bold text-foreground">{totalCustomExpenses} ج.م</p>
           <p className="text-xs text-muted-foreground">مصروفات أخرى</p>
+        </div>
+      </div>
+
+      {/* ====== Monthly Financial Summary ====== */}
+      <div className="glass-card rounded-xl p-5 space-y-4 border-2 border-primary/20">
+        <div className="flex items-center gap-2 mb-1">
+          <Calculator size={22} className="text-primary" />
+          <h2 className="text-lg font-bold text-foreground">ملخص الشهر المالي التلقائي</h2>
+          <span className="text-xs bg-primary/15 text-primary px-2 py-0.5 rounded-full mr-auto">{monthStr}</span>
+        </div>
+
+        {/* Revenue */}
+        <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10">
+          <div className="flex items-center gap-2">
+            <ArrowUpCircle size={18} className="text-primary" />
+            <span className="font-medium text-foreground">إجمالي المبيعات (الإيرادات)</span>
+          </div>
+          <span className="font-bold text-primary text-lg">{monthlySummary.totalRevenue} ج.م</span>
+        </div>
+
+        {/* Expense Breakdown */}
+        <div className="space-y-2">
+          <p className="text-sm font-semibold text-muted-foreground flex items-center gap-1">
+            <ArrowDownCircle size={14} /> المصروفات التفصيلية
+          </p>
+          {[
+            { label: 'تكلفة البضاعة المباعة', value: monthlySummary.monthCogs, icon: ShoppingCart },
+            { label: 'مرتبات العمال (حسب الحضور)', value: monthlySummary.workerSalaries, icon: Users },
+            { label: 'مكافآت العمال', value: monthlySummary.monthBonuses, icon: TrendingUp },
+            { label: 'مصروفات تشغيلية', value: monthlySummary.monthCustomExpenses, icon: Wallet },
+          ].map(({ label, value, icon: Icon }) => (
+            <div key={label} className="flex items-center justify-between p-2.5 rounded-lg bg-secondary">
+              <div className="flex items-center gap-2">
+                <Icon size={15} className="text-muted-foreground" />
+                <span className="text-sm text-foreground">{label}</span>
+              </div>
+              <span className="font-bold text-destructive text-sm">-{value} ج.م</span>
+            </div>
+          ))}
+          <div className="flex items-center justify-between p-2.5 rounded-lg bg-secondary">
+            <div className="flex items-center gap-2">
+              <DollarSign size={15} className="text-muted-foreground" />
+              <span className="text-sm text-foreground">سلف عمال (مستردة من المرتب)</span>
+            </div>
+            <span className="font-bold text-primary text-sm">+{monthlySummary.monthAdvances} ج.م</span>
+          </div>
+        </div>
+
+        {/* Total Expenses */}
+        <div className="flex items-center justify-between p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+          <span className="font-bold text-foreground">إجمالي مصروفات الشهر</span>
+          <span className="font-bold text-destructive text-lg">{monthlySummary.totalMonthExpenses} ج.م</span>
+        </div>
+
+        {/* Net Profit */}
+        <div className={`flex items-center justify-between p-4 rounded-xl border-2 ${monthlySummary.netProfit >= 0 ? 'bg-primary/10 border-primary/30' : 'bg-destructive/10 border-destructive/30'}`}>
+          <div className="flex items-center gap-2">
+            <BarChart3 size={20} className={monthlySummary.netProfit >= 0 ? 'text-primary' : 'text-destructive'} />
+            <span className="font-bold text-foreground text-lg">صافي الربح</span>
+          </div>
+          <span className={`font-bold text-2xl ${monthlySummary.netProfit >= 0 ? 'text-primary' : 'text-destructive'}`}>
+            {monthlySummary.netProfit} ج.م
+          </span>
         </div>
       </div>
 
