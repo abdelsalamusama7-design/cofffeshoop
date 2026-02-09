@@ -9,6 +9,7 @@ import {
   Users,
   ClipboardCheck,
   Wallet,
+  Settings,
   LogOut,
   Bell,
   AlertTriangle,
@@ -30,6 +31,7 @@ const navItems = [
   { path: '/workers', label: 'العمال', icon: Users },
   { path: '/attendance', label: 'الحضور', icon: ClipboardCheck },
   { path: '/expenses', label: 'المصروفات', icon: Wallet },
+  { path: '/settings', label: 'الإعدادات', icon: Settings },
 ];
 
 const AppLayout = ({ children }: LayoutProps) => {
