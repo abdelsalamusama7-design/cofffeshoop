@@ -1,10 +1,10 @@
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, Download, Upload, Mail, MessageCircle, Calendar, Clock, CheckCircle2, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Settings, Download, Upload, Mail, MessageCircle, Calendar, Clock, CheckCircle2, ShieldCheck, AlertTriangle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { getSales, getProducts, getCategories, getInventory, getWorkers, getAttendance, getExpenses, getTransactions } from '@/lib/store';
+import { getSales, getProducts, getCategories, getInventory, getWorkers, getAttendance, getExpenses, getTransactions, getCurrentUser } from '@/lib/store';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 type BackupFrequency = 'daily' | 'weekly' | 'monthly';
@@ -19,8 +19,10 @@ const SettingsPage = () => {
   const [frequency, setFrequency] = useState<BackupFrequency>('daily');
   const [isGenerating, setIsGenerating] = useState(false);
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [pendingRestore, setPendingRestore] = useState<Record<string, any> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const currentUser = getCurrentUser();
 
   const getDateRange = () => {
     const now = new Date();
@@ -354,6 +356,36 @@ const SettingsPage = () => {
         </div>
       </motion.div>
 
+      {/* Reset System Section - Admin Only */}
+      {currentUser?.role === 'admin' && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass-card rounded-2xl p-5 space-y-5 border border-destructive/20">
+          <h2 className="text-lg font-bold text-destructive flex items-center gap-2">
+            <RotateCcw size={20} />
+            إعادة تعيين النظام
+          </h2>
+
+          <p className="text-sm text-muted-foreground">
+            حذف جميع البيانات (منتجات، مبيعات، مخزون، عمال، حضور، مصروفات، سلف، مكافآت) وإرجاع السيستم للوضع الافتراضي. العملية دي مش ممكن التراجع عنها!
+          </p>
+
+          <Button
+            onClick={() => setShowResetConfirm(true)}
+            variant="destructive"
+            className="w-full h-12 text-sm font-bold gap-2"
+          >
+            <RotateCcw size={18} />
+            تصفير النظام بالكامل
+          </Button>
+
+          <div className="bg-destructive/10 rounded-xl p-3 flex items-start gap-2">
+            <AlertTriangle size={16} className="text-destructive mt-0.5 shrink-0" />
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              تحذير: ده هيمسح كل البيانات نهائياً. ننصحك تاخد نسخة احتياطية قبل ما تعمل تصفير.
+            </p>
+          </div>
+        </motion.div>
+      )}
+
       {/* Restore Confirmation Dialog */}
       <AlertDialog open={showRestoreConfirm} onOpenChange={setShowRestoreConfirm}>
         <AlertDialogContent>
@@ -375,6 +407,36 @@ const SettingsPage = () => {
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
             <AlertDialogAction onClick={confirmRestore} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               استعادة البيانات
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset Confirmation Dialog */}
+      <AlertDialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle size={20} />
+              ⚠️ تأكيد تصفير النظام
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-right">
+              هل أنت متأكد إنك عايز تمسح كل البيانات؟ ده هيرجع السيستم للوضع الافتراضي بالكامل. العملية دي نهائية ومش ممكن التراجع عنها!
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                BACKUP_STORAGE_KEYS.forEach(key => localStorage.removeItem(key));
+                localStorage.removeItem('cafe_current_user');
+                setShowResetConfirm(false);
+                toast({ title: '✅ تم التصفير', description: 'تم مسح كل البيانات. جاري إعادة التحميل...' });
+                setTimeout(() => window.location.reload(), 1000);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              تصفير النظام
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
