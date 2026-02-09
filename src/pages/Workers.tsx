@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Plus, Trash2, Key, Save, Mail, MessageCircle, TrendingUp, HandCoins, Gift, CircleDollarSign } from 'lucide-react';
+import { Users, Plus, Trash2, Key, Save, Mail, MessageCircle, TrendingUp, HandCoins, Gift, CircleDollarSign, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getWorkers, setWorkers, getCurrentUser, getAttendance, getSales, getTransactions, addTransaction } from '@/lib/store';
+import { getWorkers, setWorkers, getCurrentUser, getAttendance, getSales, getTransactions, addTransaction, setTransactions } from '@/lib/store';
 import { Worker, WorkerTransaction } from '@/lib/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
@@ -22,6 +23,23 @@ const Workers = () => {
   const [txnAmount, setTxnAmount] = useState('');
   const [txnNote, setTxnNote] = useState('');
   const [transactions, setTransactionsState] = useState(getTransactions());
+  const [showEditTxn, setShowEditTxn] = useState(false);
+  const [editTxn, setEditTxn] = useState<WorkerTransaction | null>(null);
+  const [editTxnType, setEditTxnType] = useState<'advance' | 'bonus'>('advance');
+  const [editTxnAmount, setEditTxnAmount] = useState('');
+  const [editTxnNote, setEditTxnNote] = useState('');
+
+  const handleEditTransaction = () => {
+    if (!editTxn || !editTxnAmount) return;
+    const updated = transactions.map(t =>
+      t.id === editTxn.id ? { ...t, type: editTxnType, amount: +editTxnAmount, note: editTxnNote } : t
+    );
+    setTransactions(updated);
+    setTransactionsState(updated);
+    setShowEditTxn(false);
+    setEditTxn(null);
+    toast.success('تم تعديل العملية');
+  };
 
   if (user?.role !== 'admin') {
     return (
@@ -143,7 +161,23 @@ const Workers = () => {
       <SalaryReportsSection workers={workersList} transactions={transactions} />
 
       {/* Advances & Bonuses Detail Section */}
-      <AdvancesSection workers={workersList} transactions={transactions} />
+      <AdvancesSection
+        workers={workersList}
+        transactions={transactions}
+        onDelete={(id) => {
+          const updated = transactions.filter(t => t.id !== id);
+          setTransactions(updated);
+          setTransactionsState(updated);
+          toast.success('تم حذف العملية');
+        }}
+        onEdit={(txn) => {
+          setEditTxn(txn);
+          setEditTxnType(txn.type);
+          setEditTxnAmount(String(txn.amount));
+          setEditTxnNote(txn.note);
+          setShowEditTxn(true);
+        }}
+      />
 
       {/* Add Worker Dialog */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
@@ -212,6 +246,45 @@ const Workers = () => {
             <Button onClick={handleAddTransaction} className="w-full cafe-gradient text-primary-foreground">
               <Save size={16} className="ml-2" />
               حفظ
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Transaction Dialog */}
+      <Dialog open={showEditTxn} onOpenChange={setShowEditTxn}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>تعديل العملية</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Select value={editTxnType} onValueChange={v => setEditTxnType(v as 'advance' | 'bonus')}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="advance">
+                  <span className="flex items-center gap-2"><HandCoins size={14} /> سلفة (خصم)</span>
+                </SelectItem>
+                <SelectItem value="bonus">
+                  <span className="flex items-center gap-2"><Gift size={14} /> مكافأة (إضافة)</span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              type="number"
+              placeholder="المبلغ"
+              value={editTxnAmount}
+              onChange={e => setEditTxnAmount(e.target.value)}
+            />
+            <Input
+              placeholder="ملاحظة (اختياري)"
+              value={editTxnNote}
+              onChange={e => setEditTxnNote(e.target.value)}
+            />
+            <Button onClick={handleEditTransaction} className="w-full cafe-gradient text-primary-foreground">
+              <Save size={16} className="ml-2" />
+              حفظ التعديل
             </Button>
           </div>
         </DialogContent>
@@ -401,8 +474,19 @@ const SalaryReportsSection = ({ workers, transactions }: { workers: Worker[]; tr
 };
 
 /* ===================== Advances & Bonuses Detail ===================== */
-const AdvancesSection = ({ workers, transactions }: { workers: Worker[]; transactions: WorkerTransaction[] }) => {
+const AdvancesSection = ({
+  workers,
+  transactions,
+  onDelete,
+  onEdit,
+}: {
+  workers: Worker[];
+  transactions: WorkerTransaction[];
+  onDelete: (id: string) => void;
+  onEdit: (txn: WorkerTransaction) => void;
+}) => {
   const [filterWorker, setFilterWorker] = useState<string>('all');
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const filteredTxns = useMemo(() => {
     let txns = [...transactions].sort((a, b) => b.date.localeCompare(a.date));
@@ -474,13 +558,37 @@ const AdvancesSection = ({ workers, transactions }: { workers: Worker[]; transac
                   {txn.note && <p className="text-xs text-muted-foreground/70 mt-0.5">📝 {txn.note}</p>}
                 </div>
               </div>
-              <p className={`font-bold text-sm ${txn.type === 'advance' ? 'text-destructive' : 'text-primary'}`}>
-                {txn.type === 'advance' ? '-' : '+'}{txn.amount} ج.م
-              </p>
+              <div className="flex items-center gap-2">
+                <p className={`font-bold text-sm ${txn.type === 'advance' ? 'text-destructive' : 'text-primary'}`}>
+                  {txn.type === 'advance' ? '-' : '+'}{txn.amount} ج.م
+                </p>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(txn)}>
+                  <Pencil size={14} />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteConfirm(txn.id)}>
+                  <Trash2 size={14} />
+                </Button>
+              </div>
             </motion.div>
           ))
         )}
       </div>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف العملية</AlertDialogTitle>
+            <AlertDialogDescription>هل أنت متأكد من حذف هذه العملية؟ لا يمكن التراجع عن هذا.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { if (deleteConfirm) { onDelete(deleteConfirm); setDeleteConfirm(null); } }}>
+              حذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
