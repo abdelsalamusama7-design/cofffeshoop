@@ -1,17 +1,26 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, Download, Share2, Mail, MessageCircle, Calendar, Clock, CheckCircle2 } from 'lucide-react';
+import { Settings, Download, Upload, Mail, MessageCircle, Calendar, Clock, CheckCircle2, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { getSales, getProducts, getCategories, getInventory, getWorkers, getAttendance, getExpenses, getTransactions } from '@/lib/store';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 type BackupFrequency = 'daily' | 'weekly' | 'monthly';
 type ShareMethod = 'pdf' | 'email' | 'whatsapp';
 
+const BACKUP_STORAGE_KEYS = [
+  'cafe_products', 'cafe_sales', 'cafe_inventory', 'cafe_workers',
+  'cafe_attendance', 'cafe_categories', 'cafe_transactions', 'cafe_expenses',
+];
+
 const SettingsPage = () => {
   const [frequency, setFrequency] = useState<BackupFrequency>('daily');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
+  const [pendingRestore, setPendingRestore] = useState<Record<string, any> | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const getDateRange = () => {
     const now = new Date();
@@ -160,6 +169,67 @@ const SettingsPage = () => {
     }
   };
 
+  // === Backup & Restore ===
+  const handleBackupDownload = () => {
+    const backupData: Record<string, any> = {};
+    BACKUP_STORAGE_KEYS.forEach(key => {
+      const val = localStorage.getItem(key);
+      if (val) backupData[key] = JSON.parse(val);
+    });
+    backupData._meta = {
+      version: 1,
+      date: new Date().toISOString(),
+      app: 'بن العميد',
+    };
+
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `backup-بن-العميد-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: '✅ تم', description: 'تم تحميل النسخة الاحتياطية بنجاح' });
+  };
+
+  const handleRestoreClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target?.result as string);
+        if (!data._meta || !data.cafe_products) {
+          toast({ title: '❌ خطأ', description: 'الملف مش ملف نسخة احتياطية صحيح', variant: 'destructive' });
+          return;
+        }
+        setPendingRestore(data);
+        setShowRestoreConfirm(true);
+      } catch {
+        toast({ title: '❌ خطأ', description: 'الملف تالف أو مش صحيح', variant: 'destructive' });
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const confirmRestore = () => {
+    if (!pendingRestore) return;
+    BACKUP_STORAGE_KEYS.forEach(key => {
+      if (pendingRestore[key]) {
+        localStorage.setItem(key, JSON.stringify(pendingRestore[key]));
+      }
+    });
+    setPendingRestore(null);
+    setShowRestoreConfirm(false);
+    toast({ title: '✅ تم الاستعادة', description: 'تم استعادة البيانات بنجاح. جاري إعادة التحميل...' });
+    setTimeout(() => window.location.reload(), 1000);
+  };
+
   return (
     <div className="space-y-6">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
@@ -208,7 +278,7 @@ const SettingsPage = () => {
             className="cafe-gradient text-primary-foreground h-12 text-sm font-bold gap-2"
           >
             <Download size={18} />
-            {isGenerating ? 'جاري الإنشاء...' : 'تحميل PDF'}
+            {isGenerating ? 'جاري الإنشاء...' : 'تحميل تقرير PDF'}
           </Button>
 
           <div className="grid grid-cols-2 gap-3">
@@ -231,14 +301,84 @@ const SettingsPage = () => {
           </div>
         </div>
 
-        {/* Info */}
         <div className="bg-secondary/50 rounded-xl p-3 flex items-start gap-2">
           <CheckCircle2 size={16} className="text-accent mt-0.5 shrink-0" />
           <p className="text-xs text-muted-foreground leading-relaxed">
-            التقرير يشمل: المبيعات، المصروفات، الأرباح، المخزون، الحضور، والسلف. يمكنك اختيار الفترة (يومي/أسبوعي/شهري) ومشاركته بالطريقة المناسبة.
+            التقرير يشمل: المبيعات، المصروفات، الأرباح، المخزون، الحضور، والسلف.
           </p>
         </div>
       </motion.div>
+
+      {/* Data Backup & Restore Section */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass-card rounded-2xl p-5 space-y-5">
+        <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+          <ShieldCheck size={20} className="text-accent" />
+          النسخ الاحتياطي للبيانات
+        </h2>
+
+        <p className="text-sm text-muted-foreground">
+          احفظ نسخة من كل بيانات السيستم (منتجات، مبيعات، مخزون، عمال، حضور، مصروفات) واستعيدها في أي وقت.
+        </p>
+
+        <div className="grid grid-cols-1 gap-3">
+          <Button
+            onClick={handleBackupDownload}
+            className="cafe-gradient text-primary-foreground h-12 text-sm font-bold gap-2"
+          >
+            <Download size={18} />
+            حفظ نسخة احتياطية (JSON)
+          </Button>
+
+          <Button
+            onClick={handleRestoreClick}
+            variant="outline"
+            className="h-12 text-sm font-bold gap-2 border-accent/30 text-accent hover:bg-accent/10"
+          >
+            <Upload size={18} />
+            استعادة نسخة احتياطية
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+        </div>
+
+        <div className="bg-warning/10 rounded-xl p-3 flex items-start gap-2">
+          <AlertTriangle size={16} className="text-warning mt-0.5 shrink-0" />
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            عند الاستعادة، هيتم استبدال كل البيانات الحالية بالبيانات الموجودة في النسخة الاحتياطية. تأكد إنك محتفظ بنسخة حديثة قبل الاستعادة.
+          </p>
+        </div>
+      </motion.div>
+
+      {/* Restore Confirmation Dialog */}
+      <AlertDialog open={showRestoreConfirm} onOpenChange={setShowRestoreConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle size={20} className="text-warning" />
+              تأكيد الاستعادة
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-right">
+              {pendingRestore?._meta && (
+                <span className="block mb-2 text-sm">
+                  📅 تاريخ النسخة: {new Date(pendingRestore._meta.date).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
+              هل أنت متأكد؟ ده هيستبدل كل البيانات الحالية بالبيانات من النسخة الاحتياطية. العملية دي مش ممكن التراجع عنها.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRestore} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              استعادة البيانات
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
