@@ -1,0 +1,292 @@
+import { useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { Clock, LogIn, LogOut, HandCoins, Gift, ShoppingCart, CalendarCheck, TrendingUp } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { getCurrentUser, getAttendance, setAttendance, getTransactions, getSales } from '@/lib/store';
+import { AttendanceRecord } from '@/lib/types';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
+
+const WorkerDashboard = () => {
+  const user = getCurrentUser();
+  const [records, setRecords] = useState(getAttendance());
+  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
+
+  if (!user || user.role !== 'worker') {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <p className="text-muted-foreground text-lg">ليس لديك صلاحية للوصول لهذه الصفحة</p>
+      </div>
+    );
+  }
+
+  const todayRecord = records.find(r => r.workerId === user.id && r.date === today && r.type === 'present');
+  const hasCheckedIn = !!todayRecord?.checkIn;
+  const hasCheckedOut = !!todayRecord?.checkOut;
+
+  const handleCheckIn = (shift: 'morning' | 'evening') => {
+    const timeNow = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    if (todayRecord) {
+      toast.error('لقد سجلت حضورك اليوم بالفعل');
+      return;
+    }
+
+    const record: AttendanceRecord = {
+      id: Date.now().toString(),
+      workerId: user.id,
+      workerName: user.name,
+      date: today,
+      checkIn: timeNow,
+      type: 'present',
+      shift,
+      hoursWorked: 0,
+    };
+
+    const updated = [...records, record];
+    setRecords(updated);
+    setAttendance(updated);
+    toast.success(`تم تسجيل الحضور - شيفت ${shift === 'morning' ? 'صباحي' : 'مسائي'} ☀️`);
+  };
+
+  const handleCheckOut = () => {
+    if (!todayRecord) {
+      toast.error('لم تسجل حضورك اليوم بعد');
+      return;
+    }
+    if (hasCheckedOut) {
+      toast.error('لقد سجلت انصرافك بالفعل');
+      return;
+    }
+
+    const timeNow = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const [h1, m1] = todayRecord.checkIn!.split(':').map(Number);
+    const [h2, m2] = timeNow.split(':').map(Number);
+    const hoursWorked = Math.max(0, Math.round(((h2 + m2 / 60) - (h1 + m1 / 60)) * 100) / 100);
+
+    const updated = records.map(r =>
+      r.id === todayRecord.id ? { ...r, checkOut: timeNow, hoursWorked } : r
+    );
+    setRecords(updated);
+    setAttendance(updated);
+    toast.success(`تم تسجيل الانصراف - عملت ${hoursWorked.toFixed(1)} ساعة 👋`);
+  };
+
+  // Transactions (advances & bonuses)
+  const transactions = getTransactions().filter(t => t.workerId === user.id);
+  const currentMonth = today.substring(0, 7);
+  const monthTxns = transactions.filter(t => t.date.startsWith(currentMonth));
+  const totalAdvances = monthTxns.filter(t => t.type === 'advance').reduce((s, t) => s + t.amount, 0);
+  const totalBonuses = monthTxns.filter(t => t.type === 'bonus').reduce((s, t) => s + t.amount, 0);
+
+  // Daily sales
+  const allSales = getSales();
+  const todaySales = allSales.filter(s => s.workerId === user.id && s.date === today);
+  const todaySalesTotal = todaySales.reduce((s, sale) => s + sale.total, 0);
+  const todayItemsSold = todaySales.reduce((s, sale) => s + sale.items.reduce((c, i) => c + i.quantity, 0), 0);
+
+  // Monthly attendance summary
+  const myMonthRecords = records.filter(r => r.workerId === user.id && r.date.startsWith(currentMonth));
+  const presentDays = myMonthRecords.filter(r => r.type === 'present').length;
+  const absentDays = myMonthRecords.filter(r => r.type === 'absent').length;
+  const totalHours = Math.round(myMonthRecords.reduce((s, r) => s + (r.hoursWorked || 0), 0) * 10) / 10;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-foreground">مرحباً {user.name} 👋</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          {new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+        </p>
+      </div>
+
+      {/* Check In / Check Out */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass-card rounded-2xl p-5 space-y-4"
+      >
+        <h2 className="font-bold text-foreground flex items-center gap-2">
+          <Clock size={20} />
+          الحضور والانصراف
+        </h2>
+
+        {!hasCheckedIn ? (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">اختر الشيفت وسجّل حضورك</p>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                onClick={() => handleCheckIn('morning')}
+                className="cafe-gradient text-primary-foreground h-14 text-base"
+              >
+                <LogIn size={20} className="ml-2" />
+                ☀️ شيفت صباحي
+              </Button>
+              <Button
+                onClick={() => handleCheckIn('evening')}
+                variant="outline"
+                className="h-14 text-base border-primary text-primary hover:bg-primary/10"
+              >
+                <LogIn size={20} className="ml-2" />
+                🌙 شيفت مسائي
+              </Button>
+            </div>
+          </div>
+        ) : !hasCheckedOut ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between bg-success/10 rounded-xl p-3">
+              <div>
+                <p className="text-sm font-medium text-success">✅ أنت حاضر</p>
+                <p className="text-xs text-muted-foreground">
+                  وقت الحضور: {todayRecord?.checkIn} • شيفت {todayRecord?.shift === 'morning' ? 'صباحي ☀️' : 'مسائي 🌙'}
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={handleCheckOut}
+              variant="destructive"
+              className="w-full h-14 text-base"
+            >
+              <LogOut size={20} className="ml-2" />
+              تسجيل الانصراف 👋
+            </Button>
+          </div>
+        ) : (
+          <div className="bg-muted/50 rounded-xl p-4 text-center space-y-1">
+            <p className="text-sm font-medium text-foreground">✅ تم تسجيل حضورك وانصرافك اليوم</p>
+            <p className="text-xs text-muted-foreground">
+              {todayRecord?.checkIn} → {todayRecord?.checkOut} • {todayRecord?.hoursWorked?.toFixed(1)} ساعة
+            </p>
+          </div>
+        )}
+      </motion.div>
+
+      {/* Monthly Attendance Summary */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="glass-card rounded-2xl p-5"
+      >
+        <h2 className="font-bold text-foreground flex items-center gap-2 mb-3">
+          <CalendarCheck size={20} />
+          ملخص الحضور - الشهر الحالي
+        </h2>
+        <div className="grid grid-cols-3 gap-3 text-center">
+          <div className="bg-success/10 rounded-xl p-3">
+            <p className="text-2xl font-bold text-success">{presentDays}</p>
+            <p className="text-xs text-muted-foreground">يوم حضور</p>
+          </div>
+          <div className="bg-destructive/10 rounded-xl p-3">
+            <p className="text-2xl font-bold text-destructive">{absentDays}</p>
+            <p className="text-xs text-muted-foreground">يوم غياب</p>
+          </div>
+          <div className="bg-info/10 rounded-xl p-3">
+            <p className="text-2xl font-bold text-info">{totalHours}</p>
+            <p className="text-xs text-muted-foreground">ساعة عمل</p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Daily Sales Report */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="glass-card rounded-2xl p-5 space-y-3"
+      >
+        <h2 className="font-bold text-foreground flex items-center gap-2">
+          <ShoppingCart size={20} />
+          مبيعاتك اليوم
+        </h2>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-primary/10 rounded-xl p-3 text-center">
+            <p className="text-2xl font-bold text-primary">{todaySalesTotal}</p>
+            <p className="text-xs text-muted-foreground">ج.م إجمالي</p>
+          </div>
+          <div className="bg-accent/10 rounded-xl p-3 text-center">
+            <p className="text-2xl font-bold text-accent-foreground">{todayItemsSold}</p>
+            <p className="text-xs text-muted-foreground">منتج مباع</p>
+          </div>
+        </div>
+
+        {todaySales.length > 0 ? (
+          <div className="space-y-2 max-h-60 overflow-auto">
+            {todaySales.map((sale, i) => (
+              <div key={sale.id} className="bg-muted/30 rounded-lg p-3 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {sale.items.map(item => `${item.productName} x${item.quantity}`).join('، ')}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{sale.time}</p>
+                </div>
+                <p className="font-bold text-primary text-sm">{sale.total} ج.م</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground text-center py-2">لم تسجل مبيعات اليوم بعد</p>
+        )}
+      </motion.div>
+
+      {/* Advances & Bonuses */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="glass-card rounded-2xl p-5 space-y-3"
+      >
+        <h2 className="font-bold text-foreground flex items-center gap-2">
+          <HandCoins size={20} />
+          السلف والمكافآت - الشهر الحالي
+        </h2>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-destructive/10 rounded-xl p-3 text-center">
+            <p className="text-2xl font-bold text-destructive">{totalAdvances}</p>
+            <p className="text-xs text-muted-foreground">ج.م سلف</p>
+          </div>
+          <div className="bg-success/10 rounded-xl p-3 text-center">
+            <p className="text-2xl font-bold text-success">{totalBonuses}</p>
+            <p className="text-xs text-muted-foreground">ج.م مكافآت</p>
+          </div>
+        </div>
+
+        {monthTxns.length > 0 ? (
+          <div className="space-y-2 max-h-60 overflow-auto">
+            {monthTxns.sort((a, b) => b.date.localeCompare(a.date)).map(txn => (
+              <div key={txn.id} className="bg-muted/30 rounded-lg p-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {txn.type === 'advance' ? (
+                    <HandCoins size={16} className="text-destructive" />
+                  ) : (
+                    <Gift size={16} className="text-success" />
+                  )}
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      {txn.type === 'advance' ? 'سلفة' : 'مكافأة'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {txn.date} {txn.note && `• ${txn.note}`}
+                    </p>
+                  </div>
+                </div>
+                <p className={`font-bold text-sm ${txn.type === 'advance' ? 'text-destructive' : 'text-success'}`}>
+                  {txn.type === 'advance' ? '-' : '+'}{txn.amount} ج.م
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground text-center py-2">لا توجد سلف أو مكافآت هذا الشهر</p>
+        )}
+      </motion.div>
+    </div>
+  );
+};
+
+export default WorkerDashboard;
