@@ -303,6 +303,7 @@ const Inventory = () => {
               className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
             >
               <option value="">اختر الوحدة</option>
+              <option value="جرام">جرام</option>
               <option value="كيلو">كيلو</option>
               <option value="لتر">لتر</option>
               <option value="علبة">علبة</option>
@@ -332,6 +333,7 @@ const Inventory = () => {
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
               >
                 <option value="">اختر الوحدة</option>
+                <option value="جرام">جرام</option>
                 <option value="كيلو">كيلو</option>
                 <option value="لتر">لتر</option>
                 <option value="علبة">علبة</option>
