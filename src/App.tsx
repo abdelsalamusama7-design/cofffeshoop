@@ -11,6 +11,7 @@ import SplashScreen from "@/components/SplashScreen";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Sales from "./pages/Sales";
+import Returns from "./pages/Returns";
 import Inventory from "./pages/Inventory";
 import Reports from "./pages/Reports";
 import Workers from "./pages/Workers";
@@ -45,6 +46,7 @@ const App = () => {
               <Route path="/login" element={<Login />} />
               <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
               <Route path="/sales" element={<ProtectedRoute><Sales /></ProtectedRoute>} />
+              <Route path="/returns" element={<ProtectedRoute><Returns /></ProtectedRoute>} />
               <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
               <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
               <Route path="/workers" element={<ProtectedRoute><Workers /></ProtectedRoute>} />

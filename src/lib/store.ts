@@ -1,4 +1,4 @@
-import { Product, Sale, InventoryItem, Worker, AttendanceRecord, WorkerTransaction, Expense } from './types';
+import { Product, Sale, InventoryItem, Worker, AttendanceRecord, WorkerTransaction, Expense, ReturnRecord } from './types';
 
 const STORAGE_KEYS = {
   products: 'cafe_products',
@@ -9,6 +9,7 @@ const STORAGE_KEYS = {
   currentUser: 'cafe_current_user',
   transactions: 'cafe_transactions',
   expenses: 'cafe_expenses',
+  returns: 'cafe_returns',
 };
 
 function get<T>(key: string, fallback: T): T {
@@ -72,6 +73,15 @@ export const addExpense = (e: Expense) => {
 export const deleteExpense = (id: string) => {
   const expenses = getExpenses().filter(e => e.id !== id);
   set(STORAGE_KEYS.expenses, expenses);
+};
+
+// Returns
+export const getReturns = (): ReturnRecord[] => get(STORAGE_KEYS.returns, []);
+export const setReturns = (r: ReturnRecord[]) => set(STORAGE_KEYS.returns, r);
+export const addReturn = (r: ReturnRecord) => {
+  const returns = getReturns();
+  returns.push(r);
+  set(STORAGE_KEYS.returns, returns);
 };
 
 // Default data - Products are items that need preparation (multiple ingredients)
