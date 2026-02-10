@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RotateCcw, ArrowLeftRight, Search, Calendar, Package, Coffee, Plus, Minus, Check } from 'lucide-react';
+import { RotateCcw, ArrowLeftRight, Search, Calendar, Package, Coffee, Plus, Minus, Check, Share2, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -182,6 +182,58 @@ const Returns = () => {
     setSaleSearch('');
   };
 
+  const buildReturnText = (r: ReturnRecord) => {
+    let text = `إيصال ${r.type === 'return' ? 'مرتجع' : 'بدل'} - بن العميد\n`;
+    text += `التاريخ: ${r.date} - ${r.time}\n`;
+    text += `رقم الفاتورة: #${r.saleId}\n`;
+    text += `بواسطة: ${r.workerName}\n`;
+    text += `────────────\n`;
+    text += `الأصناف المرتجعة:\n`;
+    r.items.forEach(i => { text += `• ${i.productName} x${i.quantity} = ${i.total} ج.م\n`; });
+    if (r.type === 'exchange' && r.exchangeItems?.length) {
+      text += `\nأصناف البدل:\n`;
+      r.exchangeItems.forEach(i => { text += `• ${i.productName} x${i.quantity} = ${i.total} ج.م\n`; });
+    }
+    text += `────────────\n`;
+    if (r.refundAmount > 0) text += `المبلغ المسترد: ${r.refundAmount} ج.م\n`;
+    text += `السبب: ${r.reason}\n`;
+    return text;
+  };
+
+  const shareReturn = (r: ReturnRecord, method: 'whatsapp' | 'email') => {
+    const text = buildReturnText(r);
+    if (method === 'whatsapp') {
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    } else {
+      window.open(`mailto:?subject=${encodeURIComponent(`إيصال ${r.type === 'return' ? 'مرتجع' : 'بدل'} - بن العميد`)}&body=${encodeURIComponent(text)}`, '_blank');
+    }
+  };
+
+  const printReturn = (r: ReturnRecord) => {
+    const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>إيصال مرتجع</title>
+    <style>body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;direction:rtl;padding:40px;max-width:400px;margin:0 auto;color:#1a1a1a}
+    .header{text-align:center;border-bottom:2px solid #8B4513;padding-bottom:12px;margin-bottom:16px}
+    h1{font-size:20px;color:#8B4513;margin:0 0 4px}
+    .badge{display:inline-block;padding:2px 12px;border-radius:12px;font-size:12px;font-weight:bold}
+    .return{background:#fee2e2;color:#dc2626}.exchange{background:#d1fae5;color:#059669}
+    .line{display:flex;justify-content:space-between;padding:4px 0;font-size:14px;border-bottom:1px solid #f0f0f0}
+    .section{font-weight:bold;color:#8B4513;margin-top:12px;font-size:13px}
+    .total{font-size:16px;font-weight:bold;color:#dc2626;text-align:center;margin-top:12px;padding:8px;background:#fef2f2;border-radius:8px}
+    .footer{text-align:center;color:#999;font-size:11px;margin-top:20px;border-top:1px solid #eee;padding-top:8px}
+    @media print{@page{margin:10mm;size:80mm auto}}</style></head><body>
+    <div class="header"><h1>بن العميد</h1>
+    <span class="badge ${r.type === 'return' ? 'return' : 'exchange'}">${r.type === 'return' ? 'مرتجع' : 'بدل'}</span>
+    <p style="font-size:12px;color:#666;margin:8px 0 0">${r.date} - ${r.time}<br/>فاتورة #${r.saleId} | ${r.workerName}</p></div>
+    <p class="section">الأصناف المرتجعة:</p>
+    ${r.items.map(i => `<div class="line"><span>${i.productName} x${i.quantity}</span><span>${i.total} ج.م</span></div>`).join('')}
+    ${r.type === 'exchange' && r.exchangeItems?.length ? `<p class="section">أصناف البدل:</p>${r.exchangeItems.map(i => `<div class="line"><span>${i.productName} x${i.quantity}</span><span>${i.total} ج.م</span></div>`).join('')}` : ''}
+    ${r.refundAmount > 0 ? `<div class="total">المبلغ المسترد: ${r.refundAmount} ج.م</div>` : ''}
+    <p style="font-size:12px;color:#666;margin-top:8px">السبب: ${r.reason}</p>
+    <div class="footer">تم الإنشاء تلقائياً</div></body></html>`;
+    const w = window.open('', '_blank');
+    if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 300); }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -274,6 +326,24 @@ const Returns = () => {
                 {r.refundAmount > 0 && (
                   <span className="font-bold text-destructive">مسترد: {r.refundAmount} ج.م</span>
                 )}
+              </div>
+
+              {/* Share buttons */}
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => shareReturn(r, 'whatsapp')}
+                  className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-secondary text-secondary-foreground text-xs font-medium hover:bg-accent/20 transition-colors"
+                >
+                  <Share2 size={12} />
+                  واتساب
+                </button>
+                <button
+                  onClick={() => printReturn(r)}
+                  className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-secondary text-secondary-foreground text-xs font-medium hover:bg-accent/20 transition-colors"
+                >
+                  <Printer size={12} />
+                  طباعة
+                </button>
               </div>
             </motion.div>
           ))}

@@ -2,10 +2,10 @@ import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   BarChart3, Calendar, Share2, Download, TrendingUp, DollarSign,
-  ShoppingCart, Users, ClipboardCheck, Wallet, Clock, ArrowUpDown
+  ShoppingCart, Users, ClipboardCheck, Wallet, Clock, ArrowUpDown, RotateCcw, ArrowLeftRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getSales, getProducts, getCurrentUser, getWorkers, getAttendance, getTransactions, getInventory } from '@/lib/store';
+import { getSales, getProducts, getCurrentUser, getWorkers, getAttendance, getTransactions, getInventory, getReturns } from '@/lib/store';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Reports = () => {
@@ -16,6 +16,7 @@ const Reports = () => {
   const attendance = getAttendance();
   const transactions = getTransactions();
   const inventory = getInventory();
+  const returns = getReturns();
 
   const today = new Date().toISOString().split('T')[0];
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
@@ -393,7 +394,139 @@ const Reports = () => {
   };
 
 
-  // ===== 5. Attendance Report =====
+  // ===== 5. Returns Report =====
+  const ReturnsReport = () => {
+    const filteredReturns = returns.filter(r => r.date >= startDate);
+    const totalReturns = filteredReturns.filter(r => r.type === 'return').length;
+    const totalExchanges = filteredReturns.filter(r => r.type === 'exchange').length;
+    const totalRefunded = filteredReturns.reduce((sum, r) => sum + r.refundAmount, 0);
+    const totalReturnedItems = filteredReturns.reduce((sum, r) => sum + r.items.reduce((c, i) => c + i.quantity, 0), 0);
+
+    // Most returned products
+    const returnedProducts: Record<string, { name: string; quantity: number; total: number }> = {};
+    filteredReturns.forEach(r => {
+      r.items.forEach(item => {
+        if (!returnedProducts[item.productId]) {
+          returnedProducts[item.productId] = { name: item.productName, quantity: 0, total: 0 };
+        }
+        returnedProducts[item.productId].quantity += item.quantity;
+        returnedProducts[item.productId].total += item.total;
+      });
+    });
+
+    // Return reasons
+    const reasons: Record<string, number> = {};
+    filteredReturns.forEach(r => {
+      reasons[r.reason] = (reasons[r.reason] || 0) + 1;
+    });
+
+    let text = `🔄 تقرير المرتجعات والبدل ${periodLabel}\n`;
+    text += `التاريخ: ${today}\n────────────\n`;
+    text += `عدد المرتجعات: ${totalReturns}\n`;
+    text += `عدد عمليات البدل: ${totalExchanges}\n`;
+    text += `إجمالي المبالغ المستردة: ${totalRefunded} ج.م\n`;
+    text += `عدد الأصناف المرتجعة: ${totalReturnedItems}\n\n`;
+    text += `الأصناف الأكثر إرجاعاً:\n`;
+    Object.values(returnedProducts).sort((a, b) => b.quantity - a.quantity).forEach(p => {
+      text += `• ${p.name}: ${p.quantity} وحدة - ${p.total} ج.م\n`;
+    });
+    if (Object.keys(reasons).length > 0) {
+      text += `\nأسباب الإرجاع:\n`;
+      Object.entries(reasons).sort((a, b) => b[1] - a[1]).forEach(([reason, count]) => {
+        text += `• ${reason}: ${count} مرة\n`;
+      });
+    }
+
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="glass-card rounded-xl p-4 text-center">
+            <RotateCcw size={22} className="mx-auto text-destructive mb-2" />
+            <p className="text-xl font-bold text-foreground">{totalReturns}</p>
+            <p className="text-xs text-muted-foreground">مرتجع</p>
+          </div>
+          <div className="glass-card rounded-xl p-4 text-center">
+            <ArrowLeftRight size={22} className="mx-auto text-accent mb-2" />
+            <p className="text-xl font-bold text-foreground">{totalExchanges}</p>
+            <p className="text-xs text-muted-foreground">بدل</p>
+          </div>
+          <div className="glass-card rounded-xl p-4 text-center">
+            <DollarSign size={22} className="mx-auto text-destructive mb-2" />
+            <p className="text-xl font-bold text-foreground">{totalRefunded} ج.م</p>
+            <p className="text-xs text-muted-foreground">مبالغ مستردة</p>
+          </div>
+          <div className="glass-card rounded-xl p-4 text-center">
+            <ArrowUpDown size={22} className="mx-auto text-info mb-2" />
+            <p className="text-xl font-bold text-foreground">{totalReturnedItems}</p>
+            <p className="text-xs text-muted-foreground">صنف مرتجع</p>
+          </div>
+        </div>
+
+        {/* Most returned products */}
+        <div className="glass-card rounded-xl p-4">
+          <h3 className="font-bold text-foreground mb-3">الأصناف الأكثر إرجاعاً</h3>
+          {Object.values(returnedProducts).length === 0 ? (
+            <p className="text-muted-foreground text-sm text-center py-4">لا توجد مرتجعات</p>
+          ) : (
+            <div className="space-y-2">
+              {Object.values(returnedProducts).sort((a, b) => b.quantity - a.quantity).map((p, i) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-secondary">
+                  <span className="text-sm font-medium text-foreground">{p.name}</span>
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className="text-muted-foreground">{p.quantity} وحدة</span>
+                    <span className="font-bold text-foreground">{p.total} ج.م</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Return reasons */}
+        {Object.keys(reasons).length > 0 && (
+          <div className="glass-card rounded-xl p-4">
+            <h3 className="font-bold text-foreground mb-3">أسباب الإرجاع</h3>
+            <div className="space-y-2">
+              {Object.entries(reasons).sort((a, b) => b[1] - a[1]).map(([reason, count], i) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-secondary">
+                  <span className="text-sm text-foreground">{reason}</span>
+                  <span className="text-sm font-bold text-muted-foreground">{count} مرة</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Recent returns */}
+        {filteredReturns.length > 0 && (
+          <div className="glass-card rounded-xl p-4">
+            <h3 className="font-bold text-foreground mb-3">آخر العمليات</h3>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {filteredReturns.slice().reverse().map((r) => (
+                <div key={r.id} className="p-3 rounded-lg bg-secondary text-sm">
+                  <div className="flex justify-between items-center">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                      r.type === 'return' ? 'bg-destructive/15 text-destructive' : 'bg-accent/15 text-accent'
+                    }`}>
+                      {r.type === 'return' ? 'مرتجع' : 'بدل'}
+                    </span>
+                    <span className="font-bold text-foreground">{r.refundAmount > 0 ? `${r.refundAmount} ج.م مسترد` : '-'}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {r.date} - {r.workerName} - {r.items.map(i => `${i.productName} x${i.quantity}`).join(' • ')}
+                  </p>
+                  <p className="text-xs text-muted-foreground">السبب: {r.reason}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <ShareButtons title={`تقرير المرتجعات ${periodLabel}`} text={text} />
+      </div>
+    );
+  };
+
   const AttendanceReport = () => {
     const filteredAttendance = attendance.filter(r => r.date >= startDate);
     const workerAttendance = workers.filter(w => w.role === 'worker').map(w => {
@@ -482,7 +615,7 @@ const Reports = () => {
 
       {/* Report tabs */}
       <Tabs defaultValue="sales" dir="rtl">
-        <TabsList className="w-full grid grid-cols-4 h-auto">
+        <TabsList className="w-full grid grid-cols-5 h-auto">
           <TabsTrigger value="sales" className="text-xs py-2 px-1">
             <ShoppingCart size={14} className="ml-1 hidden sm:inline" />
             المبيعات
@@ -490,6 +623,10 @@ const Reports = () => {
           <TabsTrigger value="profits" className="text-xs py-2 px-1">
             <TrendingUp size={14} className="ml-1 hidden sm:inline" />
             الأرباح
+          </TabsTrigger>
+          <TabsTrigger value="returns" className="text-xs py-2 px-1">
+            <RotateCcw size={14} className="ml-1 hidden sm:inline" />
+            المرتجعات
           </TabsTrigger>
           <TabsTrigger value="workers" className="text-xs py-2 px-1">
             <Users size={14} className="ml-1 hidden sm:inline" />
@@ -502,6 +639,7 @@ const Reports = () => {
         </TabsList>
         <TabsContent value="sales"><SalesReport /></TabsContent>
         <TabsContent value="profits"><ProfitsReport /></TabsContent>
+        <TabsContent value="returns"><ReturnsReport /></TabsContent>
         <TabsContent value="workers"><WorkerPerformanceReport /></TabsContent>
         <TabsContent value="attendance"><AttendanceReport /></TabsContent>
       </Tabs>
