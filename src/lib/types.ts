@@ -78,3 +78,17 @@ export interface Expense {
   note: string;
   date: string;
 }
+
+export interface ReturnRecord {
+  id: string;
+  saleId: string;
+  type: 'return' | 'exchange';
+  items: SaleItem[];
+  exchangeItems?: SaleItem[];
+  refundAmount: number;
+  reason: string;
+  workerId: string;
+  workerName: string;
+  date: string;
+  time: string;
+}

@@ -14,6 +14,7 @@ import {
   Bell,
   AlertTriangle,
   X,
+  RotateCcw,
 } from 'lucide-react';
 import logo from '@/assets/logo.jpg';
 import { getCurrentUser, setCurrentUser, getInventory } from '@/lib/store';
@@ -26,6 +27,7 @@ interface LayoutProps {
 const navItems = [
   { path: '/', label: 'الرئيسية', icon: LayoutDashboard },
   { path: '/sales', label: 'المبيعات', icon: ShoppingCart },
+  { path: '/returns', label: 'المرتجعات', icon: RotateCcw },
   { path: '/inventory', label: 'المخزون', icon: Package },
   { path: '/reports', label: 'التقارير', icon: BarChart3 },
   { path: '/workers', label: 'العمال', icon: Users },
