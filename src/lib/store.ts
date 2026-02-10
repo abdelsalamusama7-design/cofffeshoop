@@ -89,10 +89,26 @@ const defaultCategories: Category[] = [
 ];
 
 const defaultProducts: Product[] = [
-  { id: '1', name: 'قهوة تركي', categoryId: '1', sellPrice: 15, costPrice: 5, ingredients: [{ name: 'قهوة خام', cost: 2 }, { name: 'سكر', cost: 0.5 }, { name: 'كوب ورق', cost: 2.5 }] },
-  { id: '2', name: 'شاي', categoryId: '1', sellPrice: 10, costPrice: 3, ingredients: [{ name: 'شاي خام', cost: 1 }, { name: 'سكر', cost: 0.5 }, { name: 'كوب ورق', cost: 1.5 }] },
-  { id: '3', name: 'نسكافيه', categoryId: '1', sellPrice: 20, costPrice: 7, ingredients: [{ name: 'نسكافيه', cost: 3 }, { name: 'لبن', cost: 1.5 }, { name: 'كوب ورق', cost: 2.5 }] },
-  { id: '4', name: 'آيس كوفي', categoryId: '2', sellPrice: 25, costPrice: 8, ingredients: [{ name: 'قهوة', cost: 3 }, { name: 'لبن', cost: 2 }, { name: 'ثلج', cost: 0.5 }, { name: 'كوب', cost: 2.5 }] },
+  { id: '1', name: 'قهوة تركي', categoryId: '1', sellPrice: 15, costPrice: 5, ingredients: [
+    { name: 'قهوة خام', cost: 2, inventoryItemId: '1', quantityUsed: 0.017 },
+    { name: 'سكر', cost: 0.5, inventoryItemId: '3', quantityUsed: 0.02 },
+    { name: 'كوب ورق', cost: 2.5, inventoryItemId: '5', quantityUsed: 1 },
+  ]},
+  { id: '2', name: 'شاي', categoryId: '1', sellPrice: 10, costPrice: 3, ingredients: [
+    { name: 'شاي خام', cost: 1, inventoryItemId: '2', quantityUsed: 0.013 },
+    { name: 'سكر', cost: 0.5, inventoryItemId: '3', quantityUsed: 0.02 },
+    { name: 'كوب ورق', cost: 1.5, inventoryItemId: '5', quantityUsed: 1 },
+  ]},
+  { id: '3', name: 'نسكافيه', categoryId: '1', sellPrice: 20, costPrice: 7, ingredients: [
+    { name: 'نسكافيه', cost: 3, inventoryItemId: '6', quantityUsed: 0.033 },
+    { name: 'لبن', cost: 1.5, inventoryItemId: '7', quantityUsed: 0.05 },
+    { name: 'كوب ورق', cost: 2.5, inventoryItemId: '4', quantityUsed: 1 },
+  ]},
+  { id: '4', name: 'آيس كوفي', categoryId: '2', sellPrice: 25, costPrice: 8, ingredients: [
+    { name: 'قهوة خام', cost: 3, inventoryItemId: '1', quantityUsed: 0.025 },
+    { name: 'لبن', cost: 2, inventoryItemId: '7', quantityUsed: 0.067 },
+    { name: 'كوب ورق', cost: 2.5, inventoryItemId: '4', quantityUsed: 1 },
+  ]},
   { id: '5', name: 'بيبسي', categoryId: '3', sellPrice: 12, costPrice: 7 },
   { id: '6', name: 'مياه معدنية', categoryId: '4', sellPrice: 5, costPrice: 2.5 },
   { id: '7', name: 'عصير برتقال', categoryId: '5', sellPrice: 20, costPrice: 8 },
