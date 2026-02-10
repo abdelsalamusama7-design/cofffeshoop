@@ -4,6 +4,10 @@
 @tailwind components;
 @tailwind utilities;
 
+* {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
 @layer base {
   :root {
     --background: 30 30% 96%;
