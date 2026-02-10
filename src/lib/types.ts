@@ -1,10 +1,3 @@
-export interface Category {
-  id: string;
-  name: string;
-  icon: string;
-  color: string;
-}
-
 export interface Ingredient {
   name: string;
   cost: number;
@@ -15,7 +8,6 @@ export interface Ingredient {
 export interface Product {
   id: string;
   name: string;
-  categoryId: string;
   sellPrice: number;
   costPrice: number;
   ingredients?: Ingredient[];
@@ -45,6 +37,7 @@ export interface InventoryItem {
   unit: string;
   quantity: number;
   costPerUnit: number;
+  sellPrice?: number; // if set, this item can be sold directly
 }
 
 export interface Worker {

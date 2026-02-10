@@ -1,51 +1,76 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSearchParams } from 'react-router-dom';
-import { ShoppingCart, Plus, Minus, X, Receipt, Share2, Printer } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Receipt, Share2, Printer, Coffee, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getCategories, getProducts, getCurrentUser, addSale, getInventory, setInventory } from '@/lib/store';
+import { getProducts, getCurrentUser, addSale, getInventory, setInventory } from '@/lib/store';
 import { SaleItem, Sale } from '@/lib/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
+type SellableItem = {
+  id: string;
+  name: string;
+  sellPrice: number;
+  costPrice: number;
+  type: 'product' | 'inventory';
+  ingredients?: { inventoryItemId?: string; quantityUsed?: number }[];
+};
+
 const Sales = () => {
-  const [searchParams] = useSearchParams();
-  const initialCategory = searchParams.get('category') || '';
-  const [activeCategory, setActiveCategory] = useState(initialCategory);
+  const [activeTab, setActiveTab] = useState<'all' | 'products' | 'inventory'>('all');
   const [cart, setCart] = useState<SaleItem[]>([]);
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastSale, setLastSale] = useState<Sale | null>(null);
 
-  const categories = getCategories();
   const products = getProducts();
+  const inventory = getInventory();
   const user = getCurrentUser();
 
-  const filteredProducts = useMemo(() =>
-    activeCategory ? products.filter(p => p.categoryId === activeCategory) : products,
-    [activeCategory, products]
-  );
+  // Combine products and sellable inventory items
+  const sellableItems: SellableItem[] = useMemo(() => {
+    const items: SellableItem[] = [];
+    products.forEach(p => items.push({
+      id: `product_${p.id}`,
+      name: p.name,
+      sellPrice: p.sellPrice,
+      costPrice: p.costPrice,
+      type: 'product',
+      ingredients: p.ingredients,
+    }));
+    inventory.filter(i => i.sellPrice).forEach(i => items.push({
+      id: `inv_${i.id}`,
+      name: i.name,
+      sellPrice: i.sellPrice!,
+      costPrice: i.costPerUnit,
+      type: 'inventory',
+    }));
+    return items;
+  }, [products, inventory]);
+
+  const filteredItems = useMemo(() => {
+    if (activeTab === 'products') return sellableItems.filter(i => i.type === 'product');
+    if (activeTab === 'inventory') return sellableItems.filter(i => i.type === 'inventory');
+    return sellableItems;
+  }, [activeTab, sellableItems]);
 
   const cartTotal = cart.reduce((sum, item) => sum + item.total, 0);
 
-  const addToCart = (productId: string) => {
-    const product = products.find(p => p.id === productId);
-    if (!product) return;
-
+  const addToCart = (item: SellableItem) => {
     setCart(prev => {
-      const existing = prev.find(i => i.productId === productId);
+      const existing = prev.find(i => i.productId === item.id);
       if (existing) {
         return prev.map(i =>
-          i.productId === productId
+          i.productId === item.id
             ? { ...i, quantity: i.quantity + 1, total: (i.quantity + 1) * i.unitPrice }
             : i
         );
       }
       return [...prev, {
-        productId: product.id,
-        productName: product.name,
+        productId: item.id,
+        productName: item.name,
         quantity: 1,
-        unitPrice: product.sellPrice,
-        total: product.sellPrice,
+        unitPrice: item.sellPrice,
+        total: item.sellPrice,
       }];
     });
   };
@@ -75,14 +100,16 @@ const Sales = () => {
       time: now.toLocaleTimeString('ar-EG'),
     };
 
-    // Deduct inventory based on ingredients
-    const inventory = getInventory();
+    // Deduct from inventory
     let updatedInventory = [...inventory];
 
     cart.forEach(cartItem => {
-      const product = products.find(p => p.id === cartItem.productId);
-      if (product?.ingredients) {
-        product.ingredients.forEach(ing => {
+      const sellable = sellableItems.find(s => s.id === cartItem.productId);
+      if (!sellable) return;
+
+      if (sellable.type === 'product' && sellable.ingredients) {
+        // Product with ingredients: deduct each ingredient from inventory
+        sellable.ingredients.forEach(ing => {
           if (ing.inventoryItemId && ing.quantityUsed) {
             updatedInventory = updatedInventory.map(inv =>
               inv.id === ing.inventoryItemId
@@ -91,6 +118,14 @@ const Sales = () => {
             );
           }
         });
+      } else if (sellable.type === 'inventory') {
+        // Direct inventory item: deduct quantity
+        const invId = cartItem.productId.replace('inv_', '');
+        updatedInventory = updatedInventory.map(inv =>
+          inv.id === invId
+            ? { ...inv, quantity: Math.max(0, inv.quantity - cartItem.quantity) }
+            : inv
+        );
       }
     });
 
@@ -104,7 +139,7 @@ const Sales = () => {
 
   const shareReceipt = (method: 'whatsapp' | 'email') => {
     if (!lastSale) return;
-    const text = `إيصال بيع - كافيه مانجر\n` +
+    const text = `إيصال بيع - بن العميد\n` +
       `التاريخ: ${lastSale.date}\nالوقت: ${lastSale.time}\n` +
       `العامل: ${lastSale.workerName}\n` +
       `---\n` +
@@ -114,7 +149,7 @@ const Sales = () => {
     if (method === 'whatsapp') {
       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
     } else {
-      window.open(`mailto:?subject=${encodeURIComponent('إيصال بيع - كافيه مانجر')}&body=${encodeURIComponent(text)}`, '_blank');
+      window.open(`mailto:?subject=${encodeURIComponent('إيصال بيع - بن العميد')}&body=${encodeURIComponent(text)}`, '_blank');
     }
   };
 
@@ -128,40 +163,37 @@ const Sales = () => {
         </div>
       </div>
 
-      {/* Categories filter */}
+      {/* Filter tabs */}
       <div className="flex gap-2 overflow-x-auto pb-2">
-        <button
-          onClick={() => setActiveCategory('')}
-          className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
-            !activeCategory ? 'bg-primary text-primary-foreground shadow-md' : 'bg-secondary text-secondary-foreground hover:bg-accent'
-          }`}
-        >
-          الكل
-        </button>
-        {categories.map(cat => (
+        {[
+          { key: 'all' as const, label: 'الكل' },
+          { key: 'products' as const, label: 'المنتجات', icon: Coffee },
+          { key: 'inventory' as const, label: 'المخزون', icon: Package },
+        ].map(tab => (
           <button
-            key={cat.id}
-            onClick={() => setActiveCategory(cat.id)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
-              activeCategory === cat.id ? 'bg-primary text-primary-foreground shadow-md' : 'bg-secondary text-secondary-foreground hover:bg-accent'
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all flex items-center gap-2 ${
+              activeTab === tab.key ? 'bg-primary text-primary-foreground shadow-md' : 'bg-secondary text-secondary-foreground hover:bg-accent'
             }`}
           >
-            {cat.name}
+            {tab.icon && <tab.icon size={16} />}
+            {tab.label}
           </button>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Products Grid */}
+        {/* Items Grid */}
         <div className="lg:col-span-2">
           <div className="grid grid-cols-2 gap-3">
-            {filteredProducts.map(product => {
-              const inCart = cart.find(i => i.productId === product.id);
+            {filteredItems.map(item => {
+              const inCart = cart.find(i => i.productId === item.id);
               return (
                 <motion.button
-                  key={product.id}
+                  key={item.id}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => addToCart(product.id)}
+                  onClick={() => addToCart(item)}
                   className={`glass-card rounded-2xl p-4 text-right hover:shadow-xl transition-all relative ${
                     inCart ? 'ring-2 ring-accent' : ''
                   }`}
@@ -171,10 +203,20 @@ const Sales = () => {
                       {inCart.quantity}
                     </span>
                   )}
-                  <h3 className="font-semibold text-foreground">{product.name}</h3>
-                  <p className="text-lg font-bold text-accent mt-2">{product.sellPrice} ج.م</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    {item.type === 'product' ? (
+                      <Coffee size={14} className="text-primary" />
+                    ) : (
+                      <Package size={14} className="text-muted-foreground" />
+                    )}
+                    <span className="text-[10px] text-muted-foreground">
+                      {item.type === 'product' ? 'منتج' : 'مخزون'}
+                    </span>
+                  </div>
+                  <h3 className="font-semibold text-foreground">{item.name}</h3>
+                  <p className="text-lg font-bold text-accent mt-2">{item.sellPrice} ج.م</p>
                   {user?.role === 'admin' && (
-                    <p className="text-xs text-muted-foreground">تكلفة: {product.costPrice} ج.م</p>
+                    <p className="text-xs text-muted-foreground">تكلفة: {item.costPrice} ج.م</p>
                   )}
                 </motion.button>
               );
@@ -244,7 +286,7 @@ const Sales = () => {
           {lastSale && (
             <div className="space-y-4">
               <div className="text-center border-b border-border pb-3">
-                <h3 className="font-bold text-lg text-foreground">كافيه مانجر</h3>
+                <h3 className="font-bold text-lg text-foreground">بن العميد</h3>
                 <p className="text-sm text-muted-foreground">{lastSale.date} - {lastSale.time}</p>
                 <p className="text-sm text-muted-foreground">العامل: {lastSale.workerName}</p>
               </div>

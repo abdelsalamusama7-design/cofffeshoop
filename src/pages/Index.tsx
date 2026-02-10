@@ -1,25 +1,14 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Coffee, GlassWater, Wine, Droplets, CupSoda, Plus, ShoppingCart, BarChart3, Package, TrendingUp, DollarSign } from 'lucide-react';
-import { getCategories, getProducts, getSales } from '@/lib/store';
+import { ShoppingCart, BarChart3, Package, TrendingUp, DollarSign, Coffee } from 'lucide-react';
+import { getProducts, getSales, getInventory } from '@/lib/store';
 import { getCurrentUser } from '@/lib/store';
 
-const iconMap: Record<string, any> = {
-  Coffee, GlassWater, Wine, Droplets, CupSoda,
-};
-
-const colorMap: Record<string, string> = {
-  'cafe-warm': 'from-orange-500 to-red-500',
-  'info': 'from-blue-400 to-blue-600',
-  'success': 'from-green-400 to-green-600',
-  'warning': 'from-amber-400 to-orange-500',
-};
-
 const Dashboard = () => {
-  const categories = getCategories();
   const products = getProducts();
   const sales = getSales();
   const user = getCurrentUser();
+  const inventory = getInventory();
 
   const todaySales = sales.filter(s => s.date === new Date().toISOString().split('T')[0]);
   const todayTotal = todaySales.reduce((sum, s) => sum + s.total, 0);
@@ -27,8 +16,10 @@ const Dashboard = () => {
 
   const totalCost = todaySales.reduce((sum, s) => {
     return sum + s.items.reduce((c, item) => {
-      const product = products.find(p => p.id === item.productId);
-      return c + (product ? product.costPrice * item.quantity : 0);
+      const product = products.find(p => p.id === item.productId || `product_${p.id}` === item.productId);
+      const invItem = inventory.find(i => `inv_${i.id}` === item.productId);
+      const cost = product ? product.costPrice : invItem ? invItem.costPerUnit : 0;
+      return c + cost * item.quantity;
     }, 0);
   }, 0);
 
@@ -38,6 +29,9 @@ const Dashboard = () => {
     { label: 'الأصناف المباعة', value: todayCount.toString(), icon: TrendingUp, gradient: 'from-purple-500 to-purple-600' },
     ...(user?.role === 'admin' ? [{ label: 'صافي الربح', value: `${todayTotal - totalCost} ج.م`, icon: BarChart3, gradient: 'from-amber-500 to-orange-600' }] : []),
   ];
+
+  // Low stock items
+  const lowStockItems = inventory.filter(i => i.quantity <= 5);
 
   return (
     <div className="space-y-8">
@@ -66,55 +60,31 @@ const Dashboard = () => {
         ))}
       </div>
 
-      {/* Categories */}
-      <div>
-        <h2 className="text-lg font-bold text-foreground mb-4">الأقسام</h2>
-        <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-3">
-          {categories.map((cat, i) => {
-            const Icon = iconMap[cat.icon] || Coffee;
-            const gradient = colorMap[cat.color] || 'from-amber-500 to-orange-600';
-            const catProducts = products.filter(p => p.categoryId === cat.id);
-            return (
+      {/* Low Stock Alert */}
+      {user?.role === 'admin' && lowStockItems.length > 0 && (
+        <div>
+          <h2 className="text-lg font-bold text-foreground mb-4">⚠️ أصناف قاربت على النفاد</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {lowStockItems.map((item, i) => (
               <motion.div
-                key={cat.id}
+                key={item.id}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: i * 0.05 }}
               >
                 <Link
-                  to={`/sales?category=${cat.id}`}
-                  className="glass-card rounded-2xl p-5 flex flex-col items-center gap-3 hover:shadow-xl transition-all group cursor-pointer"
+                  to="/inventory"
+                  className="glass-card rounded-2xl p-4 flex flex-col items-center gap-2 hover:shadow-xl transition-all border border-destructive/30"
                 >
-                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
-                    <Icon size={28} className="text-primary-foreground" />
-                  </div>
-                  <span className="text-sm font-semibold text-foreground text-center">{cat.name}</span>
-                  <span className="text-xs text-muted-foreground">{catProducts.length} منتج</span>
+                  <Package size={24} className="text-destructive" />
+                  <span className="text-sm font-semibold text-foreground text-center">{item.name}</span>
+                  <span className="text-xs text-destructive font-bold">{item.quantity} {item.unit}</span>
                 </Link>
               </motion.div>
-            );
-          })}
-
-          {/* Add new category (admin only) */}
-          {user?.role === 'admin' && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: categories.length * 0.05 }}
-            >
-              <Link
-                to="/inventory"
-                className="glass-card rounded-2xl p-5 flex flex-col items-center gap-3 hover:shadow-xl transition-all border-2 border-dashed border-border cursor-pointer group"
-              >
-                <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Plus size={28} className="text-muted-foreground" />
-                </div>
-                <span className="text-sm font-semibold text-muted-foreground">إضافة قسم</span>
-              </Link>
-            </motion.div>
-          )}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Quick actions */}
       <div>

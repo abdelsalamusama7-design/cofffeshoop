@@ -1,4 +1,4 @@
-import { Product, Sale, Category, InventoryItem, Worker, AttendanceRecord, WorkerTransaction, Expense } from './types';
+import { Product, Sale, InventoryItem, Worker, AttendanceRecord, WorkerTransaction, Expense } from './types';
 
 const STORAGE_KEYS = {
   products: 'cafe_products',
@@ -6,7 +6,6 @@ const STORAGE_KEYS = {
   inventory: 'cafe_inventory',
   workers: 'cafe_workers',
   attendance: 'cafe_attendance',
-  categories: 'cafe_categories',
   currentUser: 'cafe_current_user',
   transactions: 'cafe_transactions',
   expenses: 'cafe_expenses',
@@ -24,10 +23,6 @@ function get<T>(key: string, fallback: T): T {
 function set<T>(key: string, value: T): void {
   localStorage.setItem(key, JSON.stringify(value));
 }
-
-// Categories
-export const getCategories = (): Category[] => get(STORAGE_KEYS.categories, defaultCategories);
-export const setCategories = (cats: Category[]) => set(STORAGE_KEYS.categories, cats);
 
 // Products
 export const getProducts = (): Product[] => get(STORAGE_KEYS.products, defaultProducts);
@@ -79,49 +74,43 @@ export const deleteExpense = (id: string) => {
   set(STORAGE_KEYS.expenses, expenses);
 };
 
-// Default data
-const defaultCategories: Category[] = [
-  { id: '1', name: 'مشروبات ساخنة', icon: 'Coffee', color: 'cafe-warm' },
-  { id: '2', name: 'مشروبات باردة', icon: 'GlassWater', color: 'info' },
-  { id: '3', name: 'مياه غازية', icon: 'Wine', color: 'success' },
-  { id: '4', name: 'مياه معدنية', icon: 'Droplets', color: 'info' },
-  { id: '5', name: 'عصائر', icon: 'CupSoda', color: 'warning' },
-];
-
+// Default data - Products are items that need preparation (multiple ingredients)
 const defaultProducts: Product[] = [
-  { id: '1', name: 'قهوة تركي', categoryId: '1', sellPrice: 15, costPrice: 5, ingredients: [
+  { id: '1', name: 'قهوة تركي', sellPrice: 15, costPrice: 5, ingredients: [
     { name: 'قهوة خام', cost: 2, inventoryItemId: '1', quantityUsed: 0.017 },
     { name: 'سكر', cost: 0.5, inventoryItemId: '3', quantityUsed: 0.02 },
-    { name: 'كوب ورق', cost: 2.5, inventoryItemId: '5', quantityUsed: 1 },
+    { name: 'كوب ورق صغير', cost: 2.5, inventoryItemId: '5', quantityUsed: 1 },
   ]},
-  { id: '2', name: 'شاي', categoryId: '1', sellPrice: 10, costPrice: 3, ingredients: [
+  { id: '2', name: 'شاي', sellPrice: 10, costPrice: 3, ingredients: [
     { name: 'شاي خام', cost: 1, inventoryItemId: '2', quantityUsed: 0.013 },
     { name: 'سكر', cost: 0.5, inventoryItemId: '3', quantityUsed: 0.02 },
-    { name: 'كوب ورق', cost: 1.5, inventoryItemId: '5', quantityUsed: 1 },
+    { name: 'كوب ورق صغير', cost: 1.5, inventoryItemId: '5', quantityUsed: 1 },
   ]},
-  { id: '3', name: 'نسكافيه', categoryId: '1', sellPrice: 20, costPrice: 7, ingredients: [
+  { id: '3', name: 'نسكافيه', sellPrice: 20, costPrice: 7, ingredients: [
     { name: 'نسكافيه', cost: 3, inventoryItemId: '6', quantityUsed: 0.033 },
     { name: 'لبن', cost: 1.5, inventoryItemId: '7', quantityUsed: 0.05 },
-    { name: 'كوب ورق', cost: 2.5, inventoryItemId: '4', quantityUsed: 1 },
+    { name: 'كوب ورق كبير', cost: 2.5, inventoryItemId: '4', quantityUsed: 1 },
   ]},
-  { id: '4', name: 'آيس كوفي', categoryId: '2', sellPrice: 25, costPrice: 8, ingredients: [
+  { id: '4', name: 'آيس كوفي', sellPrice: 25, costPrice: 8, ingredients: [
     { name: 'قهوة خام', cost: 3, inventoryItemId: '1', quantityUsed: 0.025 },
     { name: 'لبن', cost: 2, inventoryItemId: '7', quantityUsed: 0.067 },
-    { name: 'كوب ورق', cost: 2.5, inventoryItemId: '4', quantityUsed: 1 },
+    { name: 'كوب ورق كبير', cost: 2.5, inventoryItemId: '4', quantityUsed: 1 },
   ]},
-  { id: '5', name: 'بيبسي', categoryId: '3', sellPrice: 12, costPrice: 7 },
-  { id: '6', name: 'مياه معدنية', categoryId: '4', sellPrice: 5, costPrice: 2.5 },
-  { id: '7', name: 'عصير برتقال', categoryId: '5', sellPrice: 20, costPrice: 8 },
 ];
 
+// Inventory includes everything: raw materials, cups, and sellable items (Pepsi, water, juice)
 const defaultInventory: InventoryItem[] = [
   { id: '1', name: 'قهوة خام', unit: 'كجم', quantity: 5, costPerUnit: 120 },
   { id: '2', name: 'شاي خام', unit: 'كجم', quantity: 3, costPerUnit: 80 },
   { id: '3', name: 'سكر', unit: 'كجم', quantity: 10, costPerUnit: 25 },
   { id: '4', name: 'أكواب ورق كبيرة', unit: 'علبة', quantity: 20, costPerUnit: 50 },
   { id: '5', name: 'أكواب ورق صغيرة', unit: 'علبة', quantity: 15, costPerUnit: 35 },
-  { id: '6', name: 'نسكافيه', unit: 'برطمان', quantity: 4, costPerUnit: 90 },
+  { id: '6', name: 'نسكافيه', unit: 'كجم', quantity: 4, costPerUnit: 90 },
   { id: '7', name: 'لبن', unit: 'لتر', quantity: 20, costPerUnit: 30 },
+  // Sellable items (sold directly from inventory)
+  { id: '8', name: 'بيبسي', unit: 'علبة', quantity: 24, costPerUnit: 7, sellPrice: 12 },
+  { id: '9', name: 'مياه معدنية', unit: 'علبة', quantity: 48, costPerUnit: 2.5, sellPrice: 5 },
+  { id: '10', name: 'عصير برتقال', unit: 'علبة', quantity: 12, costPerUnit: 8, sellPrice: 20 },
 ];
 
 const defaultWorkers: Worker[] = [
