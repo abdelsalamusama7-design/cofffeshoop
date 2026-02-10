@@ -261,6 +261,7 @@ const Inventory = () => {
               <option value="علبة">علبة</option>
               <option value="كنز">كنز</option>
               <option value="كوباية">كوباية</option>
+              <option value="قطعة واحدة">قطعة واحدة</option>
             </select>
             <Input inputMode="numeric" pattern="[0-9]*" placeholder="الكمية" value={newItem.quantity || ''} onChange={e => setNewItem({ ...newItem, quantity: +e.target.value.replace(/[^0-9.]/g, '') })} />
             <Input inputMode="numeric" pattern="[0-9]*" placeholder="سعر الوحدة (التكلفة)" value={newItem.costPerUnit || ''} onChange={e => setNewItem({ ...newItem, costPerUnit: +e.target.value.replace(/[^0-9.]/g, '') })} />
@@ -300,6 +301,7 @@ const Inventory = () => {
                 <option value="علبة">علبة</option>
                 <option value="كنز">كنز</option>
                 <option value="كوباية">كوباية</option>
+                <option value="قطعة واحدة">قطعة واحدة</option>
               </select>
               <Input inputMode="numeric" pattern="[0-9]*" value={editItem.quantity} onChange={e => setEditItem({ ...editItem, quantity: +e.target.value.replace(/[^0-9.]/g, '') })} />
               <Input inputMode="numeric" pattern="[0-9]*" value={editItem.costPerUnit} onChange={e => setEditItem({ ...editItem, costPerUnit: +e.target.value.replace(/[^0-9.]/g, '') })} />
