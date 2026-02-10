@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bot, X, Send, Loader2 } from 'lucide-react';
-import { getProducts, getCategories, getInventory } from '@/lib/store';
+import { getProducts, getInventory } from '@/lib/store';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 
@@ -20,16 +20,13 @@ const ChatBot = () => {
 
   const getSiteData = useCallback(() => {
     const products = getProducts();
-    const categories = getCategories();
     const inventory = getInventory();
     return {
-      categories: categories.map(c => c.name),
       products: products.map(p => ({
         name: p.name,
         price: p.sellPrice,
-        category: categories.find(c => c.id === p.categoryId)?.name,
       })),
-      inventoryItems: inventory.map(i => ({ name: i.name, qty: i.quantity, unit: i.unit })),
+      inventoryItems: inventory.map(i => ({ name: i.name, qty: i.quantity, unit: i.unit, sellPrice: i.sellPrice })),
     };
   }, []);
 

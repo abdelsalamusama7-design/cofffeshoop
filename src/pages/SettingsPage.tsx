@@ -4,7 +4,7 @@ import { Settings, Download, Upload, Mail, MessageCircle, Calendar, Clock, Check
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { getSales, getProducts, getCategories, getInventory, getWorkers, getAttendance, getExpenses, getTransactions, getCurrentUser } from '@/lib/store';
+import { getSales, getProducts, getInventory, getWorkers, getAttendance, getExpenses, getTransactions, getCurrentUser } from '@/lib/store';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 type BackupFrequency = 'daily' | 'weekly' | 'monthly';
@@ -40,7 +40,6 @@ const SettingsPage = () => {
       return d >= start && d <= end;
     });
     const products = getProducts();
-    const categories = getCategories();
     const inventory = getInventory();
     const workers = getWorkers();
     const attendance = getAttendance().filter(a => {
