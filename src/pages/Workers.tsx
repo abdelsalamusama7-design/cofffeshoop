@@ -186,7 +186,7 @@ const Workers = () => {
           <div className="space-y-3">
             <Input placeholder="اسم العامل" value={newWorker.name} onChange={e => setNewWorker({ ...newWorker, name: e.target.value })} />
             <Input type="password" placeholder="كلمة المرور" value={newWorker.password} onChange={e => setNewWorker({ ...newWorker, password: e.target.value })} />
-            <Input type="number" placeholder="المرتب" value={newWorker.salary || ''} onChange={e => setNewWorker({ ...newWorker, salary: +e.target.value })} />
+            <Input inputMode="numeric" pattern="[0-9]*" placeholder="المرتب" value={newWorker.salary || ''} onChange={e => setNewWorker({ ...newWorker, salary: +e.target.value.replace(/[^0-9.]/g, '') })} />
             <Button onClick={addWorker} className="w-full cafe-gradient text-primary-foreground">
               <Save size={16} className="ml-2" />
               حفظ
@@ -233,10 +233,11 @@ const Workers = () => {
               </SelectContent>
             </Select>
             <Input
-              type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
               placeholder="المبلغ"
               value={txnAmount}
-              onChange={e => setTxnAmount(e.target.value)}
+              onChange={e => setTxnAmount(e.target.value.replace(/[^0-9.]/g, ''))}
             />
             <Input
               placeholder="ملاحظة (اختياري)"
@@ -272,10 +273,11 @@ const Workers = () => {
               </SelectContent>
             </Select>
             <Input
-              type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
               placeholder="المبلغ"
               value={editTxnAmount}
-              onChange={e => setEditTxnAmount(e.target.value)}
+              onChange={e => setEditTxnAmount(e.target.value.replace(/[^0-9.]/g, ''))}
             />
             <Input
               placeholder="ملاحظة (اختياري)"

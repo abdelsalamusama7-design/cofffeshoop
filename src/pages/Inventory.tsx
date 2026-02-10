@@ -298,8 +298,8 @@ const Inventory = () => {
           <div className="space-y-3">
             <Input placeholder="اسم العنصر" value={newItem.name} onChange={e => setNewItem({ ...newItem, name: e.target.value })} />
             <Input placeholder="الوحدة (كجم/لتر/علبة)" value={newItem.unit} onChange={e => setNewItem({ ...newItem, unit: e.target.value })} />
-            <Input type="number" placeholder="الكمية" value={newItem.quantity || ''} onChange={e => setNewItem({ ...newItem, quantity: +e.target.value })} />
-            <Input type="number" placeholder="سعر الوحدة" value={newItem.costPerUnit || ''} onChange={e => setNewItem({ ...newItem, costPerUnit: +e.target.value })} />
+            <Input inputMode="numeric" pattern="[0-9]*" placeholder="الكمية" value={newItem.quantity || ''} onChange={e => setNewItem({ ...newItem, quantity: +e.target.value.replace(/[^0-9.]/g, '') })} />
+            <Input inputMode="numeric" pattern="[0-9]*" placeholder="سعر الوحدة" value={newItem.costPerUnit || ''} onChange={e => setNewItem({ ...newItem, costPerUnit: +e.target.value.replace(/[^0-9.]/g, '') })} />
             <Button onClick={saveItem} className="w-full cafe-gradient text-primary-foreground">
               <Save size={16} className="ml-2" />
               حفظ
@@ -316,8 +316,8 @@ const Inventory = () => {
             <div className="space-y-3">
               <Input value={editItem.name} onChange={e => setEditItem({ ...editItem, name: e.target.value })} />
               <Input value={editItem.unit} onChange={e => setEditItem({ ...editItem, unit: e.target.value })} />
-              <Input type="number" value={editItem.quantity} onChange={e => setEditItem({ ...editItem, quantity: +e.target.value })} />
-              <Input type="number" value={editItem.costPerUnit} onChange={e => setEditItem({ ...editItem, costPerUnit: +e.target.value })} />
+              <Input inputMode="numeric" pattern="[0-9]*" value={editItem.quantity} onChange={e => setEditItem({ ...editItem, quantity: +e.target.value.replace(/[^0-9.]/g, '') })} />
+              <Input inputMode="numeric" pattern="[0-9]*" value={editItem.costPerUnit} onChange={e => setEditItem({ ...editItem, costPerUnit: +e.target.value.replace(/[^0-9.]/g, '') })} />
               <Button onClick={updateItem} className="w-full cafe-gradient text-primary-foreground">
                 <Save size={16} className="ml-2" />
                 تحديث
@@ -347,7 +347,7 @@ const Inventory = () => {
               onChange={ingredients => setNewProduct({ ...newProduct, ingredients, costPrice: ingredients.reduce((s, i) => s + i.cost, 0) })}
             />
 
-            <Input type="number" placeholder="سعر البيع" value={newProduct.sellPrice || ''} onChange={e => setNewProduct({ ...newProduct, sellPrice: +e.target.value })} />
+            <Input inputMode="numeric" pattern="[0-9]*" placeholder="سعر البيع" value={newProduct.sellPrice || ''} onChange={e => setNewProduct({ ...newProduct, sellPrice: +e.target.value.replace(/[^0-9.]/g, '') })} />
 
             {newProduct.ingredients.length > 0 && newProduct.sellPrice > 0 && (
               <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
@@ -363,7 +363,7 @@ const Inventory = () => {
             )}
 
             {newProduct.ingredients.length === 0 && (
-              <Input type="number" placeholder="سعر التكلفة (يدوي)" value={newProduct.costPrice || ''} onChange={e => setNewProduct({ ...newProduct, costPrice: +e.target.value })} />
+              <Input inputMode="numeric" pattern="[0-9]*" placeholder="سعر التكلفة (يدوي)" value={newProduct.costPrice || ''} onChange={e => setNewProduct({ ...newProduct, costPrice: +e.target.value.replace(/[^0-9.]/g, '') })} />
             )}
 
             <Button onClick={saveProduct} className="w-full cafe-gradient text-primary-foreground">
@@ -398,10 +398,10 @@ const Inventory = () => {
                   onChange={ingredients => setEditProduct({ ...editProduct, ingredients, costPrice: ingredients.reduce((s, i) => s + i.cost, 0) })}
                 />
 
-                <Input type="number" value={editProduct.sellPrice} onChange={e => setEditProduct({ ...editProduct, sellPrice: +e.target.value })} placeholder="سعر البيع" />
+                <Input inputMode="numeric" pattern="[0-9]*" value={editProduct.sellPrice} onChange={e => setEditProduct({ ...editProduct, sellPrice: +e.target.value.replace(/[^0-9.]/g, '') })} placeholder="سعر البيع" />
 
                 {ings.length === 0 && (
-                  <Input type="number" value={editProduct.costPrice} onChange={e => setEditProduct({ ...editProduct, costPrice: +e.target.value })} placeholder="سعر التكلفة (يدوي)" />
+                  <Input inputMode="numeric" pattern="[0-9]*" value={editProduct.costPrice} onChange={e => setEditProduct({ ...editProduct, costPrice: +e.target.value.replace(/[^0-9.]/g, '') })} placeholder="سعر التكلفة (يدوي)" />
                 )}
 
                 <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">

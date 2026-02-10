@@ -111,17 +111,19 @@ const IngredientsEditor = ({ ingredients, onChange }: Props) => {
               />
               {ing.inventoryItemId && (
                 <Input
-                  type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={ing.quantityUsed || ''}
-                  onChange={e => handleQtyUsedChange(i, +e.target.value)}
+                  onChange={e => handleQtyUsedChange(i, +e.target.value.replace(/[^0-9.]/g, ''))}
                   placeholder={`الكمية (${linkedItem?.unit || ''})`}
                   className="w-28"
                 />
               )}
               <Input
-                type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={ing.cost || ''}
-                onChange={e => updateIngredient(i, { cost: +e.target.value })}
+                onChange={e => updateIngredient(i, { cost: +e.target.value.replace(/[^0-9.]/g, '') })}
                 placeholder="التكلفة"
                 className="w-24"
                 disabled={!!ing.inventoryItemId}
@@ -170,21 +172,24 @@ const IngredientsEditor = ({ ingredients, onChange }: Props) => {
           />
           {newInventoryId && (
             <Input
-              type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={newQtyUsed}
               onChange={e => {
-                setNewQtyUsed(e.target.value);
+                const val = e.target.value.replace(/[^0-9.]/g, '');
+                setNewQtyUsed(val);
                 const inv = inventoryItems.find(i => i.id === newInventoryId);
-                if (inv) setNewCost(String(inv.costPerUnit * +e.target.value));
+                if (inv) setNewCost(String(inv.costPerUnit * +val));
               }}
               placeholder="الكمية المستخدمة"
               className="w-28"
             />
           )}
           <Input
-            type="number"
+            inputMode="numeric"
+            pattern="[0-9]*"
             value={newCost}
-            onChange={e => setNewCost(e.target.value)}
+            onChange={e => setNewCost(e.target.value.replace(/[^0-9.]/g, ''))}
             placeholder="التكلفة"
             className="w-24"
             disabled={!!newInventoryId}

@@ -302,7 +302,7 @@ const Expenses = () => {
         </h3>
         <div className="grid grid-cols-2 gap-2">
           <Input placeholder="اسم المصروف" value={newName} onChange={e => setNewName(e.target.value)} className="col-span-2" />
-          <Input type="number" placeholder="المبلغ" value={newAmount} onChange={e => setNewAmount(e.target.value)} />
+          <Input inputMode="numeric" pattern="[0-9]*" placeholder="المبلغ" value={newAmount} onChange={e => setNewAmount(e.target.value.replace(/[^0-9.]/g, ''))} />
           <select value={newCategory} onChange={e => setNewCategory(e.target.value)}
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background">
             {expenseCategories.map(c => <option key={c} value={c}>{c}</option>)}
