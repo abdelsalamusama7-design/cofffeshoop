@@ -4,7 +4,7 @@ import { Package, Plus, Pencil, Trash2, Save, Coffee } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getInventory, setInventory, getProducts, setProducts, getCurrentUser } from '@/lib/store';
-import { InventoryItem, Product } from '@/lib/types';
+import { InventoryItem, Product, ItemCategory, ITEM_CATEGORIES, SELLABLE_CATEGORIES } from '@/lib/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,8 +19,8 @@ const Inventory = () => {
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [editItem, setEditItem] = useState<InventoryItem | null>(null);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
-  const [newItem, setNewItem] = useState({ name: '', unit: '', quantity: 0, costPerUnit: 0, sellPrice: '' as string | number });
-  const [newProduct, setNewProduct] = useState<{ name: string; sellPrice: number; costPrice: number; ingredients: Ingredient[] }>({ name: '', sellPrice: 0, costPrice: 0, ingredients: [] });
+  const [newItem, setNewItem] = useState({ name: '', unit: '', quantity: 0, costPerUnit: 0, sellPrice: '' as string | number, category: '' as string });
+  const [newProduct, setNewProduct] = useState<{ name: string; sellPrice: number; costPrice: number; category: string; ingredients: Ingredient[] }>({ name: '', sellPrice: 0, costPrice: 0, category: '', ingredients: [] });
 
   if (user?.role !== 'admin') {
     return (
@@ -39,12 +39,13 @@ const Inventory = () => {
       unit: newItem.unit,
       quantity: newItem.quantity,
       costPerUnit: newItem.costPerUnit,
+      ...(newItem.category ? { category: newItem.category as ItemCategory } : {}),
       ...(sellPriceNum > 0 ? { sellPrice: sellPriceNum } : {}),
     };
     const updated = [...inventory, item];
     setInv(updated);
     setInventory(updated);
-    setNewItem({ name: '', unit: '', quantity: 0, costPerUnit: 0, sellPrice: '' });
+    setNewItem({ name: '', unit: '', quantity: 0, costPerUnit: 0, sellPrice: '', category: '' });
     setShowAddItem(false);
     toast.success('تمت إضافة العنصر');
   };
@@ -73,12 +74,13 @@ const Inventory = () => {
       name: newProduct.name,
       sellPrice: newProduct.sellPrice,
       costPrice: costFromIngredients || newProduct.costPrice,
+      ...(newProduct.category ? { category: newProduct.category as ItemCategory } : {}),
       ingredients: newProduct.ingredients.length > 0 ? newProduct.ingredients : undefined,
     };
     const updated = [...productsList, product];
     setProductsList(updated);
     setProducts(updated);
-    setNewProduct({ name: '', sellPrice: 0, costPrice: 0, ingredients: [] });
+    setNewProduct({ name: '', sellPrice: 0, costPrice: 0, category: '', ingredients: [] });
     setShowAddProduct(false);
     toast.success('تمت إضافة المنتج');
   };
@@ -157,8 +159,11 @@ const Inventory = () => {
                     {item.sellPrice ? <Package size={20} className="text-primary" /> : <Package size={20} className="text-accent" />}
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-semibold text-foreground">{item.name}</p>
+                      {item.category && (
+                        <span className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full font-medium">{item.category}</span>
+                      )}
                       {item.sellPrice && (
                         <span className="text-[10px] bg-primary/15 text-primary px-2 py-0.5 rounded-full font-medium">قابل للبيع</span>
                       )}
@@ -237,6 +242,14 @@ const Inventory = () => {
           <div className="space-y-3">
             <Input placeholder="اسم العنصر" value={newItem.name} onChange={e => setNewItem({ ...newItem, name: e.target.value })} />
             <select
+              value={newItem.category}
+              onChange={e => setNewItem({ ...newItem, category: e.target.value })}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
+            >
+              <option value="">اختر القسم</option>
+              {ITEM_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <select
               value={newItem.unit}
               onChange={e => setNewItem({ ...newItem, unit: e.target.value })}
               className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
@@ -267,6 +280,14 @@ const Inventory = () => {
           {editItem && (
             <div className="space-y-3">
               <Input value={editItem.name} onChange={e => setEditItem({ ...editItem, name: e.target.value })} />
+              <select
+                value={editItem.category || ''}
+                onChange={e => setEditItem({ ...editItem, category: e.target.value as ItemCategory || undefined })}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
+              >
+                <option value="">اختر القسم</option>
+                {ITEM_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
               <select
                 value={editItem.unit}
                 onChange={e => setEditItem({ ...editItem, unit: e.target.value })}
@@ -301,6 +322,14 @@ const Inventory = () => {
           <DialogHeader><DialogTitle>إضافة منتج</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <Input placeholder="اسم المنتج" value={newProduct.name} onChange={e => setNewProduct({ ...newProduct, name: e.target.value })} />
+            <select
+              value={newProduct.category}
+              onChange={e => setNewProduct({ ...newProduct, category: e.target.value })}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
+            >
+              <option value="">اختر القسم</option>
+              {SELLABLE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
 
             <IngredientsEditor
               ingredients={newProduct.ingredients}
@@ -345,6 +374,14 @@ const Inventory = () => {
             return (
               <div className="space-y-3">
                 <Input value={editProduct.name} onChange={e => setEditProduct({ ...editProduct, name: e.target.value })} placeholder="اسم المنتج" />
+                <select
+                  value={editProduct.category || ''}
+                  onChange={e => setEditProduct({ ...editProduct, category: e.target.value as ItemCategory || undefined })}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
+                >
+                  <option value="">اختر القسم</option>
+                  {SELLABLE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
 
                 <IngredientsEditor
                   ingredients={ings}

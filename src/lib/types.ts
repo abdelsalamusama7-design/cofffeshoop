@@ -1,3 +1,9 @@
+export type ItemCategory = 'مشروبات ساخنة' | 'مشروبات باردة' | 'مياه معدنية' | 'عصائر' | 'مواد خام' | 'أدوات' | 'أخرى';
+
+export const ITEM_CATEGORIES: ItemCategory[] = ['مشروبات ساخنة', 'مشروبات باردة', 'مياه معدنية', 'عصائر', 'مواد خام', 'أدوات', 'أخرى'];
+
+export const SELLABLE_CATEGORIES: ItemCategory[] = ['مشروبات ساخنة', 'مشروبات باردة', 'مياه معدنية', 'عصائر'];
+
 export interface Ingredient {
   name: string;
   cost: number;
@@ -10,7 +16,36 @@ export interface Product {
   name: string;
   sellPrice: number;
   costPrice: number;
+  category?: ItemCategory;
   ingredients?: Ingredient[];
+}
+
+export interface SaleItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
+export interface Sale {
+  id: string;
+  items: SaleItem[];
+  total: number;
+  workerId: string;
+  workerName: string;
+  date: string;
+  time: string;
+}
+
+export interface InventoryItem {
+  id: string;
+  name: string;
+  unit: string;
+  quantity: number;
+  costPerUnit: number;
+  category?: ItemCategory;
+  sellPrice?: number; // if set, this item can be sold directly
 }
 
 export interface SaleItem {

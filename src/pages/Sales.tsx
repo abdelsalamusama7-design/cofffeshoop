@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, Plus, Minus, Receipt, Share2, Printer, Coffee, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getProducts, getCurrentUser, addSale, getInventory, setInventory } from '@/lib/store';
-import { SaleItem, Sale } from '@/lib/types';
+import { SaleItem, Sale, SELLABLE_CATEGORIES, ItemCategory } from '@/lib/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
@@ -13,11 +13,12 @@ type SellableItem = {
   sellPrice: number;
   costPrice: number;
   type: 'product' | 'inventory';
+  category?: ItemCategory;
   ingredients?: { inventoryItemId?: string; quantityUsed?: number }[];
 };
 
 const Sales = () => {
-  const [activeTab, setActiveTab] = useState<'all' | 'products' | 'inventory'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | ItemCategory>('all');
   const [cart, setCart] = useState<SaleItem[]>([]);
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastSale, setLastSale] = useState<Sale | null>(null);
@@ -35,6 +36,7 @@ const Sales = () => {
       sellPrice: p.sellPrice,
       costPrice: p.costPrice,
       type: 'product',
+      category: p.category,
       ingredients: p.ingredients,
     }));
     inventory.filter(i => i.sellPrice).forEach(i => items.push({
@@ -43,14 +45,14 @@ const Sales = () => {
       sellPrice: i.sellPrice!,
       costPrice: i.costPerUnit,
       type: 'inventory',
+      category: i.category,
     }));
     return items;
   }, [products, inventory]);
 
   const filteredItems = useMemo(() => {
-    if (activeTab === 'products') return sellableItems.filter(i => i.type === 'product');
-    if (activeTab === 'inventory') return sellableItems.filter(i => i.type === 'inventory');
-    return sellableItems;
+    if (activeTab === 'all') return sellableItems;
+    return sellableItems.filter(i => i.category === activeTab);
   }, [activeTab, sellableItems]);
 
   const cartTotal = cart.reduce((sum, item) => sum + item.total, 0);
@@ -165,22 +167,29 @@ const Sales = () => {
 
       {/* Filter tabs */}
       <div className="flex gap-2 overflow-x-auto pb-2">
-        {[
-          { key: 'all' as const, label: 'الكل' },
-          { key: 'products' as const, label: 'المنتجات', icon: Coffee },
-          { key: 'inventory' as const, label: 'المخزون', icon: Package },
-        ].map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all flex items-center gap-2 ${
-              activeTab === tab.key ? 'bg-primary text-primary-foreground shadow-md' : 'bg-secondary text-secondary-foreground hover:bg-accent'
-            }`}
-          >
-            {tab.icon && <tab.icon size={16} />}
-            {tab.label}
-          </button>
-        ))}
+        <button
+          onClick={() => setActiveTab('all')}
+          className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
+            activeTab === 'all' ? 'bg-primary text-primary-foreground shadow-md' : 'bg-secondary text-secondary-foreground hover:bg-accent'
+          }`}
+        >
+          الكل
+        </button>
+        {SELLABLE_CATEGORIES.map(cat => {
+          const count = sellableItems.filter(i => i.category === cat).length;
+          if (count === 0) return null;
+          return (
+            <button
+              key={cat}
+              onClick={() => setActiveTab(cat)}
+              className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
+                activeTab === cat ? 'bg-primary text-primary-foreground shadow-md' : 'bg-secondary text-secondary-foreground hover:bg-accent'
+              }`}
+            >
+              {cat}
+            </button>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
