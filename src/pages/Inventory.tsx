@@ -297,7 +297,18 @@ const Inventory = () => {
           <DialogHeader><DialogTitle>إضافة عنصر للمخزن</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <Input placeholder="اسم العنصر" value={newItem.name} onChange={e => setNewItem({ ...newItem, name: e.target.value })} />
-            <Input placeholder="الوحدة (كجم/لتر/علبة)" value={newItem.unit} onChange={e => setNewItem({ ...newItem, unit: e.target.value })} />
+            <select
+              value={newItem.unit}
+              onChange={e => setNewItem({ ...newItem, unit: e.target.value })}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
+            >
+              <option value="">اختر الوحدة</option>
+              <option value="كيلو">كيلو</option>
+              <option value="لتر">لتر</option>
+              <option value="علبة">علبة</option>
+              <option value="كنز">كنز</option>
+              <option value="كوباية">كوباية</option>
+            </select>
             <Input inputMode="numeric" pattern="[0-9]*" placeholder="الكمية" value={newItem.quantity || ''} onChange={e => setNewItem({ ...newItem, quantity: +e.target.value.replace(/[^0-9.]/g, '') })} />
             <Input inputMode="numeric" pattern="[0-9]*" placeholder="سعر الوحدة" value={newItem.costPerUnit || ''} onChange={e => setNewItem({ ...newItem, costPerUnit: +e.target.value.replace(/[^0-9.]/g, '') })} />
             <Button onClick={saveItem} className="w-full cafe-gradient text-primary-foreground">
@@ -315,7 +326,18 @@ const Inventory = () => {
           {editItem && (
             <div className="space-y-3">
               <Input value={editItem.name} onChange={e => setEditItem({ ...editItem, name: e.target.value })} />
-              <Input value={editItem.unit} onChange={e => setEditItem({ ...editItem, unit: e.target.value })} />
+              <select
+                value={editItem.unit}
+                onChange={e => setEditItem({ ...editItem, unit: e.target.value })}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
+              >
+                <option value="">اختر الوحدة</option>
+                <option value="كيلو">كيلو</option>
+                <option value="لتر">لتر</option>
+                <option value="علبة">علبة</option>
+                <option value="كنز">كنز</option>
+                <option value="كوباية">كوباية</option>
+              </select>
               <Input inputMode="numeric" pattern="[0-9]*" value={editItem.quantity} onChange={e => setEditItem({ ...editItem, quantity: +e.target.value.replace(/[^0-9.]/g, '') })} />
               <Input inputMode="numeric" pattern="[0-9]*" value={editItem.costPerUnit} onChange={e => setEditItem({ ...editItem, costPerUnit: +e.target.value.replace(/[^0-9.]/g, '') })} />
               <Button onClick={updateItem} className="w-full cafe-gradient text-primary-foreground">
