@@ -399,21 +399,34 @@ const Returns = () => {
                   onChange={e => setSaleSearch(e.target.value)}
                 />
                 <div className="max-h-48 overflow-y-auto space-y-2">
-                  {filteredSales.map(sale => (
-                    <button
-                      key={sale.id}
-                      onClick={() => setSelectedSale(sale)}
-                      className="w-full text-right bg-secondary hover:bg-accent/10 rounded-xl p-3 transition-colors"
-                    >
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-muted-foreground">#{sale.id}</span>
-                        <span className="font-bold text-sm text-foreground">{sale.total} ج.م</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {sale.date} - {sale.workerName} - {sale.items.map(i => i.productName).join('، ')}
-                      </p>
-                    </button>
-                  ))}
+                  {filteredSales.map(sale => {
+                    const hasReturn = returns.some(r => r.saleId === sale.id);
+                    return (
+                      <button
+                        key={sale.id}
+                        onClick={() => !hasReturn && setSelectedSale(sale)}
+                        disabled={hasReturn}
+                        className={`w-full text-right rounded-xl p-3 transition-colors ${
+                          hasReturn
+                            ? 'bg-muted/50 opacity-50 cursor-not-allowed border border-muted'
+                            : 'bg-secondary hover:bg-accent/10'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">#{sale.id}</span>
+                            {hasReturn && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-destructive/15 text-destructive">تم الإرجاع</span>
+                            )}
+                          </div>
+                          <span className="font-bold text-sm text-foreground">{sale.total} ج.م</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {sale.date} - {sale.workerName} - {sale.items.map(i => i.productName).join('، ')}
+                        </p>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ) : (
