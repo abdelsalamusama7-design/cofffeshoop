@@ -11,12 +11,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { Sale, SaleItem } from '@/lib/types';
+import PasswordConfirmDialog from '@/components/PasswordConfirmDialog';
 
 const Reports = () => {
   const [, forceUpdate] = useState(0);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [editItems, setEditItems] = useState<SaleItem[]>([]);
   const [editDiscount, setEditDiscount] = useState<number>(0);
+  const [passwordAction, setPasswordAction] = useState<{ type: 'edit' | 'delete'; sale: Sale } | null>(null);
 
   const user = getCurrentUser();
   const sales = getSales();
@@ -271,24 +273,14 @@ const Reports = () => {
                       {!entry.isReturn && (
                         <>
                           <button
-                            onClick={() => {
-                              setEditingSale(entry as Sale);
-                              setEditItems((entry as Sale).items.map(i => ({ ...i })));
-                              setEditDiscount((entry as Sale).discount?.percent || 0);
-                            }}
+                            onClick={() => setPasswordAction({ type: 'edit', sale: entry as Sale })}
                             className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
                             title="تعديل"
                           >
                             <Edit3 size={14} />
                           </button>
                           <button
-                            onClick={() => {
-                              if (confirm('هل أنت متأكد من حذف هذه الفاتورة؟')) {
-                                deleteSale(entry.id);
-                                forceUpdate(n => n + 1);
-                                toast.success('تم حذف الفاتورة');
-                              }
-                            }}
+                            onClick={() => setPasswordAction({ type: 'delete', sale: entry as Sale })}
                             className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
                             title="حذف"
                           >
@@ -857,6 +849,27 @@ const Reports = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Password Confirmation */}
+      <PasswordConfirmDialog
+        open={!!passwordAction}
+        onOpenChange={(open) => { if (!open) setPasswordAction(null); }}
+        title={passwordAction?.type === 'delete' ? 'تأكيد الحذف' : 'تأكيد التعديل'}
+        description="أدخل كلمة المرور للمتابعة"
+        onConfirm={() => {
+          if (!passwordAction) return;
+          if (passwordAction.type === 'delete') {
+            deleteSale(passwordAction.sale.id);
+            forceUpdate(n => n + 1);
+            toast.success('تم حذف الفاتورة');
+          } else {
+            setEditingSale(passwordAction.sale);
+            setEditItems(passwordAction.sale.items.map(i => ({ ...i })));
+            setEditDiscount(passwordAction.sale.discount?.percent || 0);
+          }
+          setPasswordAction(null);
+        }}
+      />
     </div>
   );
 };

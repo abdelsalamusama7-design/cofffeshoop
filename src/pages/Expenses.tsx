@@ -8,8 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getSales, getProducts, getTransactions, getInventory, getExpenses, addExpense, deleteExpense, getWorkers, getAttendance } from '@/lib/store';
 import { Expense } from '@/lib/types';
+import PasswordConfirmDialog from '@/components/PasswordConfirmDialog';
 
 const Expenses = () => {
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const sales = getSales();
   const products = getProducts();
   const transactions = getTransactions();
@@ -347,7 +349,7 @@ const Expenses = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-destructive text-sm">{e.amount} ج.م</span>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(e.id)}>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setPendingDeleteId(e.id)}>
                     <Trash2 size={14} />
                   </Button>
                 </div>
@@ -393,6 +395,20 @@ const Expenses = () => {
           <Share2 size={16} className="ml-2" /> إيميل
         </Button>
       </div>
+
+
+      <PasswordConfirmDialog
+        open={!!pendingDeleteId}
+        onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}
+        title="تأكيد حذف المصروف"
+        description="أدخل كلمة المرور لحذف هذا المصروف"
+        onConfirm={() => {
+          if (pendingDeleteId) {
+            handleDelete(pendingDeleteId);
+            setPendingDeleteId(null);
+          }
+        }}
+      />
     </div>
   );
 };
