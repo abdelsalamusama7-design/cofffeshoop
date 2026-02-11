@@ -160,6 +160,10 @@ export const addReturn = (r: ReturnRecord) => {
   returns.push(r);
   set(STORAGE_KEYS.returns, returns);
 };
+export const deleteReturn = (id: string) => {
+  const returns = getReturns().filter(r => r.id !== id);
+  set(STORAGE_KEYS.returns, returns);
+};
 
 // Default data - Products are items that need preparation (multiple ingredients)
 const defaultProducts: Product[] = [
