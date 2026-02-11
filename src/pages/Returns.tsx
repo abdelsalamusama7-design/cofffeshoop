@@ -1,17 +1,19 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RotateCcw, ArrowLeftRight, Search, Calendar, Package, Coffee, Plus, Minus, Check, Share2, Printer } from 'lucide-react';
+import { RotateCcw, ArrowLeftRight, Search, Calendar, Package, Coffee, Plus, Minus, Check, Share2, Printer, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getSales, getReturns, addReturn, getInventory, setInventory, getProducts } from '@/lib/store';
+import { getSales, getReturns, addReturn, deleteReturn, getInventory, setInventory, getProducts } from '@/lib/store';
 import { getCurrentUser } from '@/lib/store';
 import { Sale, SaleItem, ReturnRecord } from '@/lib/types';
 import { toast } from 'sonner';
+import PasswordConfirmDialog from '@/components/PasswordConfirmDialog';
 
 const Returns = () => {
+  const [, forceUpdate] = useState(0);
   const [showDialog, setShowDialog] = useState(false);
   const [returnType, setReturnType] = useState<'return' | 'exchange'>('return');
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
@@ -21,6 +23,7 @@ const Returns = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDate, setFilterDate] = useState('');
   const [saleSearch, setSaleSearch] = useState('');
+  const [pendingDeleteReturn, setPendingDeleteReturn] = useState<string | null>(null);
 
   const returns = getReturns();
   const sales = getSales();
@@ -279,7 +282,7 @@ const Returns = () => {
               key={r.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="glass-card rounded-2xl p-4 space-y-3 opacity-60 pointer-events-none select-none border-2 border-muted"
+              className="glass-card rounded-2xl p-4 space-y-3 border-2 border-muted"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -328,7 +331,6 @@ const Returns = () => {
                 )}
               </div>
 
-              {/* Share buttons */}
               <div className="flex gap-2 pt-1">
                 <button
                   onClick={() => shareReturn(r, 'whatsapp')}
@@ -343,6 +345,13 @@ const Returns = () => {
                 >
                   <Printer size={12} />
                   طباعة
+                </button>
+                <button
+                  onClick={() => setPendingDeleteReturn(r.id)}
+                  className="flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20 transition-colors"
+                >
+                  <Trash2 size={12} />
+                  حذف
                 </button>
               </div>
             </motion.div>
@@ -544,6 +553,21 @@ const Returns = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <PasswordConfirmDialog
+        open={!!pendingDeleteReturn}
+        onOpenChange={(open) => { if (!open) setPendingDeleteReturn(null); }}
+        title="تأكيد حذف المرتجع"
+        description="أدخل كلمة المرور لحذف هذا المرتجع"
+        onConfirm={() => {
+          if (pendingDeleteReturn) {
+            deleteReturn(pendingDeleteReturn);
+            setPendingDeleteReturn(null);
+            forceUpdate(n => n + 1);
+            toast.success('تم حذف المرتجع');
+          }
+        }}
+      />
     </div>
   );
 };
