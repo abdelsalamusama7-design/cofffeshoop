@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ShoppingCart, BarChart3, Package, TrendingUp, DollarSign, Coffee, ChevronLeft, Trash2, Edit3, X, Check } from 'lucide-react';
-import { getProducts, getSales, getInventory, deleteSale, updateSale } from '@/lib/store';
+import { ShoppingCart, BarChart3, Package, TrendingUp, DollarSign, Coffee, ChevronLeft, Trash2, Edit3, X, Check, RotateCcw } from 'lucide-react';
+import { getProducts, getSales, getInventory, deleteSale, updateSale, getReturns, deleteReturn } from '@/lib/store';
 import { getCurrentUser } from '@/lib/store';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Sale, SaleItem } from '@/lib/types';
+import { Sale, SaleItem, ReturnRecord } from '@/lib/types';
 import { toast } from 'sonner';
 import PasswordConfirmDialog from '@/components/PasswordConfirmDialog';
 
@@ -15,12 +15,14 @@ const Dashboard = () => {
   const sales = getSales();
   const user = getCurrentUser();
   const inventory = getInventory();
+  const returns = getReturns();
   const [showSalesDetail, setShowSalesDetail] = useState(false);
   const [, forceUpdate] = useState(0);
   const [passwordAction, setPasswordAction] = useState<{ type: 'edit' | 'delete'; sale: Sale } | null>(null);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [editItems, setEditItems] = useState<SaleItem[]>([]);
   const [editDiscount, setEditDiscount] = useState<number>(0);
+  const [pendingDeleteReturn, setPendingDeleteReturn] = useState<string | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
   const todaySales = sales.filter(s => s.date === today);
@@ -61,6 +63,10 @@ const Dashboard = () => {
 
   // Low stock items
   const lowStockItems = inventory.filter(i => i.quantity <= 5);
+
+  const todayReturns = returns.filter(r => r.date === today);
+  const workerTodayReturns = user ? todayReturns.filter(r => r.workerId === user.id) : [];
+  const displayReturns = user?.role === 'admin' ? todayReturns : workerTodayReturns;
 
   return (
     <div className="space-y-8">
@@ -113,6 +119,48 @@ const Dashboard = () => {
                   <span className="text-sm font-semibold text-foreground text-center">{item.name}</span>
                   <span className="text-xs text-destructive font-bold">{item.quantity} {item.unit}</span>
                 </Link>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Today's Returns */}
+      {displayReturns.length > 0 && (
+        <div>
+          <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+            <RotateCcw size={18} className="text-destructive" />
+            مرتجعات اليوم ({displayReturns.length})
+          </h2>
+          <div className="space-y-2">
+            {displayReturns.map((ret) => (
+              <motion.div
+                key={ret.id}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="glass-card rounded-xl p-3"
+              >
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-destructive/15 text-destructive">
+                      {ret.type === 'return' ? 'مرتجع' : 'استبدال'}
+                    </span>
+                    <span className="text-xs text-muted-foreground">#{ret.saleId}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm text-destructive">-{ret.refundAmount} ج.م</span>
+                    <button
+                      onClick={() => setPendingDeleteReturn(ret.id)}
+                      className="w-6 h-6 rounded-md bg-muted flex items-center justify-center text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {ret.items.map(i => `${i.productName} x${i.quantity}`).join(' • ')}
+                </p>
+                {ret.reason && <p className="text-xs text-muted-foreground/70 mt-0.5">السبب: {ret.reason}</p>}
               </motion.div>
             ))}
           </div>
@@ -372,6 +420,20 @@ const Dashboard = () => {
             setEditDiscount(passwordAction.sale.discount?.percent || 0);
           }
           setPasswordAction(null);
+        }}
+      />
+      <PasswordConfirmDialog
+        open={!!pendingDeleteReturn}
+        onOpenChange={(open) => { if (!open) setPendingDeleteReturn(null); }}
+        title="تأكيد حذف المرتجع"
+        description="أدخل كلمة المرور لحذف هذا المرتجع"
+        onConfirm={() => {
+          if (pendingDeleteReturn) {
+            deleteReturn(pendingDeleteReturn);
+            setPendingDeleteReturn(null);
+            forceUpdate(n => n + 1);
+            toast.success('تم حذف المرتجع');
+          }
         }}
       />
     </div>
