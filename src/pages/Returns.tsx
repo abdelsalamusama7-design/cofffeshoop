@@ -279,7 +279,7 @@ const Returns = () => {
               key={r.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="glass-card rounded-2xl p-4 space-y-3"
+              className="glass-card rounded-2xl p-4 space-y-3 opacity-60 pointer-events-none select-none border-2 border-muted"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">

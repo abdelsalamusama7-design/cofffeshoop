@@ -39,6 +39,35 @@ const Reports = () => {
 
   const filteredSales = useMemo(() => sales.filter(s => s.date >= startDate), [sales, startDate]);
 
+  // Build return entries as negative sales for display
+  const returnEntries = useMemo(() => {
+    return returns
+      .filter(r => r.date >= startDate)
+      .map(r => ({
+        id: `return_${r.id}`,
+        items: r.items,
+        total: -r.refundAmount,
+        discount: undefined,
+        workerId: r.workerId,
+        workerName: r.workerName,
+        date: r.date,
+        time: r.time,
+        isReturn: true,
+        returnType: r.type,
+        reason: r.reason,
+        saleId: r.saleId,
+      }));
+  }, [returns, startDate]);
+
+  // Combined sales + returns for display
+  const allEntries = useMemo(() => {
+    const combined = [
+      ...filteredSales.map(s => ({ ...s, isReturn: false as const })),
+      ...returnEntries,
+    ];
+    return combined.sort((a, b) => new Date(b.date + ' ' + b.time).getTime() - new Date(a.date + ' ' + a.time).getTime());
+  }, [filteredSales, returnEntries]);
+
   // ===== Share helper =====
   const share = (title: string, text: string, method: 'whatsapp' | 'email') => {
     if (method === 'whatsapp') {
@@ -219,48 +248,64 @@ const Reports = () => {
           )}
         </div>
 
-        {/* Sale by sale detail */}
-        {filteredSales.length > 0 && (
+        {/* Sale by sale detail + returns */}
+        {allEntries.length > 0 && (
           <div className="glass-card rounded-xl p-4">
-            <h3 className="font-bold text-foreground mb-3">تفاصيل الطلبات</h3>
+            <h3 className="font-bold text-foreground mb-3">تفاصيل الطلبات والمرتجعات</h3>
             <div className="space-y-2 max-h-60 overflow-y-auto">
-              {filteredSales.slice().reverse().map((sale) => (
-                <div key={sale.id} className="p-3 rounded-lg bg-secondary text-sm">
+              {allEntries.map((entry) => (
+                <div key={entry.id} className={`p-3 rounded-lg text-sm ${entry.isReturn ? 'bg-destructive/10 border border-destructive/30' : 'bg-secondary'}`}>
                   <div className="flex justify-between items-center">
-                    <span className="font-medium text-foreground">{sale.workerName} - {sale.time}</span>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-foreground">{sale.total} ج.م</span>
-                      <button
-                        onClick={() => {
-                          setEditingSale(sale);
-                          setEditItems(sale.items.map(i => ({ ...i })));
-                          setEditDiscount(sale.discount?.percent || 0);
-                        }}
-                        className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-                        title="تعديل"
-                      >
-                        <Edit3 size={14} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm('هل أنت متأكد من حذف هذه الفاتورة؟')) {
-                            deleteSale(sale.id);
-                            forceUpdate(n => n + 1);
-                            toast.success('تم حذف الفاتورة');
-                          }
-                        }}
-                        className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
-                        title="حذف"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      {entry.isReturn && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-destructive/15 text-destructive">
+                          مرتجع
+                        </span>
+                      )}
+                      <span className="font-medium text-foreground">{entry.workerName} - {entry.time}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`font-bold ${entry.isReturn ? 'text-destructive' : 'text-foreground'}`}>
+                        {entry.isReturn ? `${entry.total}` : entry.total} ج.م
+                      </span>
+                      {!entry.isReturn && (
+                        <>
+                          <button
+                            onClick={() => {
+                              setEditingSale(entry as Sale);
+                              setEditItems((entry as Sale).items.map(i => ({ ...i })));
+                              setEditDiscount((entry as Sale).discount?.percent || 0);
+                            }}
+                            className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                            title="تعديل"
+                          >
+                            <Edit3 size={14} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm('هل أنت متأكد من حذف هذه الفاتورة؟')) {
+                                deleteSale(entry.id);
+                                forceUpdate(n => n + 1);
+                                toast.success('تم حذف الفاتورة');
+                              }
+                            }}
+                            className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                            title="حذف"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {sale.items.map(it => `${it.productName} x${it.quantity}`).join(' • ')}
+                    {entry.items.map(it => `${it.productName} x${it.quantity}`).join(' • ')}
                   </p>
-                  {sale.discount && sale.discount.percent > 0 && (
-                    <p className="text-xs text-destructive mt-1">خصم {sale.discount.percent}%: -{sale.discount.amount} ج.م</p>
+                  {entry.isReturn && entry.reason && (
+                    <p className="text-xs text-destructive/70 mt-1">السبب: {entry.reason}</p>
+                  )}
+                  {!entry.isReturn && (entry as Sale).discount && (entry as Sale).discount!.percent > 0 && (
+                    <p className="text-xs text-destructive mt-1">خصم {(entry as Sale).discount!.percent}%: -{(entry as Sale).discount!.amount} ج.م</p>
                   )}
                 </div>
               ))}
