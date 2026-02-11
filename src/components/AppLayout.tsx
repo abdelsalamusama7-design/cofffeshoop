@@ -17,10 +17,12 @@ import {
   AlertTriangle,
   X,
   RotateCcw,
+  Clock,
 } from 'lucide-react';
 import logo from '@/assets/logo.jpg';
 import { getCurrentUser, setCurrentUser, getInventory } from '@/lib/store';
 import ChatBot from './ChatBot';
+import ShiftEndDialog from './ShiftEndDialog';
 
 interface LayoutProps {
   children: ReactNode;
@@ -51,6 +53,7 @@ const AppLayout = ({ children }: LayoutProps) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showShiftEnd, setShowShiftEnd] = useState(false);
 
   const LOW_STOCK_THRESHOLD = 5;
   const lowStockItems = useMemo(() => {
@@ -112,7 +115,14 @@ const AppLayout = ({ children }: LayoutProps) => {
           })}
         </nav>
 
-        <div className="p-4 border-t border-sidebar-border">
+        <div className="p-4 border-t border-sidebar-border space-y-1">
+          <button
+            onClick={() => setShowShiftEnd(true)}
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-sidebar-foreground/70 hover:bg-accent/20 hover:text-accent-foreground transition-all w-full"
+          >
+            <Clock size={20} />
+            إنهاء الشيفت
+          </button>
           <button
             onClick={() => setShowLogoutConfirm(true)}
             className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-sidebar-foreground/70 hover:bg-destructive/20 hover:text-destructive transition-all w-full"
@@ -126,6 +136,9 @@ const AppLayout = ({ children }: LayoutProps) => {
       {/* Mobile Top Bar */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-sidebar text-sidebar-foreground flex items-center justify-between px-4 h-14" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="flex items-center gap-1">
+          <button onClick={() => setShowShiftEnd(true)} className="p-2 rounded-lg text-sidebar-foreground/70">
+            <Clock size={20} />
+          </button>
           <button onClick={() => setShowLogoutConfirm(true)} className="p-2 rounded-lg text-sidebar-foreground/70">
             <LogOut size={20} />
           </button>
@@ -249,6 +262,9 @@ const AppLayout = ({ children }: LayoutProps) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Shift End Dialog */}
+      <ShiftEndDialog open={showShiftEnd} onOpenChange={setShowShiftEnd} />
     </div>
   );
 };
