@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 import { getCurrentUser, startAutoBackupScheduler } from "@/lib/store";
+import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
 import SplashScreen from "@/components/SplashScreen";
 import Index from "./pages/Index";
@@ -33,7 +34,15 @@ const App = () => {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    startAutoBackupScheduler();
+    startAutoBackupScheduler(() => {
+      const user = getCurrentUser();
+      if (user?.role === 'admin') {
+        toast.success('✅ تم حفظ نسخة احتياطية تلقائية', {
+          description: `${new Date().toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}`,
+          duration: 5000,
+        });
+      }
+    });
   }, []);
 
   return (

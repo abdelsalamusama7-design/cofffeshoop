@@ -21,7 +21,7 @@ const BACKUP_DATA_KEYS = [
   'cafe_attendance', 'cafe_transactions', 'cafe_expenses', 'cafe_returns',
 ];
 
-export const performAutoBackup = () => {
+export const performAutoBackup = (): boolean => {
   const backupData: Record<string, any> = {};
   BACKUP_DATA_KEYS.forEach(key => {
     const val = localStorage.getItem(key);
@@ -35,6 +35,7 @@ export const performAutoBackup = () => {
   };
   localStorage.setItem(AUTO_BACKUP_KEY, JSON.stringify(backupData));
   localStorage.setItem(AUTO_BACKUP_TIME_KEY, new Date().toISOString());
+  return true;
 };
 
 export const getLastAutoBackupTime = (): string | null => {
@@ -54,24 +55,30 @@ export const downloadAutoBackup = () => {
   return true;
 };
 
-export const checkAndRunAutoBackup = () => {
+export const checkAndRunAutoBackup = (): boolean => {
   const lastBackup = localStorage.getItem(AUTO_BACKUP_TIME_KEY);
   if (!lastBackup) {
     performAutoBackup();
-    return;
+    return true;
   }
   const elapsed = Date.now() - new Date(lastBackup).getTime();
   if (elapsed >= AUTO_BACKUP_INTERVAL) {
     performAutoBackup();
+    return true;
   }
+  return false;
 };
 
-// Start auto-backup interval
+// Start auto-backup interval with notification callback
 let autoBackupTimer: ReturnType<typeof setInterval> | null = null;
-export const startAutoBackupScheduler = () => {
-  checkAndRunAutoBackup();
+export const startAutoBackupScheduler = (onBackupDone?: () => void) => {
+  const ran = checkAndRunAutoBackup();
+  if (ran && onBackupDone) onBackupDone();
   if (autoBackupTimer) clearInterval(autoBackupTimer);
-  autoBackupTimer = setInterval(checkAndRunAutoBackup, 60 * 60 * 1000); // check every hour
+  autoBackupTimer = setInterval(() => {
+    const didRun = checkAndRunAutoBackup();
+    if (didRun && onBackupDone) onBackupDone();
+  }, 60 * 60 * 1000);
 };
 
 function get<T>(key: string, fallback: T): T {
