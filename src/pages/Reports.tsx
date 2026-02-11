@@ -2,13 +2,22 @@ import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   BarChart3, Calendar, Share2, Download, TrendingUp, DollarSign,
-  ShoppingCart, Users, ClipboardCheck, Wallet, Clock, ArrowUpDown, RotateCcw, ArrowLeftRight
+  ShoppingCart, Users, ClipboardCheck, Wallet, Clock, ArrowUpDown, RotateCcw, ArrowLeftRight,
+  Trash2, Edit3, X, Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getSales, getProducts, getCurrentUser, getWorkers, getAttendance, getTransactions, getInventory, getReturns } from '@/lib/store';
+import { getSales, getProducts, getCurrentUser, getWorkers, getAttendance, getTransactions, getInventory, getReturns, deleteSale, updateSale } from '@/lib/store';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { toast } from 'sonner';
+import { Sale, SaleItem } from '@/lib/types';
 
 const Reports = () => {
+  const [, forceUpdate] = useState(0);
+  const [editingSale, setEditingSale] = useState<Sale | null>(null);
+  const [editItems, setEditItems] = useState<SaleItem[]>([]);
+  const [editDiscount, setEditDiscount] = useState<number>(0);
+
   const user = getCurrentUser();
   const sales = getSales();
   const products = getProducts();
@@ -215,15 +224,44 @@ const Reports = () => {
           <div className="glass-card rounded-xl p-4">
             <h3 className="font-bold text-foreground mb-3">تفاصيل الطلبات</h3>
             <div className="space-y-2 max-h-60 overflow-y-auto">
-              {filteredSales.slice().reverse().map((sale, i) => (
+              {filteredSales.slice().reverse().map((sale) => (
                 <div key={sale.id} className="p-3 rounded-lg bg-secondary text-sm">
                   <div className="flex justify-between items-center">
                     <span className="font-medium text-foreground">{sale.workerName} - {sale.time}</span>
-                    <span className="font-bold text-foreground">{sale.total} ج.م</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-foreground">{sale.total} ج.م</span>
+                      <button
+                        onClick={() => {
+                          setEditingSale(sale);
+                          setEditItems(sale.items.map(i => ({ ...i })));
+                          setEditDiscount(sale.discount?.percent || 0);
+                        }}
+                        className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                        title="تعديل"
+                      >
+                        <Edit3 size={14} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm('هل أنت متأكد من حذف هذه الفاتورة؟')) {
+                            deleteSale(sale.id);
+                            forceUpdate(n => n + 1);
+                            toast.success('تم حذف الفاتورة');
+                          }
+                        }}
+                        className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                        title="حذف"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     {sale.items.map(it => `${it.productName} x${it.quantity}`).join(' • ')}
                   </p>
+                  {sale.discount && sale.discount.percent > 0 && (
+                    <p className="text-xs text-destructive mt-1">خصم {sale.discount.percent}%: -{sale.discount.amount} ج.م</p>
+                  )}
                 </div>
               ))}
             </div>
@@ -643,6 +681,137 @@ const Reports = () => {
         <TabsContent value="workers"><WorkerPerformanceReport /></TabsContent>
         <TabsContent value="attendance"><AttendanceReport /></TabsContent>
       </Tabs>
+
+      {/* Edit Sale Dialog */}
+      <Dialog open={!!editingSale} onOpenChange={(open) => { if (!open) setEditingSale(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center">تعديل الفاتورة</DialogTitle>
+          </DialogHeader>
+          {editingSale && (
+            <div className="space-y-4">
+              <div className="text-center text-sm text-muted-foreground">
+                {editingSale.date} - {editingSale.time} • {editingSale.workerName}
+              </div>
+              <div className="space-y-2">
+                {editItems.map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between bg-secondary rounded-xl p-3">
+                    <div className="flex-1">
+                      <p className="font-medium text-sm text-foreground">{item.productName}</p>
+                      <p className="text-xs text-muted-foreground">{item.unitPrice} ج.م</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setEditItems(prev => {
+                            const updated = [...prev];
+                            if (updated[idx].quantity <= 1) {
+                              return updated.filter((_, i) => i !== idx);
+                            }
+                            updated[idx] = { ...updated[idx], quantity: updated[idx].quantity - 1, total: (updated[idx].quantity - 1) * updated[idx].unitPrice };
+                            return updated;
+                          });
+                        }}
+                        className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center text-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                      >
+                        <span className="text-sm font-bold">-</span>
+                      </button>
+                      <span className="w-6 text-center font-bold text-sm text-foreground">{item.quantity}</span>
+                      <button
+                        onClick={() => {
+                          setEditItems(prev => {
+                            const updated = [...prev];
+                            updated[idx] = { ...updated[idx], quantity: updated[idx].quantity + 1, total: (updated[idx].quantity + 1) * updated[idx].unitPrice };
+                            return updated;
+                          });
+                        }}
+                        className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                      >
+                        <span className="text-sm font-bold">+</span>
+                      </button>
+                    </div>
+                    <p className="font-bold text-sm mr-3 text-foreground">{item.total} ج.م</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Discount */}
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-foreground whitespace-nowrap">خصم %</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={editDiscount || ''}
+                  onChange={(e) => setEditDiscount(Math.min(100, Math.max(0, Number(e.target.value))))}
+                  placeholder="0"
+                  dir="ltr"
+                  lang="en"
+                  className="flex h-9 w-20 rounded-lg border border-input bg-background px-2 py-1 text-sm text-center ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </div>
+
+              {(() => {
+                const subtotal = editItems.reduce((s, i) => s + i.total, 0);
+                const discAmt = Math.round(subtotal * editDiscount / 100 * 100) / 100;
+                const final_ = subtotal - discAmt;
+                return (
+                  <div className="border-t border-border pt-3 space-y-1">
+                    {editDiscount > 0 && (
+                      <>
+                        <div className="flex justify-between text-sm text-muted-foreground">
+                          <span>المجموع قبل الخصم</span>
+                          <span>{subtotal} ج.م</span>
+                        </div>
+                        <div className="flex justify-between text-sm text-destructive">
+                          <span>خصم {editDiscount}%</span>
+                          <span>- {discAmt} ج.م</span>
+                        </div>
+                      </>
+                    )}
+                    <div className="flex justify-between font-bold text-foreground">
+                      <span>الإجمالي</span>
+                      <span className="text-accent">{final_} ج.م</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => {
+                    if (editItems.length === 0) {
+                      toast.error('لا يمكن حفظ فاتورة فارغة');
+                      return;
+                    }
+                    const subtotal = editItems.reduce((s, i) => s + i.total, 0);
+                    const discAmt = Math.round(subtotal * editDiscount / 100 * 100) / 100;
+                    const finalTotal = subtotal - discAmt;
+                    const updated: Sale = {
+                      ...editingSale,
+                      items: editItems,
+                      total: finalTotal,
+                      discount: editDiscount > 0 ? { percent: editDiscount, amount: discAmt } : undefined,
+                    };
+                    updateSale(updated);
+                    setEditingSale(null);
+                    forceUpdate(n => n + 1);
+                    toast.success('تم تعديل الفاتورة');
+                  }}
+                  className="flex-1 cafe-gradient text-primary-foreground hover:opacity-90"
+                >
+                  <Check size={16} className="ml-1" />
+                  حفظ التعديل
+                </Button>
+                <Button variant="outline" onClick={() => setEditingSale(null)} className="flex-1">
+                  <X size={16} className="ml-1" />
+                  إلغاء
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -105,6 +105,14 @@ export const addSale = (sale: Sale) => {
   sales.push(sale);
   set(STORAGE_KEYS.sales, sales);
 };
+export const deleteSale = (id: string) => {
+  const sales = getSales().filter(s => s.id !== id);
+  set(STORAGE_KEYS.sales, sales);
+};
+export const updateSale = (updated: Sale) => {
+  const sales = getSales().map(s => s.id === updated.id ? updated : s);
+  set(STORAGE_KEYS.sales, sales);
+};
 
 // Inventory
 export const getInventory = (): InventoryItem[] => get(STORAGE_KEYS.inventory, defaultInventory);
