@@ -124,15 +124,21 @@ const Inventory = () => {
             const sellableItems = inventory.filter(i => i.sellPrice);
             const totalSellValue = sellableItems.reduce((sum, i) => sum + i.quantity * (i.sellPrice || 0), 0);
             const totalSellCost = sellableItems.reduce((sum, i) => sum + i.quantity * i.costPerUnit, 0);
+            const totalProfit = totalSellValue - totalSellCost;
+            const totalWithProfit = totalCostValue + totalProfit;
             return (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div className="glass-card rounded-xl p-4 text-center">
                   <p className="text-xs text-muted-foreground mb-1">قيمة المخزون بالتكلفة</p>
-                  <p className="text-xl font-bold text-foreground">{totalCostValue.toFixed(0)} ج.م</p>
+                  <p className="text-lg font-bold text-foreground">{totalCostValue.toFixed(0)} ج.م</p>
                 </div>
                 <div className="glass-card rounded-xl p-4 text-center">
-                  <p className="text-xs text-muted-foreground mb-1">ربح الأصناف القابلة للبيع</p>
-                  <p className="text-xl font-bold text-primary">{(totalSellValue - totalSellCost).toFixed(0)} ج.م</p>
+                  <p className="text-xs text-muted-foreground mb-1">صافي الربح المتوقع</p>
+                  <p className="text-lg font-bold text-primary">{totalProfit.toFixed(0)} ج.م</p>
+                </div>
+                <div className="glass-card rounded-xl p-4 text-center">
+                  <p className="text-xs text-muted-foreground mb-1">إجمالي السيولة المتوقعة</p>
+                  <p className="text-lg font-bold text-accent">{totalWithProfit.toFixed(0)} ج.م</p>
                 </div>
               </div>
             );
