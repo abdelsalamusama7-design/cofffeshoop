@@ -39,6 +39,7 @@ const navItems = [
 const workerNavItems = [
   { path: '/', label: 'الرئيسية', icon: LayoutDashboard },
   { path: '/sales', label: 'المبيعات', icon: ShoppingCart },
+  { path: '/returns', label: 'المرتجعات', icon: RotateCcw },
   { path: '/my-dashboard', label: 'حسابي', icon: ClipboardCheck },
 ];
 
