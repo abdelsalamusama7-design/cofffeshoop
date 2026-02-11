@@ -22,6 +22,7 @@ const Sales = () => {
   const [cart, setCart] = useState<SaleItem[]>([]);
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastSale, setLastSale] = useState<Sale | null>(null);
+  const [discountPercent, setDiscountPercent] = useState<number>(0);
 
   const products = getProducts();
   const inventory = getInventory();
@@ -56,6 +57,8 @@ const Sales = () => {
   }, [activeTab, sellableItems]);
 
   const cartTotal = cart.reduce((sum, item) => sum + item.total, 0);
+  const discountAmount = Math.round(cartTotal * discountPercent / 100 * 100) / 100;
+  const finalTotal = cartTotal - discountAmount;
 
   const addToCart = (item: SellableItem) => {
     setCart(prev => {
@@ -95,7 +98,8 @@ const Sales = () => {
     const sale: Sale = {
       id: Date.now().toString(),
       items: cart,
-      total: cartTotal,
+      total: finalTotal,
+      discount: discountPercent > 0 ? { percent: discountPercent, amount: discountAmount } : undefined,
       workerId: user.id,
       workerName: user.name,
       date: now.toISOString().split('T')[0],
@@ -136,16 +140,21 @@ const Sales = () => {
     setLastSale(sale);
     setShowReceipt(true);
     setCart([]);
+    setDiscountPercent(0);
     toast.success('تم البيع بنجاح!');
   };
 
   const shareReceipt = (method: 'whatsapp' | 'email') => {
     if (!lastSale) return;
+    const discountLine = lastSale.discount && lastSale.discount.percent > 0
+      ? `\nخصم ${lastSale.discount.percent}%: -${lastSale.discount.amount} ج.م`
+      : '';
     const text = `إيصال بيع - بن العميد\n` +
       `التاريخ: ${lastSale.date}\nالوقت: ${lastSale.time}\n` +
       `العامل: ${lastSale.workerName}\n` +
       `---\n` +
       lastSale.items.map(i => `${i.productName} x${i.quantity} = ${i.total} ج.م`).join('\n') +
+      discountLine +
       `\n---\nالإجمالي: ${lastSale.total} ج.م`;
 
     if (method === 'whatsapp') {
@@ -271,10 +280,42 @@ const Sales = () => {
                 ))}
               </AnimatePresence>
 
-              <div className="border-t border-border pt-3 mt-3">
-                <div className="flex justify-between items-center mb-4">
+              <div className="border-t border-border pt-3 mt-3 space-y-3">
+                {/* Discount input */}
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-foreground whitespace-nowrap">خصم %</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={discountPercent || ''}
+                    onChange={(e) => {
+                      const val = Math.min(100, Math.max(0, Number(e.target.value)));
+                      setDiscountPercent(val);
+                    }}
+                    placeholder="0"
+                    dir="ltr"
+                    lang="en"
+                    className="flex h-9 w-20 rounded-lg border border-input bg-background px-2 py-1 text-sm text-center ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                </div>
+
+                {discountPercent > 0 && (
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>المجموع قبل الخصم</span>
+                      <span>{cartTotal} ج.م</span>
+                    </div>
+                    <div className="flex justify-between text-destructive font-medium">
+                      <span>خصم {discountPercent}%</span>
+                      <span>- {discountAmount} ج.م</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-between items-center">
                   <span className="font-bold text-foreground">الإجمالي</span>
-                  <span className="text-xl font-bold text-accent">{cartTotal} ج.م</span>
+                  <span className="text-xl font-bold text-accent">{finalTotal} ج.م</span>
                 </div>
                 <Button onClick={completeSale} className="w-full cafe-gradient text-primary-foreground hover:opacity-90">
                   <Receipt size={18} className="ml-2" />
@@ -307,6 +348,18 @@ const Sales = () => {
                   </div>
                 ))}
               </div>
+              {lastSale.discount && lastSale.discount.percent > 0 && (
+                <div className="border-t border-border pt-2 space-y-1 text-sm">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>المجموع قبل الخصم</span>
+                    <span>{(lastSale.total + lastSale.discount.amount).toFixed(2)} ج.م</span>
+                  </div>
+                  <div className="flex justify-between text-destructive font-medium">
+                    <span>خصم {lastSale.discount.percent}%</span>
+                    <span>- {lastSale.discount.amount} ج.م</span>
+                  </div>
+                </div>
+              )}
               <div className="border-t border-border pt-3 flex justify-between font-bold text-lg">
                 <span className="text-foreground">الإجمالي</span>
                 <span className="text-accent">{lastSale.total} ج.م</span>

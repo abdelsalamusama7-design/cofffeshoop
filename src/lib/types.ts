@@ -32,6 +32,7 @@ export interface Sale {
   id: string;
   items: SaleItem[];
   total: number;
+  discount?: { percent: number; amount: number };
   workerId: string;
   workerName: string;
   date: string;
@@ -60,6 +61,7 @@ export interface Sale {
   id: string;
   items: SaleItem[];
   total: number;
+  discount?: { percent: number; amount: number };
   workerId: string;
   workerName: string;
   date: string;
