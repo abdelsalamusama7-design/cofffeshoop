@@ -4,7 +4,7 @@ import { Settings, Download, Upload, Mail, MessageCircle, Calendar, Clock, Check
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { getSales, getProducts, getInventory, getWorkers, getAttendance, getExpenses, getTransactions, getCurrentUser } from '@/lib/store';
+import { getSales, getProducts, getInventory, getWorkers, getAttendance, getExpenses, getTransactions, getCurrentUser, getLastAutoBackupTime, downloadAutoBackup, performAutoBackup } from '@/lib/store';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 type BackupFrequency = 'daily' | 'weekly' | 'monthly';
@@ -355,7 +355,57 @@ const SettingsPage = () => {
         </div>
       </motion.div>
 
-      {/* Reset System Section - Admin Only */}
+      {/* Auto Backup Section */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="glass-card rounded-2xl p-5 space-y-5">
+        <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+          <Clock size={20} className="text-accent" />
+          النسخ الاحتياطي التلقائي
+        </h2>
+
+        <div className="bg-success/10 rounded-xl p-4 flex items-start gap-3">
+          <CheckCircle2 size={20} className="text-success mt-0.5 shrink-0" />
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-foreground">النسخ التلقائي مُفعّل ✅</p>
+            <p className="text-xs text-muted-foreground">
+              يتم حفظ نسخة احتياطية تلقائياً كل 24 ساعة عند فتح التطبيق.
+            </p>
+            {getLastAutoBackupTime() && (
+              <p className="text-xs text-muted-foreground mt-1">
+                آخر نسخة تلقائية: <span className="font-bold text-foreground">{new Date(getLastAutoBackupTime()!).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Button
+            onClick={() => {
+              performAutoBackup();
+              toast({ title: '✅ تم', description: 'تم حفظ نسخة احتياطية تلقائية الآن' });
+              // force re-render
+              window.dispatchEvent(new Event('storage'));
+            }}
+            variant="outline"
+            className="h-12 text-sm font-medium gap-2 border-accent/30 text-accent hover:bg-accent/10"
+          >
+            <ShieldCheck size={18} />
+            نسخ الآن
+          </Button>
+          <Button
+            onClick={() => {
+              const ok = downloadAutoBackup();
+              if (ok) toast({ title: '✅ تم', description: 'تم تحميل آخر نسخة تلقائية' });
+              else toast({ title: '❌', description: 'لا توجد نسخة تلقائية بعد', variant: 'destructive' });
+            }}
+            variant="outline"
+            className="h-12 text-sm font-medium gap-2 border-info/30 text-info hover:bg-info/10"
+          >
+            <Download size={18} />
+            تحميل النسخة
+          </Button>
+        </div>
+      </motion.div>
+
       {currentUser?.role === 'admin' && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass-card rounded-2xl p-5 space-y-5 border border-destructive/20">
           <h2 className="text-lg font-bold text-destructive flex items-center gap-2">

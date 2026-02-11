@@ -3,9 +3,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
-import { getCurrentUser } from "@/lib/store";
+import { getCurrentUser, startAutoBackupScheduler } from "@/lib/store";
 import AppLayout from "@/components/AppLayout";
 import SplashScreen from "@/components/SplashScreen";
 import Index from "./pages/Index";
@@ -31,6 +31,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 const App = () => {
   const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    startAutoBackupScheduler();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
