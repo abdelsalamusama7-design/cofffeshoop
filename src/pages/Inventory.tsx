@@ -22,13 +22,7 @@ const Inventory = () => {
   const [newItem, setNewItem] = useState({ name: '', unit: '', quantity: 0, costPerUnit: 0, sellPrice: '' as string | number, category: '' as string });
   const [newProduct, setNewProduct] = useState<{ name: string; sellPrice: number; costPrice: number; category: string; ingredients: Ingredient[] }>({ name: '', sellPrice: 0, costPrice: 0, category: '', ingredients: [] });
 
-  if (user?.role !== 'admin') {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <p className="text-muted-foreground text-lg">ليس لديك صلاحية للوصول لهذه الصفحة</p>
-      </div>
-    );
-  }
+  const isAdmin = user?.role === 'admin';
 
   const saveItem = () => {
     if (!newItem.name) return;
@@ -118,8 +112,8 @@ const Inventory = () => {
 
         {/* Inventory Tab */}
         <TabsContent value="inventory" className="space-y-4">
-          {/* Inventory Value Summary */}
-          {(() => {
+          {/* Inventory Value Summary - Admin Only */}
+          {isAdmin && (() => {
             const totalCostValue = inventory.reduce((sum, item) => sum + item.quantity * item.costPerUnit, 0);
             const sellableItems = inventory.filter(i => i.sellPrice);
             const totalSellValue = sellableItems.reduce((sum, i) => sum + i.quantity * (i.sellPrice || 0), 0);
@@ -144,12 +138,14 @@ const Inventory = () => {
             );
           })()}
 
-          <div className="flex justify-end">
-            <Button onClick={() => setShowAddItem(true)} className="cafe-gradient text-primary-foreground">
-              <Plus size={18} className="ml-2" />
-              إضافة عنصر
-            </Button>
-          </div>
+          {isAdmin && (
+            <div className="flex justify-end">
+              <Button onClick={() => setShowAddItem(true)} className="cafe-gradient text-primary-foreground">
+                <Plus size={18} className="ml-2" />
+                إضافة عنصر
+              </Button>
+            </div>
+          )}
 
           <div className="grid gap-3">
             {inventory.map((item, i) => (
@@ -175,19 +171,22 @@ const Inventory = () => {
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {item.quantity} {item.unit} • {item.costPerUnit} ج.م/{item.unit}
+                      {item.quantity} {item.unit}
+                      {isAdmin && <> • {item.costPerUnit} ج.م/{item.unit}</>}
                       {item.sellPrice ? ` • بيع: ${item.sellPrice} ج.م` : ''}
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => setEditItem(item)}>
-                    <Pencil size={16} />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => deleteItem(item.id)} className="text-destructive">
-                    <Trash2 size={16} />
-                  </Button>
-                </div>
+                {isAdmin && (
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => setEditItem(item)}>
+                      <Pencil size={16} />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => deleteItem(item.id)} className="text-destructive">
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
+                )}
               </motion.div>
             ))}
           </div>
@@ -196,12 +195,14 @@ const Inventory = () => {
         {/* Products Tab */}
         <TabsContent value="products" className="space-y-4">
           <p className="text-sm text-muted-foreground">المنتجات هي الأصناف اللي بتحتاج تحضير من أكتر من صنف في المخزن</p>
-          <div className="flex justify-end">
-            <Button onClick={() => setShowAddProduct(true)} className="cafe-gradient text-primary-foreground">
-              <Plus size={18} className="ml-2" />
-              إضافة منتج
-            </Button>
-          </div>
+          {isAdmin && (
+            <div className="flex justify-end">
+              <Button onClick={() => setShowAddProduct(true)} className="cafe-gradient text-primary-foreground">
+                <Plus size={18} className="ml-2" />
+                إضافة منتج
+              </Button>
+            </div>
+          )}
 
           <div className="grid gap-3">
             {productsList.map((product, i) => (
@@ -218,23 +219,26 @@ const Inventory = () => {
                     <p className="font-semibold text-foreground">{product.name}</p>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    بيع: {product.sellPrice} ج.م • تكلفة: {product.costPrice} ج.م •
-                    <span className="text-success font-medium"> ربح: {product.sellPrice - product.costPrice} ج.م</span>
+                    بيع: {product.sellPrice} ج.م
+                    {isAdmin && <> • تكلفة: {product.costPrice} ج.م •
+                    <span className="text-success font-medium"> ربح: {product.sellPrice - product.costPrice} ج.م</span></>}
                   </p>
-                  {product.ingredients && (
+                  {isAdmin && product.ingredients && (
                     <p className="text-xs text-muted-foreground mt-1">
                       المكونات: {product.ingredients.map(ing => `${ing.name} (${ing.cost} ج.م)`).join(' + ')}
                     </p>
                   )}
                 </div>
-                <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => setEditProduct(product)}>
-                    <Pencil size={16} />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => deleteProduct(product.id)} className="text-destructive">
-                    <Trash2 size={16} />
-                  </Button>
-                </div>
+                {isAdmin && (
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => setEditProduct(product)}>
+                      <Pencil size={16} />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => deleteProduct(product.id)} className="text-destructive">
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
+                )}
               </motion.div>
             ))}
           </div>
