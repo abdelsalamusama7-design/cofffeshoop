@@ -12,6 +12,68 @@ const STORAGE_KEYS = {
   returns: 'cafe_returns',
 };
 
+const AUTO_BACKUP_KEY = 'cafe_auto_backup';
+const AUTO_BACKUP_TIME_KEY = 'cafe_auto_backup_time';
+const AUTO_BACKUP_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
+
+const BACKUP_DATA_KEYS = [
+  'cafe_products', 'cafe_sales', 'cafe_inventory', 'cafe_workers',
+  'cafe_attendance', 'cafe_transactions', 'cafe_expenses', 'cafe_returns',
+];
+
+export const performAutoBackup = () => {
+  const backupData: Record<string, any> = {};
+  BACKUP_DATA_KEYS.forEach(key => {
+    const val = localStorage.getItem(key);
+    if (val) backupData[key] = JSON.parse(val);
+  });
+  backupData._meta = {
+    version: 1,
+    date: new Date().toISOString(),
+    app: 'بن العميد',
+    type: 'auto',
+  };
+  localStorage.setItem(AUTO_BACKUP_KEY, JSON.stringify(backupData));
+  localStorage.setItem(AUTO_BACKUP_TIME_KEY, new Date().toISOString());
+};
+
+export const getLastAutoBackupTime = (): string | null => {
+  return localStorage.getItem(AUTO_BACKUP_TIME_KEY);
+};
+
+export const downloadAutoBackup = () => {
+  const data = localStorage.getItem(AUTO_BACKUP_KEY);
+  if (!data) return false;
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `auto-backup-بن-العميد-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  return true;
+};
+
+export const checkAndRunAutoBackup = () => {
+  const lastBackup = localStorage.getItem(AUTO_BACKUP_TIME_KEY);
+  if (!lastBackup) {
+    performAutoBackup();
+    return;
+  }
+  const elapsed = Date.now() - new Date(lastBackup).getTime();
+  if (elapsed >= AUTO_BACKUP_INTERVAL) {
+    performAutoBackup();
+  }
+};
+
+// Start auto-backup interval
+let autoBackupTimer: ReturnType<typeof setInterval> | null = null;
+export const startAutoBackupScheduler = () => {
+  checkAndRunAutoBackup();
+  if (autoBackupTimer) clearInterval(autoBackupTimer);
+  autoBackupTimer = setInterval(checkAndRunAutoBackup, 60 * 60 * 1000); // check every hour
+};
+
 function get<T>(key: string, fallback: T): T {
   try {
     const data = localStorage.getItem(key);
