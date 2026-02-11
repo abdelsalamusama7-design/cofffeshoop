@@ -1,6 +1,8 @@
 import { ReactNode, useState, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -48,6 +50,7 @@ const AppLayout = ({ children }: LayoutProps) => {
   const user = getCurrentUser();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const LOW_STOCK_THRESHOLD = 5;
   const lowStockItems = useMemo(() => {
@@ -111,7 +114,7 @@ const AppLayout = ({ children }: LayoutProps) => {
 
         <div className="p-4 border-t border-sidebar-border">
           <button
-            onClick={handleLogout}
+            onClick={() => setShowLogoutConfirm(true)}
             className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-sidebar-foreground/70 hover:bg-destructive/20 hover:text-destructive transition-all w-full"
           >
             <LogOut size={20} />
@@ -123,7 +126,7 @@ const AppLayout = ({ children }: LayoutProps) => {
       {/* Mobile Top Bar */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-sidebar text-sidebar-foreground flex items-center justify-between px-4 h-14" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="flex items-center gap-1">
-          <button onClick={handleLogout} className="p-2 rounded-lg text-sidebar-foreground/70">
+          <button onClick={() => setShowLogoutConfirm(true)} className="p-2 rounded-lg text-sidebar-foreground/70">
             <LogOut size={20} />
           </button>
           {user.role === 'admin' && (
@@ -232,6 +235,20 @@ const AppLayout = ({ children }: LayoutProps) => {
 
       {/* AI Chatbot */}
       <ChatBot />
+
+      {/* Logout Confirmation Dialog */}
+      <Dialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <DialogContent className="max-w-sm text-center" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-lg">تسجيل الخروج</DialogTitle>
+            <DialogDescription>هل أنت متأكد من تسجيل الخروج؟</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 justify-center sm:justify-center">
+            <Button variant="destructive" onClick={handleLogout}>نعم، تسجيل الخروج</Button>
+            <Button variant="outline" onClick={() => setShowLogoutConfirm(false)}>لا، إلغاء</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
