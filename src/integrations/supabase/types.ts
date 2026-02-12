@@ -14,7 +14,309 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      attendance: {
+        Row: {
+          check_in: string | null
+          check_out: string | null
+          created_at: string | null
+          date: string
+          hours_worked: number | null
+          id: string
+          shift: string | null
+          type: string
+          worker_id: string
+          worker_name: string
+        }
+        Insert: {
+          check_in?: string | null
+          check_out?: string | null
+          created_at?: string | null
+          date: string
+          hours_worked?: number | null
+          id: string
+          shift?: string | null
+          type?: string
+          worker_id: string
+          worker_name: string
+        }
+        Update: {
+          check_in?: string | null
+          check_out?: string | null
+          created_at?: string | null
+          date?: string
+          hours_worked?: number | null
+          id?: string
+          shift?: string | null
+          type?: string
+          worker_id?: string
+          worker_name?: string
+        }
+        Relationships: []
+      }
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string | null
+          date: string
+          id: string
+          name: string
+          note: string | null
+        }
+        Insert: {
+          amount?: number
+          category?: string
+          created_at?: string | null
+          date: string
+          id: string
+          name: string
+          note?: string | null
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string | null
+          date?: string
+          id?: string
+          name?: string
+          note?: string | null
+        }
+        Relationships: []
+      }
+      inventory: {
+        Row: {
+          category: string | null
+          cost_per_unit: number
+          created_at: string | null
+          id: string
+          name: string
+          quantity: number
+          sell_price: number | null
+          unit: string
+        }
+        Insert: {
+          category?: string | null
+          cost_per_unit?: number
+          created_at?: string | null
+          id: string
+          name: string
+          quantity?: number
+          sell_price?: number | null
+          unit: string
+        }
+        Update: {
+          category?: string | null
+          cost_per_unit?: number
+          created_at?: string | null
+          id?: string
+          name?: string
+          quantity?: number
+          sell_price?: number | null
+          unit?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          category: string | null
+          cost_price: number
+          created_at: string | null
+          id: string
+          ingredients: Json | null
+          name: string
+          sell_price: number
+        }
+        Insert: {
+          category?: string | null
+          cost_price?: number
+          created_at?: string | null
+          id: string
+          ingredients?: Json | null
+          name: string
+          sell_price?: number
+        }
+        Update: {
+          category?: string | null
+          cost_price?: number
+          created_at?: string | null
+          id?: string
+          ingredients?: Json | null
+          name?: string
+          sell_price?: number
+        }
+        Relationships: []
+      }
+      returns: {
+        Row: {
+          created_at: string | null
+          date: string
+          exchange_items: Json | null
+          id: string
+          items: Json
+          reason: string | null
+          refund_amount: number
+          sale_id: string
+          time: string
+          type: string
+          worker_id: string
+          worker_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          exchange_items?: Json | null
+          id: string
+          items?: Json
+          reason?: string | null
+          refund_amount?: number
+          sale_id: string
+          time: string
+          type?: string
+          worker_id: string
+          worker_name: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          exchange_items?: Json | null
+          id?: string
+          items?: Json
+          reason?: string | null
+          refund_amount?: number
+          sale_id?: string
+          time?: string
+          type?: string
+          worker_id?: string
+          worker_name?: string
+        }
+        Relationships: []
+      }
+      returns_log: {
+        Row: {
+          action: string
+          action_by: string
+          action_date: string
+          action_time: string
+          created_at: string | null
+          id: string
+          return_record: Json
+        }
+        Insert: {
+          action: string
+          action_by: string
+          action_date: string
+          action_time: string
+          created_at?: string | null
+          id: string
+          return_record: Json
+        }
+        Update: {
+          action?: string
+          action_by?: string
+          action_date?: string
+          action_time?: string
+          created_at?: string | null
+          id?: string
+          return_record?: Json
+        }
+        Relationships: []
+      }
+      sales: {
+        Row: {
+          created_at: string | null
+          date: string
+          discount: Json | null
+          id: string
+          items: Json
+          time: string
+          total: number
+          worker_id: string
+          worker_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          discount?: Json | null
+          id: string
+          items?: Json
+          time: string
+          total?: number
+          worker_id: string
+          worker_name: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          discount?: Json | null
+          id?: string
+          items?: Json
+          time?: string
+          total?: number
+          worker_id?: string
+          worker_name?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          date: string
+          id: string
+          note: string | null
+          type: string
+          worker_id: string
+          worker_name: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string | null
+          date: string
+          id: string
+          note?: string | null
+          type: string
+          worker_id: string
+          worker_name: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          date?: string
+          id?: string
+          note?: string | null
+          type?: string
+          worker_id?: string
+          worker_name?: string
+        }
+        Relationships: []
+      }
+      workers: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          password: string
+          role: string
+          salary: number
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          name: string
+          password: string
+          role?: string
+          salary?: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          password?: string
+          role?: string
+          salary?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
