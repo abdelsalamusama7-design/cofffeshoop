@@ -214,7 +214,7 @@ const SettingsPage = () => {
   const handleRestoreClick = async () => {
     setIsRestoring(true);
     try {
-      const { data, error } = await (supabase.from('backups') as any).select('backup_data, created_at, created_by').eq('id', 'latest').single();
+      const { data, error } = await (supabase.from('backups') as any).select('backup_data, created_at, created_by').eq('id', 'latest').maybeSingle();
       if (error || !data) {
         toast({ title: '❌ لا توجد نسخة', description: 'لا توجد نسخة احتياطية محفوظة في السحاب. احفظ نسخة أولاً.', variant: 'destructive' });
         setIsRestoring(false);
