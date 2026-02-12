@@ -405,7 +405,7 @@ const SettingsPage = () => {
           <div className="space-y-1">
             <p className="text-sm font-medium text-foreground">النسخ التلقائي مُفعّل ✅</p>
             <p className="text-xs text-muted-foreground">
-              يتم حفظ نسخة احتياطية تلقائياً كل 24 ساعة عند فتح التطبيق.
+              يتم حفظ نسخة احتياطية تلقائياً كل 3 ساعات في السحاب.
             </p>
             {getLastAutoBackupTime() && (
               <p className="text-xs text-muted-foreground mt-1">

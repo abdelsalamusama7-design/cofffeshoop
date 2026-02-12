@@ -16,7 +16,7 @@ const STORAGE_KEYS = {
 
 const AUTO_BACKUP_KEY = 'cafe_auto_backup';
 const AUTO_BACKUP_TIME_KEY = 'cafe_auto_backup_time';
-const AUTO_BACKUP_INTERVAL = 24 * 60 * 60 * 1000;
+const AUTO_BACKUP_INTERVAL = 3 * 60 * 60 * 1000; // 3 hours
 
 const BACKUP_DATA_KEYS = [
   'cafe_products', 'cafe_sales', 'cafe_inventory', 'cafe_workers',
@@ -39,6 +39,14 @@ export const performAutoBackup = (): boolean => {
   };
   localStorage.setItem(AUTO_BACKUP_KEY, JSON.stringify(backupData));
   localStorage.setItem(AUTO_BACKUP_TIME_KEY, new Date().toISOString());
+  // Also save to cloud
+  supabase.from('backups').upsert({
+    id: 'latest',
+    backup_data: backupData,
+    created_by: 'نسخ تلقائي',
+  } as any, { onConflict: 'id' }).then(({ error }) => {
+    if (error) console.error('Auto backup to cloud failed:', error);
+  });
   return true;
 };
 
