@@ -207,7 +207,7 @@ const Expenses = () => {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
         <div className="glass-card rounded-xl p-4 text-center">
           <Wallet size={22} className="mx-auto text-destructive mb-2" />
           <p className="text-xl font-bold text-foreground">{totalExpenses} ج.م</p>
@@ -228,7 +228,7 @@ const Expenses = () => {
           <p className="text-xl font-bold text-foreground">{totalBonuses} ج.م</p>
           <p className="text-xs text-muted-foreground">مكافآت</p>
         </div>
-        <div className="glass-card rounded-xl p-4 text-center col-span-2 md:col-span-1">
+        <div className="glass-card rounded-xl p-3 sm:p-4 text-center col-span-2 sm:col-span-1">
           <Wallet size={22} className="mx-auto text-accent mb-2" />
           <p className="text-xl font-bold text-foreground">{totalCustomExpenses} ج.م</p>
           <p className="text-xs text-muted-foreground">مصروفات أخرى</p>

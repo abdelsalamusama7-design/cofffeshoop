@@ -348,7 +348,7 @@ const Reports = () => {
 
     return (
       <div className="space-y-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
           <div className="glass-card rounded-xl p-4 text-center">
             <DollarSign size={22} className="mx-auto text-success mb-2" />
             <p className="text-xl font-bold text-foreground">{totalSales} ج.م</p>
