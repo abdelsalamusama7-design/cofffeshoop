@@ -162,6 +162,27 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
   
   const netTotal = useMemo(() => totalAmount - totalReturnsAmount, [totalAmount, totalReturnsAmount]);
 
+  // Aggregate sales by product
+  const salesByProduct = useMemo(() => {
+    const map: Record<string, { name: string; quantity: number; unitPrice: number; total: number }> = {};
+    shiftSales.forEach(sale => {
+      sale.items.forEach(item => {
+        if (map[item.productId]) {
+          map[item.productId].quantity += item.quantity;
+          map[item.productId].total += item.total;
+        } else {
+          map[item.productId] = {
+            name: item.productName,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            total: item.total,
+          };
+        }
+      });
+    });
+    return Object.values(map).sort((a, b) => b.total - a.total);
+  }, [shiftSales]);
+
   const generateReportText = () => {
     if (!user) return '';
     const today = new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -182,6 +203,16 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
       text += `• إجمالي المرتجعات: -${totalReturnsAmount.toFixed(2)} ج.م\n`;
     }
     text += `\n━━━━━━━━━━━━━━━\n`;
+    // Aggregated sales by product
+    if (salesByProduct.length > 0) {
+      text += `🛒 تفصيل المبيعات بالأصناف:\n\n`;
+      salesByProduct.forEach(item => {
+        text += `• ${item.name} — ${item.quantity} × ${item.unitPrice.toFixed(2)} = ${item.total.toFixed(2)} ج.م\n`;
+      });
+      text += `\n`;
+    }
+
+    text += `━━━━━━━━━━━━━━━\n`;
     text += `📝 تفاصيل الفواتير:\n\n`;
 
     shiftSales.forEach((sale, idx) => {
@@ -352,6 +383,27 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
               <p className="text-2xl font-bold text-primary">{netTotal.toFixed(2)} ج.م</p>
             </div>
 
+            {/* Aggregated Sales by Product */}
+            {salesByProduct.length > 0 && (
+              <div className="mt-2">
+                <p className="text-xs font-bold text-muted-foreground flex items-center gap-1 mb-2">
+                  🛒 تفصيل المبيعات بالأصناف
+                </p>
+                <div className="bg-primary/5 rounded-xl p-3 space-y-1 max-h-[20vh] overflow-auto border border-primary/10">
+                  {salesByProduct.map((item, i) => (
+                    <div key={i} className="flex items-center justify-between text-xs">
+                      <span className="text-foreground">{item.name} <span className="text-muted-foreground">×{item.quantity}</span></span>
+                      <span className="font-bold text-primary">{item.total.toFixed(2)} ج.م</span>
+                    </div>
+                  ))}
+                  <div className="border-t border-primary/10 pt-1 mt-1 flex items-center justify-between text-xs font-bold">
+                    <span className="text-foreground">الإجمالي</span>
+                    <span className="text-primary">{totalAmount.toFixed(2)} ج.م</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Sales List */}
             <div className="flex-1 overflow-auto space-y-2 mt-2 max-h-[35vh]">
               {shiftSales.length === 0 && activeReturns.length === 0 ? (
@@ -364,7 +416,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                   {/* Sales */}
                   {shiftSales.length > 0 && (
                     <p className="text-xs font-bold text-muted-foreground flex items-center gap-1">
-                      <ShoppingCart size={12} /> المبيعات ({shiftSales.length})
+                      <ShoppingCart size={12} /> الفواتير ({shiftSales.length})
                     </p>
                   )}
                   {shiftSales.map((sale, idx) => (
