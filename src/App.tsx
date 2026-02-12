@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
-import { getCurrentUser, startAutoBackupScheduler } from "@/lib/store";
+import { getCurrentUser, startAutoBackupScheduler, initializeFromDatabase } from "@/lib/store";
 import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
 import SplashScreen from "@/components/SplashScreen";
@@ -33,8 +33,16 @@ const ProtectedRoute = ({ children, adminOnly }: { children: React.ReactNode; ad
 
 const App = () => {
   const [showSplash, setShowSplash] = useState(true);
+  const [dbReady, setDbReady] = useState(false);
 
   useEffect(() => {
+    // Load data from database on startup
+    initializeFromDatabase().then(() => {
+      setDbReady(true);
+    }).catch(() => {
+      setDbReady(true); // fallback to localStorage
+    });
+
     startAutoBackupScheduler(() => {
       const user = getCurrentUser();
       if (user?.role === 'admin') {
@@ -52,9 +60,9 @@ const App = () => {
         <Toaster />
         <Sonner />
         <AnimatePresence>
-          {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
+          {(showSplash || !dbReady) && <SplashScreen onFinish={() => setShowSplash(false)} />}
         </AnimatePresence>
-        {!showSplash && (
+        {!showSplash && dbReady && (
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<Login />} />
