@@ -440,7 +440,6 @@ const Returns = () => {
                       returnedQtyMap[i.productId] = (returnedQtyMap[i.productId] || 0) + i.quantity;
                     }));
                     const allReturned = sale.items.every(i => (returnedQtyMap[i.productId] || 0) >= i.quantity);
-                    const hasPartialReturn = Object.keys(returnedQtyMap).length > 0;
                     return (
                       <button
                         key={sale.id}
@@ -458,15 +457,22 @@ const Returns = () => {
                             {allReturned && (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-destructive/15 text-destructive">تم الإرجاع بالكامل</span>
                             )}
-                            {hasPartialReturn && !allReturned && (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-500/15 text-yellow-600">إرجاع جزئي</span>
-                            )}
                           </div>
                           <span className="font-bold text-sm text-foreground">{sale.total} ج.م</span>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {sale.date} - {sale.workerName} - {sale.items.map(i => i.productName).join('، ')}
-                        </p>
+                        <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                          <p>{sale.date} - {sale.workerName}</p>
+                          {sale.items.map(item => {
+                            const returned = returnedQtyMap[item.productId] || 0;
+                            const fullyReturned = returned >= item.quantity;
+                            return (
+                              <span key={item.productId} className={`inline-block ml-2 ${fullyReturned ? 'line-through opacity-50' : ''}`}>
+                                {item.productName} x{item.quantity}{returned > 0 && !fullyReturned ? ` (مرتجع: ${returned})` : ''}
+                                {fullyReturned ? ' ✓' : ''}
+                              </span>
+                            );
+                          })}
+                        </div>
                       </button>
                     );
                   })}
