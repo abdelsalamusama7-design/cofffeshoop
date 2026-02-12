@@ -41,12 +41,16 @@ const Returns = () => {
   const inventory = getInventory();
   const products = getProducts();
 
-  // Build available products list (aggregated across all sales)
+  const today = new Date().toISOString().split('T')[0];
+
+  // Build available products list (only from today's sales)
   const availableProducts = useMemo(() => {
     const productMap: Record<string, AvailableProduct> = {};
+    const todaySales = sales.filter(s => s.date === today);
+    const todayReturns = returns.filter(r => r.date === today);
 
-    // Aggregate sold quantities per product
-    sales.forEach(sale => {
+    // Aggregate sold quantities per product (today only)
+    todaySales.forEach(sale => {
       sale.items.forEach(item => {
         if (!productMap[item.productId]) {
           productMap[item.productId] = {
@@ -71,7 +75,7 @@ const Returns = () => {
     });
 
     // Subtract returned quantities
-    returns.forEach(r => {
+    todayReturns.forEach(r => {
       r.items.forEach(item => {
         if (productMap[item.productId]) {
           productMap[item.productId].totalReturned += item.quantity;
