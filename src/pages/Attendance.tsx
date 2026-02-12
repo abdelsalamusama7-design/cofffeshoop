@@ -210,9 +210,9 @@ const Attendance = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">الحضور والانصراف</h1>
-        <Button onClick={() => setShowAdd(true)} className="cafe-gradient text-primary-foreground">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">الحضور والانصراف</h1>
+        <Button onClick={() => setShowAdd(true)} className="cafe-gradient text-primary-foreground w-full sm:w-auto">
           <Plus size={18} className="ml-2" />
           تسجيل حضور
         </Button>

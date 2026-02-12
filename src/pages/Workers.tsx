@@ -110,9 +110,9 @@ const Workers = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">إدارة العمال</h1>
-        <Button onClick={() => setShowAdd(true)} className="cafe-gradient text-primary-foreground">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">إدارة العمال</h1>
+        <Button onClick={() => setShowAdd(true)} className="cafe-gradient text-primary-foreground w-full sm:w-auto">
           <Plus size={18} className="ml-2" />
           إضافة عامل
         </Button>
@@ -138,17 +138,17 @@ const Workers = () => {
                 </p>
               </div>
             </div>
-            <div className="flex gap-1">
+            <div className="flex gap-0.5 sm:gap-1 shrink-0">
               {worker.role !== 'admin' && (
-                <Button variant="ghost" size="icon" onClick={() => setShowTransaction(worker.id)} title="سلفة / مكافأة">
+                <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" onClick={() => setShowTransaction(worker.id)} title="سلفة / مكافأة">
                   <CircleDollarSign size={16} />
                 </Button>
               )}
-              <Button variant="ghost" size="icon" onClick={() => setShowChangePass(worker.id)} title="تغيير كلمة المرور">
+              <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" onClick={() => setShowChangePass(worker.id)} title="تغيير كلمة المرور">
                 <Key size={16} />
               </Button>
               {worker.role !== 'admin' && (
-                <Button variant="ghost" size="icon" onClick={() => deleteWorker(worker.id)} className="text-destructive">
+                <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 text-destructive" onClick={() => deleteWorker(worker.id)}>
                   <Trash2 size={16} />
                 </Button>
               )}

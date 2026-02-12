@@ -269,25 +269,25 @@ const Returns = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">المرتجعات والبدل</h1>
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">المرتجعات والبدل</h1>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           {user?.role === 'admin' && (
-            <Button variant="outline" onClick={() => setShowLogDialog(true)}>
-              <ClipboardList size={18} className="ml-2" />
+            <Button variant="outline" onClick={() => setShowLogDialog(true)} className="flex-1 sm:flex-none text-xs sm:text-sm">
+              <ClipboardList size={16} className="ml-1 sm:ml-2" />
               سجل المرتجعات
             </Button>
           )}
-          <Button onClick={() => setShowDialog(true)} className="cafe-gradient text-primary-foreground">
-            <RotateCcw size={18} className="ml-2" />
+          <Button onClick={() => setShowDialog(true)} className="cafe-gradient text-primary-foreground flex-1 sm:flex-none text-xs sm:text-sm">
+            <RotateCcw size={16} className="ml-1 sm:ml-2" />
             مرتجع / بدل جديد
           </Button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
+      <div className="flex gap-2 sm:gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[140px] sm:min-w-[200px]">
           <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="بحث..."
@@ -312,7 +312,7 @@ const Returns = () => {
 
       {/* New Return/Exchange Dialog */}
       <Dialog open={showDialog} onOpenChange={open => { if (!open) resetDialog(); }}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-lg max-w-[95vw] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>مرتجع / بدل جديد</DialogTitle>
           </DialogHeader>
@@ -483,7 +483,7 @@ const Returns = () => {
 
       {/* Full Returns Log Dialog - Admin Only */}
       <Dialog open={showLogDialog} onOpenChange={setShowLogDialog}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl max-w-[95vw] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ClipboardList size={20} />
