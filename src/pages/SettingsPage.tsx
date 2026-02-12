@@ -393,9 +393,13 @@ const SettingsPage = () => {
           </Button>
           <Button
             onClick={() => {
+              // If no auto backup exists yet, perform one first
+              if (!getLastAutoBackupTime()) {
+                performAutoBackup();
+              }
               const ok = downloadAutoBackup();
               if (ok) toast({ title: '✅ تم', description: 'تم تحميل آخر نسخة تلقائية' });
-              else toast({ title: '❌', description: 'لا توجد نسخة تلقائية بعد', variant: 'destructive' });
+              else toast({ title: '❌', description: 'حدث خطأ أثناء التحميل', variant: 'destructive' });
             }}
             variant="outline"
             className="h-12 text-sm font-medium gap-2 border-info/30 text-info hover:bg-info/10"
