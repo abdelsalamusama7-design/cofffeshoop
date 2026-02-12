@@ -5,7 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
-import { getCurrentUser, startAutoBackupScheduler, initializeFromDatabase } from "@/lib/store";
+import { getCurrentUser, initializeFromDatabase } from "@/lib/store";
+import { startAutoBackup } from "@/lib/backupService";
 import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
 import SplashScreen from "@/components/SplashScreen";
@@ -43,13 +44,15 @@ const App = () => {
       setDbReady(true); // fallback to localStorage
     });
 
-    startAutoBackupScheduler(() => {
+    startAutoBackup((success) => {
       const user = getCurrentUser();
       if (user?.role === 'admin') {
-        toast.success('✅ تم حفظ نسخة احتياطية تلقائية', {
-          description: `${new Date().toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}`,
-          duration: 5000,
-        });
+        if (success) {
+          toast.success('✅ تم حفظ نسخة احتياطية تلقائية', {
+            description: `${new Date().toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}`,
+            duration: 5000,
+          });
+        }
       }
     });
   }, []);

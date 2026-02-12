@@ -1,12 +1,13 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, Download, Upload, Mail, MessageCircle, Calendar, Clock, CheckCircle2, ShieldCheck, AlertTriangle, RotateCcw } from 'lucide-react';
+import { Settings, Download, Upload, Mail, MessageCircle, Calendar, Clock, CheckCircle2, ShieldCheck, AlertTriangle, RotateCcw, Circle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { getSales, getProducts, getInventory, getWorkers, getAttendance, getExpenses, getTransactions, getCurrentUser, getLastAutoBackupTime, downloadAutoBackup, performAutoBackup, syncLocalStorageToCloud } from '@/lib/store';
+import { getSales, getProducts, getInventory, getWorkers, getAttendance, getExpenses, getTransactions, getCurrentUser, syncLocalStorageToCloud } from '@/lib/store';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { getLastBackupTime, getBackupStatus, createBackup, restoreLatestBackup, resetLocalSystem } from '@/lib/backupService';
 
 type BackupFrequency = 'daily' | 'weekly' | 'monthly';
 type ShareMethod = 'pdf' | 'email' | 'whatsapp';
@@ -16,6 +17,17 @@ const BACKUP_STORAGE_KEYS = [
   'cafe_attendance', 'cafe_categories', 'cafe_transactions', 'cafe_expenses',
 ];
 
+const BackupStatusIndicator = () => {
+  const [status, setStatus] = useState(getBackupStatus());
+  useEffect(() => {
+    const interval = setInterval(() => setStatus(getBackupStatus()), 30000);
+    return () => clearInterval(interval);
+  }, []);
+  const color = status === 'ok' ? 'text-success' : status === 'warning' ? 'text-warning' : 'text-destructive';
+  const title = status === 'ok' ? 'النسخ يعمل بشكل طبيعي' : status === 'warning' ? 'لم يتم النسخ بعد' : 'فشل النسخ لأكثر من ساعتين!';
+  return <Circle size={10} className={`${color} fill-current`} aria-label={title} />;
+};
+
 const SettingsPage = () => {
   const [frequency, setFrequency] = useState<BackupFrequency>('daily');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -24,6 +36,7 @@ const SettingsPage = () => {
   const [pendingRestore, setPendingRestore] = useState<Record<string, any> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const currentUser = getCurrentUser();
+  const [isRestoring, setIsRestoring] = useState(false);
 
   const getDateRange = () => {
     const now = new Date();
@@ -209,7 +222,6 @@ const SettingsPage = () => {
     toast({ title: '✅ تم', description: 'تم حفظ النسخة الاحتياطية في السحاب وتحميلها' });
   };
 
-  const [isRestoring, setIsRestoring] = useState(false);
 
   const handleRestoreClick = async () => {
     setIsRestoring(true);
@@ -398,6 +410,8 @@ const SettingsPage = () => {
         <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
           <Clock size={20} className="text-accent" />
           النسخ الاحتياطي التلقائي
+          {/* Status indicator */}
+          <BackupStatusIndicator />
         </h2>
 
         <div className="bg-success/10 rounded-xl p-4 flex items-start gap-3">
@@ -405,11 +419,11 @@ const SettingsPage = () => {
           <div className="space-y-1">
             <p className="text-sm font-medium text-foreground">النسخ التلقائي مُفعّل ✅</p>
             <p className="text-xs text-muted-foreground">
-              يتم حفظ نسخة احتياطية تلقائياً كل 3 ساعات في السحاب.
+              يتم حفظ نسخة احتياطية تلقائياً كل 60 دقيقة (فقط عند وجود تغييرات). يتم الاحتفاظ بآخر 24 نسخة.
             </p>
-            {getLastAutoBackupTime() && (
+            {getLastBackupTime() && (
               <p className="text-xs text-muted-foreground mt-1">
-                آخر نسخة تلقائية: <span className="font-bold text-foreground">{new Date(getLastAutoBackupTime()!).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                آخر نسخة: <span className="font-bold text-foreground">{new Date(getLastBackupTime()!).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}</span>
               </p>
             )}
           </div>
@@ -417,11 +431,10 @@ const SettingsPage = () => {
 
         <div className="grid grid-cols-2 gap-3">
           <Button
-            onClick={() => {
-              performAutoBackup();
-              toast({ title: '✅ تم', description: 'تم حفظ نسخة احتياطية تلقائية الآن' });
-              // force re-render
-              window.dispatchEvent(new Event('storage'));
+            onClick={async () => {
+              const ok = await createBackup();
+              if (ok) toast({ title: '✅ تم', description: 'تم حفظ نسخة احتياطية الآن' });
+              else toast({ title: '❌ خطأ', description: 'فشل حفظ النسخة', variant: 'destructive' });
             }}
             variant="outline"
             className="h-12 text-sm font-medium gap-2 border-accent/30 text-accent hover:bg-accent/10"
@@ -430,20 +443,23 @@ const SettingsPage = () => {
             نسخ الآن
           </Button>
           <Button
-            onClick={() => {
-              // If no auto backup exists yet, perform one first
-              if (!getLastAutoBackupTime()) {
-                performAutoBackup();
+            onClick={async () => {
+              setIsRestoring(true);
+              const ok = await restoreLatestBackup();
+              if (ok) {
+                toast({ title: '✅ تم الاستعادة', description: 'تم استعادة آخر نسخة احتياطية. جاري إعادة التحميل...' });
+                setTimeout(() => window.location.reload(), 1500);
+              } else {
+                toast({ title: '❌ لا توجد نسخة', description: 'لا توجد نسخة احتياطية محفوظة', variant: 'destructive' });
               }
-              const ok = downloadAutoBackup();
-              if (ok) toast({ title: '✅ تم', description: 'تم تحميل آخر نسخة تلقائية' });
-              else toast({ title: '❌', description: 'حدث خطأ أثناء التحميل', variant: 'destructive' });
+              setIsRestoring(false);
             }}
+            disabled={isRestoring}
             variant="outline"
             className="h-12 text-sm font-medium gap-2 border-info/30 text-info hover:bg-info/10"
           >
-            <Download size={18} />
-            تحميل النسخة
+            <Upload size={18} />
+            {isRestoring ? 'جاري الاستعادة...' : 'استعادة آخر نسخة'}
           </Button>
         </div>
       </motion.div>
@@ -452,11 +468,11 @@ const SettingsPage = () => {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass-card rounded-2xl p-5 space-y-5 border border-destructive/20">
           <h2 className="text-lg font-bold text-destructive flex items-center gap-2">
             <RotateCcw size={20} />
-            إعادة تعيين النظام
+            تصفير النظام
           </h2>
 
           <p className="text-sm text-muted-foreground">
-            حذف جميع البيانات (منتجات، مبيعات، مخزون، عمال، حضور، مصروفات، سلف، مكافآت) وإرجاع السيستم للوضع الافتراضي. العملية دي مش ممكن التراجع عنها!
+            مسح كل البيانات المحلية والسحابية (ماعدا النسخ الاحتياطية). النسخ الاحتياطية تبقى محفوظة في السحاب.
           </p>
 
           <Button
@@ -465,13 +481,13 @@ const SettingsPage = () => {
             className="w-full h-12 text-sm font-bold gap-2"
           >
             <RotateCcw size={18} />
-            تصفير النظام بالكامل
+            تصفير النظام
           </Button>
 
           <div className="bg-destructive/10 rounded-xl p-3 flex items-start gap-2">
             <AlertTriangle size={16} className="text-destructive mt-0.5 shrink-0" />
             <p className="text-xs text-muted-foreground leading-relaxed">
-              تحذير: ده هيمسح كل البيانات نهائياً. ننصحك تاخد نسخة احتياطية قبل ما تعمل تصفير.
+              تحذير: ده هيمسح كل البيانات نهائياً. النسخ الاحتياطية في السحاب مش هتتأثر.
             </p>
           </div>
         </motion.div>
@@ -512,7 +528,7 @@ const SettingsPage = () => {
               ⚠️ تأكيد تصفير النظام
             </AlertDialogTitle>
             <AlertDialogDescription className="text-right">
-              هل أنت متأكد إنك عايز تمسح كل البيانات؟ ده هيرجع السيستم للوضع الافتراضي بالكامل. العملية دي نهائية ومش ممكن التراجع عنها!
+              هل أنت متأكد إنك عايز تمسح كل البيانات؟ النسخ الاحتياطية في السحاب مش هتتأثر ويمكنك استعادتها في أي وقت.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex gap-2">
@@ -520,31 +536,15 @@ const SettingsPage = () => {
             <AlertDialogAction
               onClick={async () => {
                 try {
-                  // Clear all cloud data except backups
-                  await Promise.all([
-                    supabase.from('sales').delete().neq('id', ''),
-                    supabase.from('products').delete().neq('id', ''),
-                    supabase.from('inventory').delete().neq('id', ''),
-                    supabase.from('expenses').delete().neq('id', ''),
-                    supabase.from('attendance').delete().neq('id', ''),
-                    supabase.from('transactions').delete().neq('id', ''),
-                    supabase.from('returns').delete().neq('id', ''),
-                    supabase.from('returns_log').delete().neq('id', ''),
-                    supabase.from('shift_resets').delete().neq('id', ''),
-                  ]);
-
-                  // Clear local storage except workers and current user
-                  BACKUP_STORAGE_KEYS.forEach(key => {
-                    if (key !== 'cafe_workers') {
-                      localStorage.removeItem(key);
-                    }
-                  });
-                  localStorage.removeItem('cafe_auto_backup');
-                  localStorage.removeItem('cafe_auto_backup_time');
+                  const ok = await resetLocalSystem();
                   setShowResetConfirm(false);
-                  toast({ title: '✅ تم التصفير', description: 'تم مسح كل البيانات من السيستم والسحاب (ماعدا النسخ الاحتياطية). جاري إعادة التحميل...' });
+                  if (ok) {
+                    toast({ title: '✅ تم التصفير', description: 'تم مسح كل البيانات (ماعدا النسخ الاحتياطية). جاري إعادة التحميل...' });
+                  } else {
+                    toast({ title: '❌ خطأ', description: 'حصل مشكلة أثناء التصفير', variant: 'destructive' });
+                  }
                   setTimeout(() => window.location.reload(), 1000);
-                } catch (error) {
+                } catch {
                   toast({ title: '❌ خطأ', description: 'حصل مشكلة أثناء التصفير', variant: 'destructive' });
                 }
               }}
