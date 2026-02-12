@@ -452,6 +452,50 @@ export const addReturnLogEntry = (entry: ReturnLogEntry) => {
   dbUpsertReturnsLog([entry]);
 };
 
+// Sync all localStorage data UP to Cloud (used after restoring a backup)
+export const syncLocalStorageToCloud = async (): Promise<boolean> => {
+  try {
+    const workers = getWorkers();
+    const products = getProducts();
+    const inventory = getInventory();
+    const sales = getSales();
+    const attendance = getAttendance();
+    const transactions = getTransactions();
+    const expenses = getExpenses();
+    const returns = getReturns();
+    const returnsLog = getReturnsLog();
+
+    // Delete all existing cloud data first, then upsert
+    await Promise.all([
+      (supabase.from('workers') as any).delete().neq('id', ''),
+      (supabase.from('products') as any).delete().neq('id', ''),
+      (supabase.from('inventory') as any).delete().neq('id', ''),
+      (supabase.from('sales') as any).delete().neq('id', ''),
+      (supabase.from('attendance') as any).delete().neq('id', ''),
+      (supabase.from('transactions') as any).delete().neq('id', ''),
+      (supabase.from('expenses') as any).delete().neq('id', ''),
+      (supabase.from('returns') as any).delete().neq('id', ''),
+      (supabase.from('returns_log') as any).delete().neq('id', ''),
+    ]);
+
+    // Now upsert all data
+    if (workers.length > 0) dbUpsertWorkers(workers);
+    if (products.length > 0) dbUpsertProducts(products);
+    if (inventory.length > 0) dbUpsertInventory(inventory);
+    if (sales.length > 0) dbUpsertSales(sales);
+    if (attendance.length > 0) dbUpsertAttendance(attendance);
+    if (transactions.length > 0) dbUpsertTransactions(transactions);
+    if (expenses.length > 0) dbUpsertExpenses(expenses);
+    if (returns.length > 0) dbUpsertReturns(returns);
+    if (returnsLog.length > 0) dbUpsertReturnsLog(returnsLog);
+
+    return true;
+  } catch (err) {
+    console.error('Failed to sync localStorage to cloud:', err);
+    return false;
+  }
+};
+
 // Shift Resets Log
 export const addShiftReset = (record: ShiftResetRecord) => {
   supabase.from('shift_resets').upsert([{
