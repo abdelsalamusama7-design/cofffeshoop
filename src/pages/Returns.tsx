@@ -433,14 +433,21 @@ const Returns = () => {
                 />
                 <div className="max-h-48 overflow-y-auto space-y-2">
                   {filteredSales.map(sale => {
-                    const hasReturn = returns.some(r => r.saleId === sale.id);
+                    // Calculate remaining returnable qty per item
+                    const saleReturns = returns.filter(r => r.saleId === sale.id);
+                    const returnedQtyMap: Record<string, number> = {};
+                    saleReturns.forEach(r => r.items.forEach(i => {
+                      returnedQtyMap[i.productId] = (returnedQtyMap[i.productId] || 0) + i.quantity;
+                    }));
+                    const allReturned = sale.items.every(i => (returnedQtyMap[i.productId] || 0) >= i.quantity);
+                    const hasPartialReturn = Object.keys(returnedQtyMap).length > 0;
                     return (
                       <button
                         key={sale.id}
-                        onClick={() => !hasReturn && setSelectedSale(sale)}
-                        disabled={hasReturn}
+                        onClick={() => !allReturned && setSelectedSale(sale)}
+                        disabled={allReturned}
                         className={`w-full text-right rounded-xl p-3 transition-colors ${
-                          hasReturn
+                          allReturned
                             ? 'bg-muted/50 opacity-50 cursor-not-allowed border border-muted'
                             : 'bg-secondary hover:bg-accent/10'
                         }`}
@@ -448,8 +455,11 @@ const Returns = () => {
                         <div className="flex justify-between items-center">
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-muted-foreground">#{sale.id}</span>
-                            {hasReturn && (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-destructive/15 text-destructive">تم الإرجاع</span>
+                            {allReturned && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-destructive/15 text-destructive">تم الإرجاع بالكامل</span>
+                            )}
+                            {hasPartialReturn && !allReturned && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-500/15 text-yellow-600">إرجاع جزئي</span>
                             )}
                           </div>
                           <span className="font-bold text-sm text-foreground">{sale.total} ج.م</span>
@@ -480,40 +490,63 @@ const Returns = () => {
                 {/* Items to return */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">اختر الأصناف للإرجاع</label>
-                  {selectedSale.items.map(item => {
-                    const qty = selectedItems[item.productId] || 0;
-                    return (
-                      <div key={item.productId} className={`flex items-center justify-between rounded-xl p-3 transition-all ${
-                        qty > 0 ? 'bg-destructive/10 ring-1 ring-destructive/30' : 'bg-secondary'
-                      }`}>
-                        <div className="flex items-center gap-2">
-                          {qty > 0 ? (
-                            <>
-                              <button onClick={() => decrementItem(item.productId)} className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center">
-                                <Minus size={14} />
-                              </button>
-                              <span className="w-6 text-center font-bold text-sm">{qty}</span>
-                              <button
-                                onClick={() => toggleItem(item.productId, item.quantity)}
-                                className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center"
-                                disabled={qty >= item.quantity}
-                              >
+                  {(() => {
+                    // Calculate already returned quantities for this sale
+                    const saleReturns = returns.filter(r => r.saleId === selectedSale.id);
+                    const returnedQtyMap: Record<string, number> = {};
+                    saleReturns.forEach(r => r.items.forEach(i => {
+                      returnedQtyMap[i.productId] = (returnedQtyMap[i.productId] || 0) + i.quantity;
+                    }));
+                    return selectedSale.items.map(item => {
+                      const alreadyReturned = returnedQtyMap[item.productId] || 0;
+                      const remainingQty = item.quantity - alreadyReturned;
+                      const qty = selectedItems[item.productId] || 0;
+                      if (remainingQty <= 0) {
+                        return (
+                          <div key={item.productId} className="flex items-center justify-between rounded-xl p-3 bg-muted/50 opacity-50">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-destructive/15 text-destructive">تم إرجاعه</span>
+                            <div className="text-right flex-1 mr-3">
+                              <p className="text-sm font-medium text-foreground line-through">{item.productName}</p>
+                              <p className="text-xs text-muted-foreground">x{item.quantity} - {item.unitPrice} ج.م/وحدة</p>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div key={item.productId} className={`flex items-center justify-between rounded-xl p-3 transition-all ${
+                          qty > 0 ? 'bg-destructive/10 ring-1 ring-destructive/30' : 'bg-secondary'
+                        }`}>
+                          <div className="flex items-center gap-2">
+                            {qty > 0 ? (
+                              <>
+                                <button onClick={() => decrementItem(item.productId)} className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center">
+                                  <Minus size={14} />
+                                </button>
+                                <span className="w-6 text-center font-bold text-sm">{qty}</span>
+                                <button
+                                  onClick={() => toggleItem(item.productId, remainingQty)}
+                                  className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center"
+                                  disabled={qty >= remainingQty}
+                                >
+                                  <Plus size={14} />
+                                </button>
+                              </>
+                            ) : (
+                              <button onClick={() => toggleItem(item.productId, remainingQty)} className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center">
                                 <Plus size={14} />
                               </button>
-                            </>
-                          ) : (
-                            <button onClick={() => toggleItem(item.productId, item.quantity)} className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center">
-                              <Plus size={14} />
-                            </button>
-                          )}
+                            )}
+                          </div>
+                          <div className="text-right flex-1 mr-3">
+                            <p className="text-sm font-medium text-foreground">{item.productName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              متبقي: {remainingQty} من {item.quantity} - {item.unitPrice} ج.م/وحدة
+                            </p>
+                          </div>
                         </div>
-                        <div className="text-right flex-1 mr-3">
-                          <p className="text-sm font-medium text-foreground">{item.productName}</p>
-                          <p className="text-xs text-muted-foreground">x{item.quantity} - {item.unitPrice} ج.م/وحدة</p>
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    });
+                  })()}
                 </div>
 
                 {/* Exchange items */}
