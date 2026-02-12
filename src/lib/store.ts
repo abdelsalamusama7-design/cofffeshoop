@@ -1,4 +1,4 @@
-import { Product, Sale, InventoryItem, Worker, AttendanceRecord, WorkerTransaction, Expense, ReturnRecord, ReturnLogEntry, ItemCategory } from './types';
+import { Product, Sale, InventoryItem, Worker, AttendanceRecord, WorkerTransaction, Expense, ReturnRecord, ReturnLogEntry, ItemCategory, ShiftResetRecord } from './types';
 import { supabase } from '@/integrations/supabase/client';
 
 const STORAGE_KEYS = {
@@ -450,6 +450,33 @@ export const addReturnLogEntry = (entry: ReturnLogEntry) => {
   log.push(entry);
   setLocal(STORAGE_KEYS.returnsLog, log);
   dbUpsertReturnsLog([entry]);
+};
+
+// Shift Resets Log
+export const addShiftReset = (record: ShiftResetRecord) => {
+  supabase.from('shift_resets').upsert([{
+    id: record.id,
+    worker_id: record.workerId,
+    worker_name: record.workerName,
+    reset_date: record.resetDate,
+    reset_time: record.resetTime,
+    report_summary: record.reportSummary || null,
+  }] as any, { onConflict: 'id' }).then(({ error }) => {
+    if (error) console.error('DB sync shift_resets error:', error);
+  });
+};
+
+export const getShiftResets = async (): Promise<ShiftResetRecord[]> => {
+  const { data, error } = await supabase.from('shift_resets').select('*').order('created_at', { ascending: false });
+  if (error) { console.error('Error fetching shift resets:', error); return []; }
+  return (data || []).map((r: any) => ({
+    id: r.id,
+    workerId: r.worker_id,
+    workerName: r.worker_name,
+    resetDate: r.reset_date,
+    resetTime: r.reset_time,
+    reportSummary: r.report_summary,
+  }));
 };
 
 // Default data

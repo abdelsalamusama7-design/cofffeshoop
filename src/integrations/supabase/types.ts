@@ -257,6 +257,36 @@ export type Database = {
         }
         Relationships: []
       }
+      shift_resets: {
+        Row: {
+          created_at: string | null
+          id: string
+          report_summary: string | null
+          reset_date: string
+          reset_time: string
+          worker_id: string
+          worker_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          report_summary?: string | null
+          reset_date: string
+          reset_time: string
+          worker_id: string
+          worker_name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          report_summary?: string | null
+          reset_date?: string
+          reset_time?: string
+          worker_id?: string
+          worker_name?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
