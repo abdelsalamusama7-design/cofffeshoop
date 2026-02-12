@@ -8,6 +8,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { getSales, getProducts, getCurrentUser, getWorkers, getAttendance, getTransactions, getInventory, getReturns, deleteSale, updateSale } from '@/lib/store';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ScrollableList from '@/components/ScrollableList';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { Sale, SaleItem } from '@/lib/types';
@@ -254,7 +255,7 @@ const Reports = () => {
         {allEntries.length > 0 && (
           <div className="glass-card rounded-xl p-4">
             <h3 className="font-bold text-foreground mb-3">تفاصيل الطلبات والمرتجعات</h3>
-            <div className="space-y-2 max-h-60 overflow-y-auto">
+            <ScrollableList className="space-y-2">
               {allEntries.map((entry) => (
                 <div key={entry.id} className={`p-3 rounded-lg text-sm ${entry.isReturn ? 'bg-destructive/10 border border-destructive/30' : 'bg-secondary'}`}>
                   <div className="flex justify-between items-center">
@@ -301,7 +302,7 @@ const Reports = () => {
                   )}
                 </div>
               ))}
-            </div>
+            </ScrollableList>
           </div>
         )}
 
@@ -576,7 +577,7 @@ const Reports = () => {
         {filteredReturns.length > 0 && (
           <div className="glass-card rounded-xl p-4">
             <h3 className="font-bold text-foreground mb-3">آخر العمليات</h3>
-            <div className="space-y-2 max-h-60 overflow-y-auto">
+            <ScrollableList className="space-y-2">
               {filteredReturns.slice().reverse().map((r) => (
                 <div key={r.id} className="p-3 rounded-lg bg-secondary text-sm">
                   <div className="flex justify-between items-center">
@@ -593,7 +594,7 @@ const Reports = () => {
                   <p className="text-xs text-muted-foreground">السبب: {r.reason}</p>
                 </div>
               ))}
-            </div>
+            </ScrollableList>
           </div>
         )}
 

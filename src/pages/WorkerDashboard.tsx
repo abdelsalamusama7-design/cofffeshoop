@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getCurrentUser, getAttendance, setAttendance, getTransactions, getSales, getWorkers } from '@/lib/store';
 import { AttendanceRecord } from '@/lib/types';
+import ScrollableList from '@/components/ScrollableList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -229,7 +230,7 @@ const WorkerDashboard = () => {
         </div>
 
         {todaySales.length > 0 ? (
-          <div className="space-y-2 max-h-60 overflow-auto">
+          <ScrollableList className="space-y-2">
             {todaySales.map((sale, i) => (
               <div key={sale.id} className="bg-muted/30 rounded-lg p-3 flex items-center justify-between">
                 <div>
@@ -241,7 +242,7 @@ const WorkerDashboard = () => {
                 <p className="font-bold text-primary text-sm">{sale.total} ج.م</p>
               </div>
             ))}
-          </div>
+          </ScrollableList>
         ) : (
           <p className="text-sm text-muted-foreground text-center py-2">لم تسجل مبيعات اليوم بعد</p>
         )}
@@ -271,7 +272,7 @@ const WorkerDashboard = () => {
         </div>
 
         {monthTxns.length > 0 ? (
-          <div className="space-y-2 max-h-60 overflow-auto">
+          <ScrollableList className="space-y-2">
             {monthTxns.sort((a, b) => b.date.localeCompare(a.date)).map(txn => (
               <div key={txn.id} className="bg-muted/30 rounded-lg p-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -294,7 +295,7 @@ const WorkerDashboard = () => {
                 </p>
               </div>
             ))}
-          </div>
+          </ScrollableList>
         ) : (
           <p className="text-sm text-muted-foreground text-center py-2">لا توجد سلف أو مكافآت هذا الشهر</p>
         )}

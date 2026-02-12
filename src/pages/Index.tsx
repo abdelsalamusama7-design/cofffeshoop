@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, BarChart3, Package, TrendingUp, DollarSign, Coffee, ChevronLeft, Trash2, Edit3, X, Check, RotateCcw } from 'lucide-react';
 import { getProducts, getSales, getInventory, deleteSale, updateSale, getReturns, deleteReturn } from '@/lib/store';
+import ScrollableList from '@/components/ScrollableList';
 import { getCurrentUser } from '@/lib/store';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -251,7 +252,7 @@ const Dashboard = () => {
             {displaySales.length > 0 ? (
               <div>
                 <h3 className="font-bold text-foreground text-sm mb-2">تفاصيل الطلبات</h3>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
+                <ScrollableList className="space-y-2">
                   {displaySales.slice().reverse().map((sale) => (
                     <div key={sale.id} className="bg-muted/30 rounded-lg p-3 text-sm">
                       <div className="flex justify-between items-center">
@@ -280,7 +281,7 @@ const Dashboard = () => {
                       )}
                     </div>
                   ))}
-                </div>
+                </ScrollableList>
               </div>
             ) : (
               <p className="text-sm text-muted-foreground text-center py-4">لم تسجل مبيعات اليوم بعد</p>
