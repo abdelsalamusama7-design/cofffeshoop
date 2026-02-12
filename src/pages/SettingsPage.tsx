@@ -519,8 +519,11 @@ const SettingsPage = () => {
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                BACKUP_STORAGE_KEYS.forEach(key => localStorage.removeItem(key));
-                localStorage.removeItem('cafe_current_user');
+                BACKUP_STORAGE_KEYS.forEach(key => {
+                  if (key !== 'cafe_workers') {
+                    localStorage.removeItem(key);
+                  }
+                });
                 localStorage.removeItem('cafe_auto_backup');
                 localStorage.removeItem('cafe_auto_backup_time');
                 setShowResetConfirm(false);
