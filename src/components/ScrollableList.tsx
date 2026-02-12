@@ -40,29 +40,29 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60' }: Scrolla
   const atBottom = scrollProgress > 0.95;
 
   return (
-    <div className="relative flex gap-1.5">
-      {/* Scroll track on the left side */}
+    <div className="relative flex gap-2">
+      {/* Scroll track - full height */}
       {canScroll && (
-        <div className="flex flex-col items-center py-1 shrink-0">
-          {/* Track background */}
-          <div className="relative w-2.5 flex-1 rounded-full bg-muted/60 overflow-hidden">
+        <div className="flex flex-col items-center shrink-0 self-stretch">
+          {/* Full-height track */}
+          <div className="relative w-3 h-full min-h-full rounded-full bg-primary/15 overflow-hidden">
             {/* Progress thumb */}
             <div
               className="absolute left-0 right-0 w-full rounded-full bg-primary transition-all duration-200"
               style={{
-                height: '30%',
-                top: `${scrollProgress * 70}%`,
+                height: '25%',
+                top: `${scrollProgress * 75}%`,
               }}
             />
           </div>
-          {/* Scroll down button */}
+          {/* Arrow button at bottom */}
           <button
             onClick={() => scrollBy(atBottom ? -9999 : 120)}
-            className="mt-1.5 w-6 h-6 rounded-full bg-primary text-primary-foreground shadow flex items-center justify-center hover:bg-primary/80 transition-all"
+            className="mt-1 w-7 h-7 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/80 transition-all"
             type="button"
           >
             <ChevronDown
-              size={14}
+              size={16}
               strokeWidth={3}
               className={cn('transition-transform duration-200', atBottom && 'rotate-180')}
             />
