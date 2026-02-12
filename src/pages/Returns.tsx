@@ -1,17 +1,17 @@
 import { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { RotateCcw, ArrowLeftRight, Search, Calendar, Package, Coffee, Plus, Minus, Check, Share2, Printer, Trash2, ClipboardList } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { RotateCcw, ArrowLeftRight, Search, Calendar, Plus, Minus, Check, ClipboardList } from 'lucide-react';
 import ScrollableList from '@/components/ScrollableList';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getSales, getReturns, addReturn, deleteReturn, getInventory, setInventory, getProducts, getReturnsLog } from '@/lib/store';
+import { getSales, getReturns, addReturn, getInventory, setInventory, getProducts, getReturnsLog } from '@/lib/store';
 import { getCurrentUser } from '@/lib/store';
 import { Sale, SaleItem, ReturnRecord } from '@/lib/types';
 import { toast } from 'sonner';
-import PasswordConfirmDialog from '@/components/PasswordConfirmDialog';
+
 
 interface AvailableProduct {
   productId: string;
@@ -25,7 +25,6 @@ interface AvailableProduct {
 }
 
 const Returns = () => {
-  const [, forceUpdate] = useState(0);
   const [showDialog, setShowDialog] = useState(false);
   const [returnType, setReturnType] = useState<'return' | 'exchange'>('return');
   const [selectedItems, setSelectedItems] = useState<Record<string, number>>({});
@@ -34,8 +33,6 @@ const Returns = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDate, setFilterDate] = useState('');
   const [productSearch, setProductSearch] = useState('');
-  const [pendingDeleteReturn, setPendingDeleteReturn] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'returns' | 'log'>('returns');
   const returns = getReturns();
   const sales = getSales();
   const user = getCurrentUser();
@@ -121,15 +118,6 @@ const Returns = () => {
     return items;
   }, [products, inventory]);
 
-  const filteredReturns = useMemo(() => {
-    return returns
-      .filter(r => {
-        if (searchTerm && !r.items.some(i => i.productName.includes(searchTerm)) && !r.reason.includes(searchTerm)) return false;
-        if (filterDate && r.date !== filterDate) return false;
-        return true;
-      })
-      .sort((a, b) => new Date(b.date + ' ' + b.time).getTime() - new Date(a.date + ' ' + a.time).getTime());
-  }, [returns, searchTerm, filterDate]);
 
   const toggleItem = (productId: string, maxQty: number) => {
     setSelectedItems(prev => {
@@ -276,56 +264,6 @@ const Returns = () => {
     setProductSearch('');
   };
 
-  const buildReturnText = (r: ReturnRecord) => {
-    let text = `إيصال ${r.type === 'return' ? 'مرتجع' : 'بدل'} - بن العميد\n`;
-    text += `التاريخ: ${r.date} - ${r.time}\n`;
-    text += `بواسطة: ${r.workerName}\n`;
-    text += `────────────\n`;
-    text += `الأصناف المرتجعة:\n`;
-    r.items.forEach(i => { text += `• ${i.productName} x${i.quantity} = ${i.total} ج.م\n`; });
-    if (r.type === 'exchange' && r.exchangeItems?.length) {
-      text += `\nأصناف البدل:\n`;
-      r.exchangeItems.forEach(i => { text += `• ${i.productName} x${i.quantity} = ${i.total} ج.م\n`; });
-    }
-    text += `────────────\n`;
-    if (r.refundAmount > 0) text += `المبلغ المسترد: ${r.refundAmount} ج.م\n`;
-    text += `السبب: ${r.reason}\n`;
-    return text;
-  };
-
-  const shareReturn = (r: ReturnRecord, method: 'whatsapp' | 'email') => {
-    const text = buildReturnText(r);
-    if (method === 'whatsapp') {
-      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-    } else {
-      window.open(`mailto:?subject=${encodeURIComponent(`إيصال ${r.type === 'return' ? 'مرتجع' : 'بدل'} - بن العميد`)}&body=${encodeURIComponent(text)}`, '_blank');
-    }
-  };
-
-  const printReturn = (r: ReturnRecord) => {
-    const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>إيصال مرتجع</title>
-    <style>body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;direction:rtl;padding:40px;max-width:400px;margin:0 auto;color:#1a1a1a}
-    .header{text-align:center;border-bottom:2px solid #8B4513;padding-bottom:12px;margin-bottom:16px}
-    h1{font-size:20px;color:#8B4513;margin:0 0 4px}
-    .badge{display:inline-block;padding:2px 12px;border-radius:12px;font-size:12px;font-weight:bold}
-    .return{background:#fee2e2;color:#dc2626}.exchange{background:#d1fae5;color:#059669}
-    .line{display:flex;justify-content:space-between;padding:4px 0;font-size:14px;border-bottom:1px solid #f0f0f0}
-    .section{font-weight:bold;color:#8B4513;margin-top:12px;font-size:13px}
-    .total{font-size:16px;font-weight:bold;color:#dc2626;text-align:center;margin-top:12px;padding:8px;background:#fef2f2;border-radius:8px}
-    .footer{text-align:center;color:#999;font-size:11px;margin-top:20px;border-top:1px solid #eee;padding-top:8px}
-    @media print{@page{margin:10mm;size:80mm auto}}</style></head><body>
-    <div class="header"><h1>بن العميد</h1>
-    <span class="badge ${r.type === 'return' ? 'return' : 'exchange'}">${r.type === 'return' ? 'مرتجع' : 'بدل'}</span>
-    <p style="font-size:12px;color:#666;margin:8px 0 0">${r.date} - ${r.time}<br/>${r.workerName}</p></div>
-    <p class="section">الأصناف المرتجعة:</p>
-    ${r.items.map(i => `<div class="line"><span>${i.productName} x${i.quantity}</span><span>${i.total} ج.م</span></div>`).join('')}
-    ${r.type === 'exchange' && r.exchangeItems?.length ? `<p class="section">أصناف البدل:</p>${r.exchangeItems.map(i => `<div class="line"><span>${i.productName} x${i.quantity}</span><span>${i.total} ج.م</span></div>`).join('')}` : ''}
-    ${r.refundAmount > 0 ? `<div class="total">المبلغ المسترد: ${r.refundAmount} ج.م</div>` : ''}
-    <p style="font-size:12px;color:#666;margin-top:8px">السبب: ${r.reason}</p>
-    <div class="footer">تم الإنشاء تلقائياً</div></body></html>`;
-    const w = window.open('', '_blank');
-    if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 300); }
-  };
 
   return (
     <div className="space-y-6">
@@ -336,30 +274,6 @@ const Returns = () => {
           مرتجع / بدل جديد
         </Button>
       </div>
-
-      {/* Tabs */}
-      {user?.role === 'admin' && (
-        <div className="flex gap-2">
-          <button
-            onClick={() => setActiveTab('returns')}
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
-              activeTab === 'returns' ? 'bg-primary/15 text-primary ring-2 ring-primary' : 'bg-secondary text-secondary-foreground'
-            }`}
-          >
-            <RotateCcw size={16} />
-            المرتجعات الحالية
-          </button>
-          <button
-            onClick={() => setActiveTab('log')}
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
-              activeTab === 'log' ? 'bg-primary/15 text-primary ring-2 ring-primary' : 'bg-secondary text-secondary-foreground'
-            }`}
-          >
-            <ClipboardList size={16} />
-            سجل المرتجعات
-          </button>
-        </div>
-      )}
 
       {/* Filters */}
       <div className="flex gap-3 flex-wrap">
@@ -383,101 +297,8 @@ const Returns = () => {
         </div>
       </div>
 
-      {/* Returns Log Tab */}
-      {activeTab === 'log' && user?.role === 'admin' ? (
-        <ReturnsLogView searchTerm={searchTerm} filterDate={filterDate} />
-      ) : (
-      <>
-      {/* Returns List */}
-      {filteredReturns.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">
-          <RotateCcw size={48} className="mx-auto mb-4 opacity-30" />
-          <p className="text-lg font-medium">لا توجد مرتجعات مسجلة</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {filteredReturns.map(r => (
-            <motion.div
-              key={r.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="glass-card rounded-2xl p-4 space-y-3 border-2 border-muted"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                    r.type === 'return' ? 'bg-destructive/15 text-destructive' : 'bg-accent/15 text-accent'
-                  }`}>
-                    {r.type === 'return' ? 'مرتجع' : 'بدل'}
-                  </span>
-                </div>
-                <div className="text-left text-xs text-muted-foreground">
-                  <p>{r.date}</p>
-                  <p>{r.time}</p>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">الأصناف المرتجعة:</p>
-                {r.items.map((item, i) => (
-                  <div key={i} className="flex justify-between text-sm">
-                    <span className="text-foreground">{item.productName} x{item.quantity}</span>
-                    <span className="font-medium text-foreground">{item.total} ج.م</span>
-                  </div>
-                ))}
-              </div>
-
-              {r.type === 'exchange' && r.exchangeItems && r.exchangeItems.length > 0 && (
-                <div className="space-y-1 border-t border-border pt-2">
-                  <p className="text-xs text-muted-foreground">أصناف البدل:</p>
-                  {r.exchangeItems.map((item, i) => (
-                    <div key={i} className="flex justify-between text-sm">
-                      <span className="text-accent">{item.productName} x{item.quantity}</span>
-                      <span className="font-medium text-accent">{item.total} ج.م</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex justify-between items-center border-t border-border pt-2">
-                <div>
-                  <p className="text-xs text-muted-foreground">السبب: {r.reason}</p>
-                  <p className="text-xs text-muted-foreground">بواسطة: {r.workerName}</p>
-                </div>
-                {r.refundAmount > 0 && (
-                  <span className="font-bold text-destructive">مسترد: {r.refundAmount} ج.م</span>
-                )}
-              </div>
-
-              <div className="flex gap-2 pt-1">
-                <button
-                  onClick={() => shareReturn(r, 'whatsapp')}
-                  className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-secondary text-secondary-foreground text-xs font-medium hover:bg-accent/20 transition-colors"
-                >
-                  <Share2 size={12} />
-                  واتساب
-                </button>
-                <button
-                  onClick={() => printReturn(r)}
-                  className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-secondary text-secondary-foreground text-xs font-medium hover:bg-accent/20 transition-colors"
-                >
-                  <Printer size={12} />
-                  طباعة
-                </button>
-                <button
-                  onClick={() => setPendingDeleteReturn(r.id)}
-                  className="flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20 transition-colors"
-                >
-                  <Trash2 size={12} />
-                  حذف
-                </button>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      )}
-      </>
-      )}
+      {/* Returns Log - visible to all */}
+      <ReturnsLogView searchTerm={searchTerm} filterDate={filterDate} />
 
       {/* New Return/Exchange Dialog */}
       <Dialog open={showDialog} onOpenChange={open => { if (!open) resetDialog(); }}>
@@ -646,20 +467,6 @@ const Returns = () => {
         </DialogContent>
       </Dialog>
 
-      <PasswordConfirmDialog
-        open={!!pendingDeleteReturn}
-        onOpenChange={(open) => { if (!open) setPendingDeleteReturn(null); }}
-        title="تأكيد حذف المرتجع"
-        description="أدخل كلمة المرور لحذف هذا المرتجع"
-        onConfirm={() => {
-          if (pendingDeleteReturn) {
-            deleteReturn(pendingDeleteReturn);
-            setPendingDeleteReturn(null);
-            forceUpdate(n => n + 1);
-            toast.success('تم حذف المرتجع');
-          }
-        }}
-      />
     </div>
   );
 };
