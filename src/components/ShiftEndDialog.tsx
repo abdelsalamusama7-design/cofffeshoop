@@ -6,6 +6,7 @@ import { Lock, Clock, ShoppingCart, Share2, Mail, FileText, MessageCircle, Rotat
 import { getCurrentUser, getSales, setSales, getAttendance, setAttendance, getWorkers, getReturns, setReturns, getReturnsLog, setReturnsLog, getInventory } from '@/lib/store';
 import { Sale, ReturnRecord, ReturnLogEntry } from '@/lib/types';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ShiftEndDialogProps {
   open: boolean;
@@ -410,7 +411,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
             ) : (
               <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-3 space-y-3">
                 <p className="text-xs text-center text-muted-foreground">أدخل كلمة المرور لتأكيد تصفير الشيفت</p>
-                <form onSubmit={(e) => {
+                <form onSubmit={async (e) => {
                   e.preventDefault();
                   if (!user) return;
                   const workers = getWorkers();
@@ -419,6 +420,27 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                     setResetError('كلمة المرور غير صحيحة');
                     return;
                   }
+
+                  // Send report email before clearing data
+                  const reportText = generateReportText();
+                  try {
+                    const { data, error } = await supabase.functions.invoke('send-shift-report', {
+                      body: {
+                        reportText,
+                        workerName: user.name,
+                        date: new Date().toLocaleDateString('ar-EG'),
+                      },
+                    });
+                    if (error) {
+                      console.error('Email send error:', error);
+                      toast.error('تم التصفير لكن فشل إرسال الإيميل');
+                    } else {
+                      toast.success('تم إرسال التقرير بالإيميل بنجاح 📧');
+                    }
+                  } catch (err) {
+                    console.error('Email send error:', err);
+                  }
+
                   const today = new Date().toISOString().slice(0, 10);
                   // Clear attendance
                   const attendance = getAttendance();
