@@ -187,7 +187,7 @@ const SettingsPage = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `backup-بن-العميد-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `نسخه احتياطيه العميد ${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
     toast({ title: '✅ تم', description: 'تم تحميل النسخة الاحتياطية بنجاح' });
