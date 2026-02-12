@@ -1,13 +1,14 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { RotateCcw, ArrowLeftRight, Search, Calendar, Plus, Minus, Check, ClipboardList } from 'lucide-react';
+import { RotateCcw, ArrowLeftRight, Search, Calendar, Plus, Minus, Check, ClipboardList, Trash2 } from 'lucide-react';
 import ScrollableList from '@/components/ScrollableList';
+import PasswordConfirmDialog from '@/components/PasswordConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getSales, getReturns, addReturn, getInventory, setInventory, getProducts, getReturnsLog } from '@/lib/store';
+import { getSales, getReturns, addReturn, getInventory, setInventory, getProducts, getReturnsLog, deleteReturn } from '@/lib/store';
 import { getCurrentUser } from '@/lib/store';
 import { Sale, SaleItem, ReturnRecord } from '@/lib/types';
 import { toast } from 'sonner';
@@ -478,18 +479,49 @@ const Returns = () => {
 // Returns Log View Component
 const ReturnsLogView = ({ searchTerm, filterDate }: { searchTerm: string; filterDate: string }) => {
   const log = getReturnsLog();
+  const returns = getReturns();
+  const user = getCurrentUser();
+  const isAdmin = user?.role === 'admin';
+  const [deleteReturnId, setDeleteReturnId] = useState<string | null>(null);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
 
-  const filteredLog = useMemo(() => {
+  // Active returns (not deleted) - shown to everyone
+  const activeReturns = useMemo(() => {
+    return returns
+      .filter(r => {
+        if (searchTerm && !r.items.some(i => i.productName.includes(searchTerm)) && !r.workerName.includes(searchTerm)) return false;
+        if (filterDate && r.date !== filterDate) return false;
+        return true;
+      })
+      .sort((a, b) => new Date(b.date + ' ' + b.time).getTime() - new Date(a.date + ' ' + a.time).getTime());
+  }, [returns, searchTerm, filterDate]);
+
+  // Deleted log entries - only for admin
+  const deletedLogEntries = useMemo(() => {
+    if (!isAdmin) return [];
     return log
       .filter(entry => {
+        if (entry.action !== 'deleted') return false;
         if (searchTerm && !entry.returnRecord.items.some(i => i.productName.includes(searchTerm)) && !entry.actionBy.includes(searchTerm)) return false;
         if (filterDate && entry.actionDate !== filterDate) return false;
         return true;
       })
       .sort((a, b) => new Date(b.actionDate + ' ' + b.actionTime).getTime() - new Date(a.actionDate + ' ' + a.actionTime).getTime());
-  }, [log, searchTerm, filterDate]);
+  }, [log, searchTerm, filterDate, isAdmin]);
 
-  if (filteredLog.length === 0) {
+  const handleDeleteConfirm = () => {
+    if (!deleteReturnId) return;
+    deleteReturn(deleteReturnId);
+    toast.success('تم حذف المرتجع بنجاح');
+    setDeleteReturnId(null);
+  };
+
+  const handleDeleteClick = (returnId: string) => {
+    setDeleteReturnId(returnId);
+    setShowPasswordDialog(true);
+  };
+
+  if (activeReturns.length === 0 && deletedLogEntries.length === 0) {
     return (
       <div className="text-center py-16 text-muted-foreground">
         <ClipboardList size={48} className="mx-auto mb-4 opacity-30" />
@@ -499,60 +531,131 @@ const ReturnsLogView = ({ searchTerm, filterDate }: { searchTerm: string; filter
   }
 
   return (
-    <div className="space-y-3">
-      {filteredLog.map(entry => (
-        <motion.div
-          key={entry.id}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`glass-card rounded-2xl p-4 space-y-2 border-2 ${
-            entry.action === 'deleted' ? 'border-destructive/30 bg-destructive/5' : 'border-muted'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                entry.action === 'created' ? 'bg-green-500/15 text-green-600' : 'bg-destructive/15 text-destructive'
-              }`}>
-                {entry.action === 'created' ? 'تم الإنشاء' : 'تم الحذف'}
-              </span>
-              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                entry.returnRecord.type === 'return' ? 'bg-destructive/15 text-destructive' : 'bg-accent/15 text-accent'
-              }`}>
-                {entry.returnRecord.type === 'return' ? 'مرتجع' : 'بدل'}
-              </span>
-            </div>
-            <div className="text-left text-xs text-muted-foreground">
-              <p>{entry.actionDate}</p>
-              <p>{entry.actionTime}</p>
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">الأصناف:</p>
-            {entry.returnRecord.items.map((item, i) => (
-              <div key={i} className="flex justify-between text-sm">
-                <span className="text-foreground">{item.productName} x{item.quantity}</span>
-                <span className="font-medium text-foreground">{item.total} ج.م</span>
+    <>
+      <div className="space-y-3">
+        {/* Active returns */}
+        {activeReturns.map(r => (
+          <motion.div
+            key={r.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-card rounded-2xl p-4 space-y-2 border-2 border-muted"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                  r.type === 'return' ? 'bg-destructive/15 text-destructive' : 'bg-accent/15 text-accent'
+                }`}>
+                  {r.type === 'return' ? 'مرتجع' : 'بدل'}
+                </span>
               </div>
-            ))}
-          </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleDeleteClick(r.id)}
+                  className="w-8 h-8 rounded-lg bg-destructive/10 text-destructive flex items-center justify-center hover:bg-destructive/20 transition-all"
+                  title="حذف المرتجع"
+                >
+                  <Trash2 size={16} />
+                </button>
+                <div className="text-left text-xs text-muted-foreground">
+                  <p>{r.date}</p>
+                  <p>{r.time}</p>
+                </div>
+              </div>
+            </div>
 
-          <div className="flex justify-between items-center border-t border-border pt-2 text-xs text-muted-foreground">
-            <div>
-              <p>السبب: {entry.returnRecord.reason}</p>
-              <p>بواسطة: {entry.returnRecord.workerName}</p>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">الأصناف:</p>
+              {r.items.map((item, i) => (
+                <div key={i} className="flex justify-between text-sm">
+                  <span className="text-foreground">{item.productName} x{item.quantity}</span>
+                  <span className="font-medium text-foreground">{item.total} ج.م</span>
+                </div>
+              ))}
             </div>
-            <div className="text-left">
-              <p>العملية بواسطة: <span className="font-bold text-foreground">{entry.actionBy}</span></p>
-              {entry.returnRecord.refundAmount > 0 && (
-                <span className="font-bold text-destructive">مسترد: {entry.returnRecord.refundAmount} ج.م</span>
-              )}
+
+            <div className="flex justify-between items-center border-t border-border pt-2 text-xs text-muted-foreground">
+              <div>
+                <p>السبب: {r.reason}</p>
+                <p>بواسطة: {r.workerName}</p>
+              </div>
+              <div className="text-left">
+                {r.refundAmount > 0 && (
+                  <span className="font-bold text-destructive">مسترد: {r.refundAmount} ج.م</span>
+                )}
+              </div>
             </div>
-          </div>
-        </motion.div>
-      ))}
-    </div>
+          </motion.div>
+        ))}
+
+        {/* Deleted returns - admin only */}
+        {isAdmin && deletedLogEntries.length > 0 && (
+          <>
+            <div className="flex items-center gap-2 mt-6 mb-2">
+              <div className="h-px flex-1 bg-destructive/30" />
+              <span className="text-xs font-bold text-destructive px-2">سجل المحذوفات (للمدير فقط)</span>
+              <div className="h-px flex-1 bg-destructive/30" />
+            </div>
+            {deletedLogEntries.map(entry => (
+              <motion.div
+                key={entry.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass-card rounded-2xl p-4 space-y-2 border-2 border-destructive/30 bg-destructive/5 opacity-70"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-destructive/15 text-destructive">
+                      تم الحذف
+                    </span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      entry.returnRecord.type === 'return' ? 'bg-destructive/15 text-destructive' : 'bg-accent/15 text-accent'
+                    }`}>
+                      {entry.returnRecord.type === 'return' ? 'مرتجع' : 'بدل'}
+                    </span>
+                  </div>
+                  <div className="text-left text-xs text-muted-foreground">
+                    <p>{entry.actionDate}</p>
+                    <p>{entry.actionTime}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">الأصناف:</p>
+                  {entry.returnRecord.items.map((item, i) => (
+                    <div key={i} className="flex justify-between text-sm">
+                      <span className="text-foreground">{item.productName} x{item.quantity}</span>
+                      <span className="font-medium text-foreground">{item.total} ج.م</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-between items-center border-t border-border pt-2 text-xs text-muted-foreground">
+                  <div>
+                    <p>السبب: {entry.returnRecord.reason}</p>
+                    <p>بواسطة: {entry.returnRecord.workerName}</p>
+                  </div>
+                  <div className="text-left">
+                    <p>حُذف بواسطة: <span className="font-bold text-destructive">{entry.actionBy}</span></p>
+                    {entry.returnRecord.refundAmount > 0 && (
+                      <span className="font-bold text-destructive">مسترد: {entry.returnRecord.refundAmount} ج.م</span>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </>
+        )}
+      </div>
+
+      <PasswordConfirmDialog
+        open={showPasswordDialog}
+        onOpenChange={setShowPasswordDialog}
+        onConfirm={handleDeleteConfirm}
+        title="تأكيد حذف المرتجع"
+        description="أدخل كلمة المرور لتأكيد حذف هذا المرتجع"
+      />
+    </>
   );
 };
 
