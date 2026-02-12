@@ -1,17 +1,17 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   BarChart3, Calendar, Share2, Download, TrendingUp, DollarSign,
   ShoppingCart, Users, ClipboardCheck, Wallet, Clock, ArrowUpDown, RotateCcw, ArrowLeftRight,
-  Trash2, Edit3, X, Check
+  Trash2, Edit3, X, Check, History
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getSales, getProducts, getCurrentUser, getWorkers, getAttendance, getTransactions, getInventory, getReturns, deleteSale, updateSale } from '@/lib/store';
+import { getSales, getProducts, getCurrentUser, getWorkers, getAttendance, getTransactions, getInventory, getReturns, deleteSale, updateSale, getShiftResets } from '@/lib/store';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ScrollableList from '@/components/ScrollableList';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Sale, SaleItem } from '@/lib/types';
+import { Sale, SaleItem, ShiftResetRecord } from '@/lib/types';
 import PasswordConfirmDialog from '@/components/PasswordConfirmDialog';
 
 const Reports = () => {
@@ -20,6 +20,11 @@ const Reports = () => {
   const [editItems, setEditItems] = useState<SaleItem[]>([]);
   const [editDiscount, setEditDiscount] = useState<number>(0);
   const [passwordAction, setPasswordAction] = useState<{ type: 'edit' | 'delete'; sale: Sale } | null>(null);
+  const [shiftResets, setShiftResets] = useState<ShiftResetRecord[]>([]);
+
+  useEffect(() => {
+    getShiftResets().then(setShiftResets);
+  }, []);
 
   const user = getCurrentUser();
   const sales = getSales();
@@ -691,7 +696,7 @@ const Reports = () => {
 
       {/* Report tabs */}
       <Tabs defaultValue="sales" dir="rtl">
-        <TabsList className="w-full grid grid-cols-5 h-auto">
+        <TabsList className="w-full grid grid-cols-6 h-auto">
           <TabsTrigger value="sales" className="text-xs py-2 px-1">
             <ShoppingCart size={14} className="ml-1 hidden sm:inline" />
             المبيعات
@@ -712,12 +717,52 @@ const Reports = () => {
             <ClipboardCheck size={14} className="ml-1 hidden sm:inline" />
             الحضور
           </TabsTrigger>
+          <TabsTrigger value="resets" className="text-xs py-2 px-1">
+            <History size={14} className="ml-1 hidden sm:inline" />
+            التصفيرات
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="sales"><SalesReport /></TabsContent>
         <TabsContent value="profits"><ProfitsReport /></TabsContent>
         <TabsContent value="returns"><ReturnsReport /></TabsContent>
         <TabsContent value="workers"><WorkerPerformanceReport /></TabsContent>
         <TabsContent value="attendance"><AttendanceReport /></TabsContent>
+        <TabsContent value="resets">
+          <div className="space-y-3 mt-4">
+            <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+              <History size={20} />
+              سجل تصفيرات الشيفت
+            </h3>
+            {shiftResets.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <History size={32} className="mx-auto mb-2 opacity-50" />
+                <p className="text-sm">لا توجد عمليات تصفير مسجلة</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {shiftResets.map(reset => (
+                  <div key={reset.id} className="bg-muted/50 rounded-xl p-4 space-y-1 border border-border">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">🕐 {reset.resetTime}</span>
+                      <span className="text-xs text-muted-foreground">📅 {reset.resetDate}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-foreground">👤 {reset.workerName}</span>
+                    </div>
+                    {reset.reportSummary && (
+                      <details className="mt-2">
+                        <summary className="text-xs text-primary cursor-pointer hover:underline">عرض تقرير الشيفت</summary>
+                        <pre className="text-xs text-muted-foreground whitespace-pre-wrap mt-2 bg-background rounded-lg p-3 max-h-40 overflow-auto border border-border">
+                          {reset.reportSummary}
+                        </pre>
+                      </details>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
       </Tabs>
 
       {/* Edit Sale Dialog */}

@@ -138,3 +138,12 @@ export interface ReturnLogEntry {
   actionDate: string;
   actionTime: string;
 }
+
+export interface ShiftResetRecord {
+  id: string;
+  workerId: string;
+  workerName: string;
+  resetDate: string;
+  resetTime: string;
+  reportSummary?: string;
+}

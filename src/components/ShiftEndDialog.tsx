@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Lock, Clock, ShoppingCart, Share2, Mail, FileText, MessageCircle, RotateCcw, Trash2, Package } from 'lucide-react';
-import { getCurrentUser, getSales, setSales, getAttendance, setAttendance, getWorkers, getReturns, setReturns, getReturnsLog, setReturnsLog, getInventory } from '@/lib/store';
+import { getCurrentUser, getSales, setSales, getAttendance, setAttendance, getWorkers, getReturns, setReturns, getReturnsLog, setReturnsLog, getInventory, addShiftReset } from '@/lib/store';
 import { Sale, ReturnRecord, ReturnLogEntry } from '@/lib/types';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -458,6 +458,18 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                   const returnsLog = getReturnsLog();
                   const updatedLog = returnsLog.filter(e => !(e.returnRecord.workerId === user.id && e.actionDate === today));
                   setReturnsLog(updatedLog);
+
+                  // Log the shift reset
+                  const now = new Date();
+                  addShiftReset({
+                    id: Date.now().toString(),
+                    workerId: user.id,
+                    workerName: user.name,
+                    resetDate: today,
+                    resetTime: now.toLocaleTimeString('ar-EG'),
+                    reportSummary: reportText,
+                  });
+
                   setShowResetConfirm(false);
                   setResetPassword('');
                   setResetError('');
