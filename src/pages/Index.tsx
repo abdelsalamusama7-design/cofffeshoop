@@ -30,7 +30,12 @@ const Dashboard = () => {
   const workerTodaySales = user ? todaySales.filter(s => s.workerId === user.id) : [];
   const displaySales = user?.role === 'admin' ? todaySales : workerTodaySales;
 
-  const todayTotal = displaySales.reduce((sum, s) => sum + s.total, 0);
+  const todayReturns = returns.filter(r => r.date === today);
+  const workerTodayReturns = user ? todayReturns.filter(r => r.workerId === user.id) : [];
+  const displayReturns = user?.role === 'admin' ? todayReturns : workerTodayReturns;
+
+  const todayReturnsTotal = displayReturns.reduce((sum, r) => sum + r.refundAmount, 0);
+  const todayTotal = displaySales.reduce((sum, s) => sum + s.total, 0) - todayReturnsTotal;
   const todayCount = displaySales.reduce((sum, s) => sum + s.items.reduce((c, i) => c + i.quantity, 0), 0);
 
   const totalCost = displaySales.reduce((sum, s) => {
@@ -64,10 +69,6 @@ const Dashboard = () => {
 
   // Low stock items
   const lowStockItems = inventory.filter(i => i.quantity <= 5);
-
-  const todayReturns = returns.filter(r => r.date === today);
-  const workerTodayReturns = user ? todayReturns.filter(r => r.workerId === user.id) : [];
-  const displayReturns = user?.role === 'admin' ? todayReturns : workerTodayReturns;
 
   return (
     <div className="space-y-8">
