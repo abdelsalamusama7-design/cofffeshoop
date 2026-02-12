@@ -2,8 +2,8 @@ import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Lock, Clock, ShoppingCart, Share2, Mail, FileText, MessageCircle, RotateCcw, Trash2 } from 'lucide-react';
-import { getCurrentUser, getSales, setSales, getAttendance, setAttendance, getWorkers, getReturns, setReturns, getReturnsLog, setReturnsLog } from '@/lib/store';
+import { Lock, Clock, ShoppingCart, Share2, Mail, FileText, MessageCircle, RotateCcw, Trash2, Package } from 'lucide-react';
+import { getCurrentUser, getSales, setSales, getAttendance, setAttendance, getWorkers, getReturns, setReturns, getReturnsLog, setReturnsLog, getInventory } from '@/lib/store';
 import { Sale, ReturnRecord, ReturnLogEntry } from '@/lib/types';
 import { toast } from 'sonner';
 
@@ -152,7 +152,18 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
       });
     }
 
-    text += `━━━━━━━━━━━━━━━\n`;
+    // Inventory section
+    const inventoryItems = getInventory();
+    if (inventoryItems.length > 0) {
+      text += `━━━━━━━━━━━━━━━\n`;
+      text += `📦 الكمية الحالية في المخزون:\n\n`;
+      inventoryItems.forEach(item => {
+        const warning = item.quantity <= 5 ? ' ⚠️' : '';
+        text += `• ${item.name}: ${item.quantity} ${item.unit}${warning}\n`;
+      });
+    }
+
+    text += `\n━━━━━━━━━━━━━━━\n`;
     text += `💵 إجمالي المبيعات: ${totalAmount.toFixed(2)} ج.م\n`;
     if (totalReturnsAmount > 0) {
       text += `🔄 إجمالي المرتجعات: -${totalReturnsAmount.toFixed(2)} ج.م\n`;
@@ -346,6 +357,28 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                 </>
               )}
             </div>
+
+            {/* Current Inventory */}
+            {(() => {
+              const inventoryItems = getInventory();
+              return inventoryItems.length > 0 ? (
+                <div className="mt-2">
+                  <p className="text-xs font-bold text-muted-foreground flex items-center gap-1 mb-2">
+                    <Package size={12} /> الكمية الحالية في المخزون
+                  </p>
+                  <div className="bg-muted/30 rounded-xl p-3 space-y-1 max-h-[20vh] overflow-auto">
+                    {inventoryItems.map(item => (
+                      <div key={item.id} className="flex items-center justify-between text-xs">
+                        <span className="text-foreground">{item.name}</span>
+                        <span className={`font-bold ${item.quantity <= 5 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                          {item.quantity} {item.unit}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null;
+            })()}
 
             {/* Share Buttons */}
             <div className="flex gap-2 mt-3">
