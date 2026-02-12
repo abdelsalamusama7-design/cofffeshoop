@@ -53,6 +53,27 @@ export type Database = {
         }
         Relationships: []
       }
+      backups: {
+        Row: {
+          backup_data: Json
+          created_at: string
+          created_by: string
+          id: string
+        }
+        Insert: {
+          backup_data: Json
+          created_at?: string
+          created_by: string
+          id: string
+        }
+        Update: {
+          backup_data?: Json
+          created_at?: string
+          created_by?: string
+          id?: string
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number
