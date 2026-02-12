@@ -1,4 +1,4 @@
-import { Product, Sale, InventoryItem, Worker, AttendanceRecord, WorkerTransaction, Expense, ReturnRecord, ItemCategory } from './types';
+import { Product, Sale, InventoryItem, Worker, AttendanceRecord, WorkerTransaction, Expense, ReturnRecord, ReturnLogEntry, ItemCategory } from './types';
 
 const STORAGE_KEYS = {
   products: 'cafe_products',
@@ -10,6 +10,7 @@ const STORAGE_KEYS = {
   transactions: 'cafe_transactions',
   expenses: 'cafe_expenses',
   returns: 'cafe_returns',
+  returnsLog: 'cafe_returns_log',
 };
 
 const AUTO_BACKUP_KEY = 'cafe_auto_backup';
@@ -18,7 +19,7 @@ const AUTO_BACKUP_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
 
 const BACKUP_DATA_KEYS = [
   'cafe_products', 'cafe_sales', 'cafe_inventory', 'cafe_workers',
-  'cafe_attendance', 'cafe_transactions', 'cafe_expenses', 'cafe_returns',
+  'cafe_attendance', 'cafe_transactions', 'cafe_expenses', 'cafe_returns', 'cafe_returns_log',
 ];
 
 export const performAutoBackup = (): boolean => {
@@ -159,10 +160,42 @@ export const addReturn = (r: ReturnRecord) => {
   const returns = getReturns();
   returns.push(r);
   set(STORAGE_KEYS.returns, returns);
+  // Log the creation
+  const user = getCurrentUser();
+  const now = new Date();
+  addReturnLogEntry({
+    id: Date.now().toString(),
+    action: 'created',
+    returnRecord: r,
+    actionBy: user?.name || 'غير معروف',
+    actionDate: now.toISOString().split('T')[0],
+    actionTime: now.toLocaleTimeString('ar-EG'),
+  });
 };
 export const deleteReturn = (id: string) => {
-  const returns = getReturns().filter(r => r.id !== id);
-  set(STORAGE_KEYS.returns, returns);
+  const returns = getReturns();
+  const deleted = returns.find(r => r.id === id);
+  if (deleted) {
+    const user = getCurrentUser();
+    const now = new Date();
+    addReturnLogEntry({
+      id: Date.now().toString(),
+      action: 'deleted',
+      returnRecord: deleted,
+      actionBy: user?.name || 'غير معروف',
+      actionDate: now.toISOString().split('T')[0],
+      actionTime: now.toLocaleTimeString('ar-EG'),
+    });
+  }
+  set(STORAGE_KEYS.returns, returns.filter(r => r.id !== id));
+};
+
+// Returns Log
+export const getReturnsLog = (): ReturnLogEntry[] => get(STORAGE_KEYS.returnsLog, []);
+export const addReturnLogEntry = (entry: ReturnLogEntry) => {
+  const log = getReturnsLog();
+  log.push(entry);
+  set(STORAGE_KEYS.returnsLog, log);
 };
 
 // Default data - Products are items that need preparation (multiple ingredients)

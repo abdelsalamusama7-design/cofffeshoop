@@ -129,3 +129,12 @@ export interface ReturnRecord {
   date: string;
   time: string;
 }
+
+export interface ReturnLogEntry {
+  id: string;
+  action: 'created' | 'deleted';
+  returnRecord: ReturnRecord;
+  actionBy: string;
+  actionDate: string;
+  actionTime: string;
+}

@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RotateCcw, ArrowLeftRight, Search, Calendar, Package, Coffee, Plus, Minus, Check, Share2, Printer, Trash2 } from 'lucide-react';
+import { RotateCcw, ArrowLeftRight, Search, Calendar, Package, Coffee, Plus, Minus, Check, Share2, Printer, Trash2, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getSales, getReturns, addReturn, deleteReturn, getInventory, setInventory, getProducts } from '@/lib/store';
+import { getSales, getReturns, addReturn, deleteReturn, getInventory, setInventory, getProducts, getReturnsLog } from '@/lib/store';
 import { getCurrentUser } from '@/lib/store';
 import { Sale, SaleItem, ReturnRecord } from '@/lib/types';
 import { toast } from 'sonner';
@@ -24,7 +24,7 @@ const Returns = () => {
   const [filterDate, setFilterDate] = useState('');
   const [saleSearch, setSaleSearch] = useState('');
   const [pendingDeleteReturn, setPendingDeleteReturn] = useState<string | null>(null);
-
+  const [activeTab, setActiveTab] = useState<'returns' | 'log'>('returns');
   const returns = getReturns();
   const sales = getSales();
   const user = getCurrentUser();
@@ -247,6 +247,30 @@ const Returns = () => {
         </Button>
       </div>
 
+      {/* Tabs */}
+      {user?.role === 'admin' && (
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab('returns')}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+              activeTab === 'returns' ? 'bg-primary/15 text-primary ring-2 ring-primary' : 'bg-secondary text-secondary-foreground'
+            }`}
+          >
+            <RotateCcw size={16} />
+            المرتجعات الحالية
+          </button>
+          <button
+            onClick={() => setActiveTab('log')}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+              activeTab === 'log' ? 'bg-primary/15 text-primary ring-2 ring-primary' : 'bg-secondary text-secondary-foreground'
+            }`}
+          >
+            <ClipboardList size={16} />
+            سجل المرتجعات
+          </button>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="flex gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
@@ -268,6 +292,13 @@ const Returns = () => {
           />
         </div>
       </div>
+
+      {/* Returns Log Tab */}
+      {activeTab === 'log' && user?.role === 'admin' ? (
+        <ReturnsLogView searchTerm={searchTerm} filterDate={filterDate} />
+      ) : (
+      <>
+      {/* Returns List */}
 
       {/* Returns Log */}
       {filteredReturns.length === 0 ? (
@@ -357,6 +388,8 @@ const Returns = () => {
             </motion.div>
           ))}
         </div>
+      )}
+      </>
       )}
 
       {/* New Return/Exchange Dialog */}
@@ -581,6 +614,88 @@ const Returns = () => {
           }
         }}
       />
+    </div>
+  );
+};
+
+// Returns Log View Component
+const ReturnsLogView = ({ searchTerm, filterDate }: { searchTerm: string; filterDate: string }) => {
+  const log = getReturnsLog();
+
+  const filteredLog = useMemo(() => {
+    return log
+      .filter(entry => {
+        if (searchTerm && !entry.returnRecord.items.some(i => i.productName.includes(searchTerm)) && !entry.actionBy.includes(searchTerm)) return false;
+        if (filterDate && entry.actionDate !== filterDate) return false;
+        return true;
+      })
+      .sort((a, b) => new Date(b.actionDate + ' ' + b.actionTime).getTime() - new Date(a.actionDate + ' ' + a.actionTime).getTime());
+  }, [log, searchTerm, filterDate]);
+
+  if (filteredLog.length === 0) {
+    return (
+      <div className="text-center py-16 text-muted-foreground">
+        <ClipboardList size={48} className="mx-auto mb-4 opacity-30" />
+        <p className="text-lg font-medium">لا توجد سجلات</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {filteredLog.map(entry => (
+        <motion.div
+          key={entry.id}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`glass-card rounded-2xl p-4 space-y-2 border-2 ${
+            entry.action === 'deleted' ? 'border-destructive/30 bg-destructive/5' : 'border-muted'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                entry.action === 'created' ? 'bg-green-500/15 text-green-600' : 'bg-destructive/15 text-destructive'
+              }`}>
+                {entry.action === 'created' ? 'تم الإنشاء' : 'تم الحذف'}
+              </span>
+              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                entry.returnRecord.type === 'return' ? 'bg-destructive/15 text-destructive' : 'bg-accent/15 text-accent'
+              }`}>
+                {entry.returnRecord.type === 'return' ? 'مرتجع' : 'بدل'}
+              </span>
+              <span className="text-xs text-muted-foreground">#{entry.returnRecord.saleId}</span>
+            </div>
+            <div className="text-left text-xs text-muted-foreground">
+              <p>{entry.actionDate}</p>
+              <p>{entry.actionTime}</p>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">الأصناف:</p>
+            {entry.returnRecord.items.map((item, i) => (
+              <div key={i} className="flex justify-between text-sm">
+                <span className="text-foreground">{item.productName} x{item.quantity}</span>
+                <span className="font-medium text-foreground">{item.total} ج.م</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex justify-between items-center border-t border-border pt-2 text-xs text-muted-foreground">
+            <div>
+              <p>السبب: {entry.returnRecord.reason}</p>
+              <p>بواسطة: {entry.returnRecord.workerName}</p>
+            </div>
+            <div className="text-left">
+              <p>العملية بواسطة: <span className="font-bold text-foreground">{entry.actionBy}</span></p>
+              {entry.returnRecord.refundAmount > 0 && (
+                <span className="font-bold text-destructive">مسترد: {entry.returnRecord.refundAmount} ج.م</span>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      ))}
     </div>
   );
 };
