@@ -102,8 +102,9 @@ const Inventory = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">إدارة المخزون</h1>
+      <h1 className="text-2xl font-bold text-foreground">{isAdmin ? 'إدارة المخزون' : 'المخزون'}</h1>
 
+      {isAdmin ? (
       <Tabs defaultValue="inventory" className="w-full" dir="rtl">
         <TabsList className="w-full grid grid-cols-2">
           <TabsTrigger value="inventory">المخزن</TabsTrigger>
@@ -173,7 +174,7 @@ const Inventory = () => {
                     <p className="text-sm text-muted-foreground">
                       {item.quantity} {item.unit}
                       {isAdmin && <> • {item.costPerUnit} ج.م/{item.unit}</>}
-                      {item.sellPrice ? ` • بيع: ${item.sellPrice} ج.م` : ''}
+                      {isAdmin && item.sellPrice ? ` • بيع: ${item.sellPrice} ج.م` : ''}
                     </p>
                   </div>
                 </div>
@@ -244,6 +245,32 @@ const Inventory = () => {
           </div>
         </TabsContent>
       </Tabs>
+      ) : (
+        <div className="grid gap-3">
+          {inventory.map((item, i) => (
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className="glass-card rounded-xl p-4 flex items-center gap-3"
+            >
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.sellPrice ? 'bg-primary/20' : 'bg-accent/20'}`}>
+                <Package size={20} className={item.sellPrice ? 'text-primary' : 'text-accent'} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-semibold text-foreground">{item.name}</p>
+                  {item.category && (
+                    <span className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full font-medium">{item.category}</span>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">{item.quantity} {item.unit}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
 
       {/* Add Inventory Item Dialog */}
       <Dialog open={showAddItem} onOpenChange={setShowAddItem}>
