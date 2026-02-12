@@ -518,11 +518,34 @@ const SettingsPage = () => {
           <AlertDialogFooter className="flex gap-2">
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
+              onClick={async () => {
+                // Clear localStorage
                 BACKUP_STORAGE_KEYS.forEach(key => localStorage.removeItem(key));
                 localStorage.removeItem('cafe_current_user');
+                localStorage.removeItem('cafe_auto_backup');
+                localStorage.removeItem('cafe_auto_backup_time');
                 setShowResetConfirm(false);
-                toast({ title: '✅ تم التصفير', description: 'تم مسح كل البيانات. جاري إعادة التحميل...' });
+                
+                // Clear cloud data
+                try {
+                  await Promise.all([
+                    (supabase.from('sales') as any).delete().neq('id', ''),
+                    (supabase.from('products') as any).delete().neq('id', ''),
+                    (supabase.from('inventory') as any).delete().neq('id', ''),
+                    (supabase.from('workers') as any).delete().neq('id', ''),
+                    (supabase.from('attendance') as any).delete().neq('id', ''),
+                    (supabase.from('expenses') as any).delete().neq('id', ''),
+                    (supabase.from('transactions') as any).delete().neq('id', ''),
+                    (supabase.from('returns') as any).delete().neq('id', ''),
+                    (supabase.from('returns_log') as any).delete().neq('id', ''),
+                    (supabase.from('shift_resets') as any).delete().neq('id', ''),
+                    (supabase.from('backups') as any).delete().neq('id', ''),
+                  ]);
+                } catch (e) {
+                  console.error('Cloud reset error:', e);
+                }
+                
+                toast({ title: '✅ تم التصفير', description: 'تم مسح كل البيانات من الجهاز والسحاب. جاري إعادة التحميل...' });
                 setTimeout(() => window.location.reload(), 1000);
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
