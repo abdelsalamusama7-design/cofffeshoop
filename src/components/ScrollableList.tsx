@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, ReactNode } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ScrollableListProps {
@@ -10,14 +10,18 @@ interface ScrollableListProps {
 
 const ScrollableList = ({ children, className, maxHeight = 'max-h-60' }: ScrollableListProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollUp, setCanScrollUp] = useState(false);
-  const [canScrollDown, setCanScrollDown] = useState(false);
+  const [canScroll, setCanScroll] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
 
   const checkScroll = () => {
     const el = scrollRef.current;
     if (!el) return;
-    setCanScrollUp(el.scrollTop > 8);
-    setCanScrollDown(el.scrollTop + el.clientHeight < el.scrollHeight - 8);
+    const hasScroll = el.scrollHeight > el.clientHeight + 8;
+    setCanScroll(hasScroll);
+    if (hasScroll) {
+      const progress = el.scrollTop / (el.scrollHeight - el.clientHeight);
+      setScrollProgress(progress);
+    }
   };
 
   useEffect(() => {
@@ -33,43 +37,47 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60' }: Scrolla
     scrollRef.current?.scrollBy({ top: amount, behavior: 'smooth' });
   };
 
+  const atBottom = scrollProgress > 0.95;
+
   return (
-    <div className="relative">
-      {/* Up fade + arrow */}
-      {canScrollUp && (
-        <>
-          <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-card to-transparent z-10 pointer-events-none rounded-t-xl" />
+    <div className="relative flex gap-1.5">
+      {/* Scroll track on the left side */}
+      {canScroll && (
+        <div className="flex flex-col items-center py-1 shrink-0">
+          {/* Track background */}
+          <div className="relative w-2.5 flex-1 rounded-full bg-muted/60 overflow-hidden">
+            {/* Progress thumb */}
+            <div
+              className="absolute left-0 right-0 w-full rounded-full bg-primary transition-all duration-200"
+              style={{
+                height: '30%',
+                top: `${scrollProgress * 70}%`,
+              }}
+            />
+          </div>
+          {/* Scroll down button */}
           <button
-            onClick={() => scrollBy(-120)}
-            className="absolute left-1/2 -translate-x-1/2 top-0 z-20 w-8 h-5 rounded-b-lg bg-primary text-primary-foreground shadow-md flex items-center justify-center hover:bg-primary/80 transition-all animate-bounce"
+            onClick={() => scrollBy(atBottom ? -9999 : 120)}
+            className="mt-1.5 w-6 h-6 rounded-full bg-primary text-primary-foreground shadow flex items-center justify-center hover:bg-primary/80 transition-all"
             type="button"
           >
-            <ChevronUp size={14} strokeWidth={3} />
+            <ChevronDown
+              size={14}
+              strokeWidth={3}
+              className={cn('transition-transform duration-200', atBottom && 'rotate-180')}
+            />
           </button>
-        </>
+        </div>
       )}
 
+      {/* Content */}
       <div
         ref={scrollRef}
         onScroll={checkScroll}
-        className={cn(maxHeight, 'overflow-y-auto', className)}
+        className={cn(maxHeight, 'overflow-y-auto flex-1', className)}
       >
         {children}
       </div>
-
-      {/* Down fade + arrow */}
-      {canScrollDown && (
-        <>
-          <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-card to-transparent z-10 pointer-events-none rounded-b-xl" />
-          <button
-            onClick={() => scrollBy(120)}
-            className="absolute left-1/2 -translate-x-1/2 bottom-0 z-20 w-8 h-5 rounded-t-lg bg-primary text-primary-foreground shadow-md flex items-center justify-center hover:bg-primary/80 transition-all animate-bounce"
-            type="button"
-          >
-            <ChevronDown size={14} strokeWidth={3} />
-          </button>
-        </>
-      )}
     </div>
   );
 };
