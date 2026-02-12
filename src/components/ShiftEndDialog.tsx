@@ -2,9 +2,9 @@ import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Lock, Clock, ShoppingCart, Share2, Mail, FileText, MessageCircle } from 'lucide-react';
-import { getCurrentUser, getSales, getAttendance, getWorkers } from '@/lib/store';
-import { Sale } from '@/lib/types';
+import { Lock, Clock, ShoppingCart, Share2, Mail, FileText, MessageCircle, RotateCcw, Trash2 } from 'lucide-react';
+import { getCurrentUser, getSales, getAttendance, getWorkers, getReturns, getReturnsLog } from '@/lib/store';
+import { Sale, ReturnRecord, ReturnLogEntry } from '@/lib/types';
 import { toast } from 'sonner';
 
 interface ShiftEndDialogProps {
@@ -17,6 +17,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [shiftSales, setShiftSales] = useState<Sale[]>([]);
+  const [shiftReturnsLog, setShiftReturnsLog] = useState<ReturnLogEntry[]>([]);
 
   const user = getCurrentUser();
 
@@ -44,13 +45,22 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
     const allSales = getSales();
     const todaySales = allSales.filter(s => s.workerId === user.id && s.date === today);
 
-    // If there's a check-in time, filter sales after check-in
+    // Get returns log for this worker today
+    const allReturnsLog = getReturnsLog();
+    const todayReturnsLog = allReturnsLog.filter(
+      e => e.returnRecord.workerId === user.id && e.returnRecord.date === today
+    );
+
+    // If there's a check-in time, filter sales and returns after check-in
     if (todayRecord?.checkIn) {
       const checkInTime = todayRecord.checkIn;
       const filtered = todaySales.filter(s => s.time >= checkInTime);
+      const filteredReturns = todayReturnsLog.filter(e => e.returnRecord.time >= checkInTime);
       setShiftSales(filtered);
+      setShiftReturnsLog(filteredReturns);
     } else {
       setShiftSales(todaySales);
+      setShiftReturnsLog(todayReturnsLog);
     }
 
     setStep('report');
@@ -62,12 +72,29 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
     setPassword('');
     setError('');
     setShiftSales([]);
+    setShiftReturnsLog([]);
     onOpenChange(false);
   };
 
   const totalAmount = useMemo(() => shiftSales.reduce((sum, s) => sum + s.total, 0), [shiftSales]);
   const totalDiscount = useMemo(() => shiftSales.reduce((sum, s) => sum + (s.discount?.amount || 0), 0), [shiftSales]);
   const totalItems = useMemo(() => shiftSales.reduce((sum, s) => sum + s.items.reduce((is, i) => is + i.quantity, 0), 0), [shiftSales]);
+
+  // Returns calculations - only count active (created) returns, not deleted ones
+  const activeReturns = useMemo(() => shiftReturnsLog.filter(e => e.action === 'created'), [shiftReturnsLog]);
+  const deletedReturns = useMemo(() => shiftReturnsLog.filter(e => e.action === 'deleted'), [shiftReturnsLog]);
+  
+  // Check if a created return was later deleted (same returnRecord.id appears in deleted)
+  const deletedReturnIds = useMemo(() => new Set(deletedReturns.map(e => e.returnRecord.id)), [deletedReturns]);
+  
+  const totalReturnsAmount = useMemo(() => 
+    activeReturns
+      .filter(e => !deletedReturnIds.has(e.returnRecord.id))
+      .reduce((sum, e) => sum + e.returnRecord.refundAmount, 0), 
+    [activeReturns, deletedReturnIds]
+  );
+  
+  const netTotal = useMemo(() => totalAmount - totalReturnsAmount, [totalAmount, totalReturnsAmount]);
 
   const generateReportText = () => {
     if (!user) return '';
@@ -84,6 +111,10 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
     if (totalDiscount > 0) {
       text += `• إجمالي الخصومات: ${totalDiscount.toFixed(2)} ج.م\n`;
     }
+    if (activeReturns.length > 0) {
+      text += `• عدد المرتجعات: ${activeReturns.length}\n`;
+      text += `• إجمالي المرتجعات: -${totalReturnsAmount.toFixed(2)} ج.م\n`;
+    }
     text += `\n━━━━━━━━━━━━━━━\n`;
     text += `📝 تفاصيل الفواتير:\n\n`;
 
@@ -98,8 +129,29 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
       text += `   💰 الإجمالي: ${sale.total.toFixed(2)} ج.م\n\n`;
     });
 
+    // Returns section
+    if (activeReturns.length > 0 || deletedReturns.length > 0) {
+      text += `━━━━━━━━━━━━━━━\n`;
+      text += `🔄 المرتجعات:\n\n`;
+      activeReturns.forEach((entry) => {
+        const isDeleted = deletedReturnIds.has(entry.returnRecord.id);
+        text += `🔄 مرتجع — ${entry.returnRecord.time}${isDeleted ? ' [محذوف]' : ''}\n`;
+        entry.returnRecord.items.forEach(item => {
+          text += `   • ${item.productName} × ${item.quantity}${isDeleted ? '' : ` = -${item.total.toFixed(2)} ج.م`}\n`;
+        });
+        if (!isDeleted) {
+          text += `   💰 المبلغ المسترد: -${entry.returnRecord.refundAmount.toFixed(2)} ج.م\n`;
+        }
+        text += `\n`;
+      });
+    }
+
     text += `━━━━━━━━━━━━━━━\n`;
-    text += `💵 الإجمالي الكلي: ${totalAmount.toFixed(2)} ج.م\n`;
+    text += `💵 إجمالي المبيعات: ${totalAmount.toFixed(2)} ج.م\n`;
+    if (totalReturnsAmount > 0) {
+      text += `🔄 إجمالي المرتجعات: -${totalReturnsAmount.toFixed(2)} ج.م\n`;
+    }
+    text += `💰 صافي المبلغ للتسليم: ${netTotal.toFixed(2)} ج.م\n`;
     text += `━━━━━━━━━━━━━━━\n`;
     text += `بن العميد ☕`;
     return text;
@@ -190,44 +242,102 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                 <p className="text-xs text-muted-foreground">الأصناف</p>
                 <p className="text-xl font-bold text-foreground">{totalItems}</p>
               </div>
-              <div className="bg-green-500/10 rounded-xl p-3 text-center">
-                <p className="text-xs text-muted-foreground">الإجمالي</p>
-                <p className="text-xl font-bold text-green-600">{totalAmount.toFixed(0)}</p>
+              <div className="bg-primary/10 rounded-xl p-3 text-center">
+                <p className="text-xs text-muted-foreground">المبيعات</p>
+                <p className="text-xl font-bold text-primary">{totalAmount.toFixed(0)}</p>
               </div>
             </div>
-            {totalDiscount > 0 && (
-              <div className="bg-orange-500/10 rounded-xl p-2 text-center">
-                <p className="text-xs text-muted-foreground">إجمالي الخصومات: <span className="font-bold text-orange-600">{totalDiscount.toFixed(2)} ج.م</span></p>
-              </div>
-            )}
+            
+            {/* Returns & Discount Summary */}
+            <div className="flex flex-wrap gap-2 mt-1">
+              {totalDiscount > 0 && (
+                <div className="bg-accent/50 rounded-xl p-2 text-center flex-1">
+                  <p className="text-xs text-muted-foreground">الخصومات: <span className="font-bold text-foreground">{totalDiscount.toFixed(2)} ج.م</span></p>
+                </div>
+              )}
+              {activeReturns.length > 0 && (
+                <div className="bg-destructive/10 rounded-xl p-2 text-center flex-1">
+                  <p className="text-xs text-muted-foreground">المرتجعات: <span className="font-bold text-destructive">-{totalReturnsAmount.toFixed(2)} ج.م</span></p>
+                </div>
+              )}
+            </div>
+
+            {/* Net Total */}
+            <div className="bg-primary/15 rounded-xl p-3 text-center border border-primary/20">
+              <p className="text-xs text-muted-foreground">💰 صافي المبلغ للتسليم</p>
+              <p className="text-2xl font-bold text-primary">{netTotal.toFixed(2)} ج.م</p>
+            </div>
 
             {/* Sales List */}
-            <div className="flex-1 overflow-auto space-y-2 mt-2 max-h-[40vh]">
-              {shiftSales.length === 0 ? (
+            <div className="flex-1 overflow-auto space-y-2 mt-2 max-h-[35vh]">
+              {shiftSales.length === 0 && activeReturns.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <ShoppingCart size={32} className="mx-auto mb-2 opacity-50" />
                   <p className="text-sm">لا توجد مبيعات في هذا الشيفت</p>
                 </div>
               ) : (
-                shiftSales.map((sale, idx) => (
-                  <div key={sale.id} className="bg-muted/50 rounded-xl p-3 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-muted-foreground">🕐 {sale.time}</span>
-                      <span className="text-sm font-bold text-foreground">{sale.total.toFixed(2)} ج.م</span>
+                <>
+                  {/* Sales */}
+                  {shiftSales.length > 0 && (
+                    <p className="text-xs font-bold text-muted-foreground flex items-center gap-1">
+                      <ShoppingCart size={12} /> المبيعات ({shiftSales.length})
+                    </p>
+                  )}
+                  {shiftSales.map((sale, idx) => (
+                    <div key={sale.id} className="bg-muted/50 rounded-xl p-3 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-muted-foreground">🕐 {sale.time}</span>
+                        <span className="text-sm font-bold text-foreground">{sale.total.toFixed(2)} ج.م</span>
+                      </div>
+                      <div className="space-y-0.5">
+                        {sale.items.map((item, i) => (
+                          <div key={i} className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>{item.productName} × {item.quantity}</span>
+                            <span>{item.total.toFixed(2)} ج.م</span>
+                          </div>
+                        ))}
+                      </div>
+                      {sale.discount && sale.discount.amount > 0 && (
+                        <p className="text-xs text-muted-foreground/70">خصم {sale.discount.percent}% (-{sale.discount.amount.toFixed(2)} ج.م)</p>
+                      )}
                     </div>
-                    <div className="space-y-0.5">
-                      {sale.items.map((item, i) => (
-                        <div key={i} className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>{item.productName} × {item.quantity}</span>
-                          <span>{item.total.toFixed(2)} ج.م</span>
+                  ))}
+
+                  {/* Returns */}
+                  {(activeReturns.length > 0 || deletedReturns.length > 0) && (
+                    <p className="text-xs font-bold text-muted-foreground flex items-center gap-1 mt-3">
+                      <RotateCcw size={12} /> المرتجعات ({activeReturns.length})
+                    </p>
+                  )}
+                  {activeReturns.map((entry) => {
+                    const isDeleted = deletedReturnIds.has(entry.returnRecord.id);
+                    return (
+                      <div key={entry.id} className={`rounded-xl p-3 space-y-1 border ${isDeleted ? 'bg-muted/30 border-dashed border-muted-foreground/20 opacity-60' : 'bg-destructive/5 border-destructive/15'}`}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-muted-foreground">🕐 {entry.returnRecord.time}</span>
+                          <div className="flex items-center gap-1">
+                            {isDeleted && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground flex items-center gap-0.5">
+                                <Trash2 size={10} /> محذوف
+                              </span>
+                            )}
+                            <span className={`text-sm font-bold ${isDeleted ? 'line-through text-muted-foreground' : 'text-destructive'}`}>
+                              -{entry.returnRecord.refundAmount.toFixed(2)} ج.م
+                            </span>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                    {sale.discount && sale.discount.amount > 0 && (
-                      <p className="text-xs text-orange-500">خصم {sale.discount.percent}% (-{sale.discount.amount.toFixed(2)} ج.م)</p>
-                    )}
-                  </div>
-                ))
+                        <div className="space-y-0.5">
+                          {entry.returnRecord.items.map((item, i) => (
+                            <div key={i} className={`flex items-center justify-between text-xs ${isDeleted ? 'text-muted-foreground/50 line-through' : 'text-muted-foreground'}`}>
+                              <span>{item.productName} × {item.quantity}</span>
+                              <span>-{item.total.toFixed(2)} ج.م</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
               )}
             </div>
 
