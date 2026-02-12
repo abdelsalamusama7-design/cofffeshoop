@@ -3,8 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Lock, Clock, ShoppingCart, Share2, Mail, FileText, MessageCircle, RotateCcw, Trash2, Package } from 'lucide-react';
-import { getCurrentUser, getSales, setSales, getAttendance, setAttendance, getWorkers, getReturns, setReturns, getReturnsLog, setReturnsLog, getInventory, addShiftReset } from '@/lib/store';
-import { Sale, ReturnRecord, ReturnLogEntry } from '@/lib/types';
+import { getCurrentUser, getSales, setSales, getAttendance, setAttendance, getWorkers, getReturns, setReturns, getReturnsLog, setReturnsLog, getInventory, getProducts, addShiftReset } from '@/lib/store';
+import { Sale, ReturnRecord, ReturnLogEntry, InventoryItem } from '@/lib/types';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -22,6 +22,8 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetPassword, setResetPassword] = useState('');
   const [resetError, setResetError] = useState('');
+  const [inventoryEndShift, setInventoryEndShift] = useState<InventoryItem[]>([]);
+  const [inventoryStartShift, setInventoryStartShift] = useState<InventoryItem[]>([]);
 
   const user = getCurrentUser();
 
@@ -55,17 +57,74 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
       e => e.returnRecord.workerId === user.id && e.returnRecord.date === today
     );
 
-    // If there's a check-in time, filter sales and returns after check-in
+    let finalSales: Sale[];
+    let finalReturnsLog: ReturnLogEntry[];
+    
     if (todayRecord?.checkIn) {
       const checkInTime = todayRecord.checkIn;
-      const filtered = todaySales.filter(s => s.time >= checkInTime);
-      const filteredReturns = todayReturnsLog.filter(e => e.returnRecord.time >= checkInTime);
-      setShiftSales(filtered);
-      setShiftReturnsLog(filteredReturns);
+      finalSales = todaySales.filter(s => s.time >= checkInTime);
+      finalReturnsLog = todayReturnsLog.filter(e => e.returnRecord.time >= checkInTime);
     } else {
-      setShiftSales(todaySales);
-      setShiftReturnsLog(todayReturnsLog);
+      finalSales = todaySales;
+      finalReturnsLog = todayReturnsLog;
     }
+    
+    setShiftSales(finalSales);
+    setShiftReturnsLog(finalReturnsLog);
+
+    // Capture current inventory (end of shift)
+    const currentInventory = getInventory();
+    setInventoryEndShift(currentInventory);
+
+    // Calculate start-of-shift inventory by reversing sold quantities
+    const products = getProducts();
+    const quantityChanges: Record<string, number> = {};
+    
+    // Add back quantities sold from inventory items (direct sell) and product ingredients
+    finalSales.forEach(sale => {
+      sale.items.forEach(item => {
+        // Check if it's an inventory item sold directly
+        const invItem = currentInventory.find(inv => inv.id === item.productId);
+        if (invItem) {
+          quantityChanges[item.productId] = (quantityChanges[item.productId] || 0) + item.quantity;
+        }
+        // Check if it's a product with ingredients
+        const product = products.find(p => p.id === item.productId);
+        if (product?.ingredients) {
+          product.ingredients.forEach(ing => {
+            if (ing.inventoryItemId && ing.quantityUsed) {
+              quantityChanges[ing.inventoryItemId] = (quantityChanges[ing.inventoryItemId] || 0) + (ing.quantityUsed * item.quantity);
+            }
+          });
+        }
+      });
+    });
+
+    // Subtract returned quantities (they were added back to inventory)
+    const activeReturnEntries = finalReturnsLog.filter(e => e.action === 'created');
+    const deletedIds = new Set(finalReturnsLog.filter(e => e.action === 'deleted').map(e => e.returnRecord.id));
+    activeReturnEntries.filter(e => !deletedIds.has(e.returnRecord.id)).forEach(entry => {
+      entry.returnRecord.items.forEach(item => {
+        const invItem = currentInventory.find(inv => inv.id === item.productId);
+        if (invItem) {
+          quantityChanges[item.productId] = (quantityChanges[item.productId] || 0) - item.quantity;
+        }
+        const product = products.find(p => p.id === item.productId);
+        if (product?.ingredients) {
+          product.ingredients.forEach(ing => {
+            if (ing.inventoryItemId && ing.quantityUsed) {
+              quantityChanges[ing.inventoryItemId] = (quantityChanges[ing.inventoryItemId] || 0) - (ing.quantityUsed * item.quantity);
+            }
+          });
+        }
+      });
+    });
+
+    const startInventory = currentInventory.map(item => ({
+      ...item,
+      quantity: Math.round((item.quantity + (quantityChanges[item.id] || 0)) * 1000) / 1000,
+    }));
+    setInventoryStartShift(startInventory);
 
     setStep('report');
     setError('');
@@ -153,14 +212,21 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
       });
     }
 
-    // Inventory section
-    const inventoryItems = getInventory();
-    if (inventoryItems.length > 0) {
+    // Inventory section - start and end of shift
+    if (inventoryStartShift.length > 0) {
       text += `━━━━━━━━━━━━━━━\n`;
-      text += `📦 الكمية الحالية في المخزون:\n\n`;
-      inventoryItems.forEach(item => {
+      text += `📦 رصيد المخزون أول الشيفت:\n\n`;
+      inventoryStartShift.forEach(item => {
+        text += `• ${item.name}: ${item.quantity} ${item.unit}\n`;
+      });
+      
+      text += `\n📦 رصيد المخزون آخر الشيفت:\n\n`;
+      inventoryEndShift.forEach(item => {
+        const startItem = inventoryStartShift.find(s => s.id === item.id);
+        const diff = startItem ? item.quantity - startItem.quantity : 0;
+        const diffText = diff !== 0 ? ` (${diff > 0 ? '+' : ''}${Math.round(diff * 1000) / 1000})` : '';
         const warning = item.quantity <= 5 ? ' ⚠️' : '';
-        text += `• ${item.name}: ${item.quantity} ${item.unit}${warning}\n`;
+        text += `• ${item.name}: ${item.quantity} ${item.unit}${diffText}${warning}\n`;
       });
     }
 
@@ -359,27 +425,52 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
               )}
             </div>
 
-            {/* Current Inventory */}
-            {(() => {
-              const inventoryItems = getInventory();
-              return inventoryItems.length > 0 ? (
-                <div className="mt-2">
+            {/* Inventory Start & End of Shift */}
+            {inventoryStartShift.length > 0 && (
+              <div className="mt-2 space-y-3">
+                {/* Start of shift */}
+                <div>
                   <p className="text-xs font-bold text-muted-foreground flex items-center gap-1 mb-2">
-                    <Package size={12} /> الكمية الحالية في المخزون
+                    <Package size={12} /> 📥 رصيد المخزون أول الشيفت
                   </p>
-                  <div className="bg-muted/30 rounded-xl p-3 space-y-1 max-h-[20vh] overflow-auto">
-                    {inventoryItems.map(item => (
+                  <div className="bg-muted/30 rounded-xl p-3 space-y-1 max-h-[15vh] overflow-auto">
+                    {inventoryStartShift.map(item => (
                       <div key={item.id} className="flex items-center justify-between text-xs">
                         <span className="text-foreground">{item.name}</span>
-                        <span className={`font-bold ${item.quantity <= 5 ? 'text-destructive' : 'text-muted-foreground'}`}>
-                          {item.quantity} {item.unit}
-                        </span>
+                        <span className="font-bold text-muted-foreground">{item.quantity} {item.unit}</span>
                       </div>
                     ))}
                   </div>
                 </div>
-              ) : null;
-            })()}
+                {/* End of shift */}
+                <div>
+                  <p className="text-xs font-bold text-muted-foreground flex items-center gap-1 mb-2">
+                    <Package size={12} /> 📤 رصيد المخزون آخر الشيفت
+                  </p>
+                  <div className="bg-muted/30 rounded-xl p-3 space-y-1 max-h-[15vh] overflow-auto">
+                    {inventoryEndShift.map(item => {
+                      const startItem = inventoryStartShift.find(s => s.id === item.id);
+                      const diff = startItem ? Math.round((item.quantity - startItem.quantity) * 1000) / 1000 : 0;
+                      return (
+                        <div key={item.id} className="flex items-center justify-between text-xs">
+                          <span className="text-foreground">{item.name}</span>
+                          <div className="flex items-center gap-2">
+                            {diff !== 0 && (
+                              <span className={`text-[10px] ${diff < 0 ? 'text-destructive' : 'text-success'}`}>
+                                ({diff > 0 ? '+' : ''}{diff})
+                              </span>
+                            )}
+                            <span className={`font-bold ${item.quantity <= 5 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                              {item.quantity} {item.unit}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Share Buttons */}
             <div className="flex gap-2 mt-3">
