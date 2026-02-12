@@ -36,21 +36,23 @@ const Reports = () => {
   const returns = getReturns();
 
   const today = new Date().toISOString().split('T')[0];
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
   const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
-  const currentMonth = new Date().toISOString().slice(0, 7);
 
-  const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'custom'>('daily');
+  const [selectedDate, setSelectedDate] = useState(today);
 
-  const startDate = period === 'daily' ? today : period === 'weekly' ? weekAgo : monthAgo;
-  const periodLabel = period === 'daily' ? 'يومي' : period === 'weekly' ? 'أسبوعي' : 'شهري';
+  const startDate = period === 'custom' ? selectedDate : period === 'daily' ? today : period === 'weekly' ? weekAgo : monthAgo;
+  const endDate = period === 'custom' ? selectedDate : undefined;
+  const periodLabel = period === 'custom' ? selectedDate : period === 'daily' ? 'يومي' : period === 'weekly' ? 'أسبوعي' : 'شهري';
 
-  const filteredSales = useMemo(() => sales.filter(s => s.date >= startDate), [sales, startDate]);
+  const filteredSales = useMemo(() => sales.filter(s => endDate ? s.date === endDate : s.date >= startDate), [sales, startDate, endDate]);
 
   // Build return entries as negative sales for display
   const returnEntries = useMemo(() => {
     return returns
-      .filter(r => r.date >= startDate)
+      .filter(r => endDate ? r.date === endDate : r.date >= startDate)
       .map(r => ({
         id: `return_${r.id}`,
         items: r.items,
@@ -477,7 +479,7 @@ const Reports = () => {
 
   // ===== 5. Returns Report =====
   const ReturnsReport = () => {
-    const filteredReturns = returns.filter(r => r.date >= startDate);
+    const filteredReturns = returns.filter(r => endDate ? r.date === endDate : r.date >= startDate);
     const totalReturns = filteredReturns.filter(r => r.type === 'return').length;
     const totalExchanges = filteredReturns.filter(r => r.type === 'exchange').length;
     const totalRefunded = filteredReturns.reduce((sum, r) => sum + r.refundAmount, 0);
@@ -609,7 +611,7 @@ const Reports = () => {
   };
 
   const AttendanceReport = () => {
-    const filteredAttendance = attendance.filter(r => r.date >= startDate);
+    const filteredAttendance = attendance.filter(r => endDate ? r.date === endDate : r.date >= startDate);
     const workerAttendance = workers.filter(w => w.role === 'worker').map(w => {
       const records = filteredAttendance.filter(r => r.workerId === w.id);
       const present = records.filter(r => r.type === 'present').length;
@@ -685,13 +687,36 @@ const Reports = () => {
       <h1 className="text-2xl font-bold text-foreground">التقارير</h1>
 
       {/* Period selector */}
-      <div className="grid grid-cols-3 gap-2">
-        {(['daily', 'weekly', 'monthly'] as const).map(p => (
-          <Button key={p} variant={period === p ? 'default' : 'outline'} onClick={() => setPeriod(p)}
-            className={period === p ? 'cafe-gradient text-primary-foreground' : ''}>
-            {p === 'daily' ? 'يومي' : p === 'weekly' ? 'أسبوعي' : 'شهري'}
+      <div className="space-y-3">
+        <div className="grid grid-cols-3 gap-2">
+          {(['daily', 'weekly', 'monthly'] as const).map(p => (
+            <Button key={p} variant={period === p ? 'default' : 'outline'} onClick={() => setPeriod(p)}
+              className={period === p ? 'cafe-gradient text-primary-foreground' : ''}>
+              {p === 'daily' ? 'يومي' : p === 'weekly' ? 'أسبوعي' : 'شهري'}
+            </Button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={period === 'custom' && selectedDate === yesterday ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => { setPeriod('custom'); setSelectedDate(yesterday); }}
+            className={period === 'custom' && selectedDate === yesterday ? 'cafe-gradient text-primary-foreground' : ''}
+          >
+            أمس
           </Button>
-        ))}
+          <div className="flex-1 relative">
+            <input
+              type="date"
+              value={period === 'custom' ? selectedDate : ''}
+              onChange={(e) => { setSelectedDate(e.target.value); setPeriod('custom'); }}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              dir="ltr"
+              max={today}
+            />
+          </div>
+          <Calendar size={18} className="text-muted-foreground" />
+        </div>
       </div>
 
       {/* Report tabs */}
