@@ -4,7 +4,7 @@ import { Settings, Download, Upload, Mail, MessageCircle, Calendar, Clock, Check
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { getSales, getProducts, getInventory, getWorkers, getAttendance, getExpenses, getTransactions, getCurrentUser, getLastAutoBackupTime, downloadAutoBackup, performAutoBackup } from '@/lib/store';
+import { getSales, getProducts, getInventory, getWorkers, getAttendance, getExpenses, getTransactions, getCurrentUser, getLastAutoBackupTime, downloadAutoBackup, performAutoBackup, syncLocalStorageToCloud } from '@/lib/store';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 type BackupFrequency = 'daily' | 'weekly' | 'monthly';
@@ -218,17 +218,30 @@ const SettingsPage = () => {
     e.target.value = '';
   };
 
-  const confirmRestore = () => {
+  const confirmRestore = async () => {
     if (!pendingRestore) return;
     BACKUP_STORAGE_KEYS.forEach(key => {
       if (pendingRestore[key]) {
         localStorage.setItem(key, JSON.stringify(pendingRestore[key]));
       }
     });
+    // Also handle returns and returns_log if present in backup
+    if (pendingRestore['cafe_returns']) {
+      localStorage.setItem('cafe_returns', JSON.stringify(pendingRestore['cafe_returns']));
+    }
+    if (pendingRestore['cafe_returns_log']) {
+      localStorage.setItem('cafe_returns_log', JSON.stringify(pendingRestore['cafe_returns_log']));
+    }
     setPendingRestore(null);
     setShowRestoreConfirm(false);
-    toast({ title: '✅ تم الاستعادة', description: 'تم استعادة البيانات بنجاح. جاري إعادة التحميل...' });
-    setTimeout(() => window.location.reload(), 1000);
+    toast({ title: '⏳ جاري الرفع', description: 'جاري رفع البيانات للسحاب...' });
+    const success = await syncLocalStorageToCloud();
+    if (success) {
+      toast({ title: '✅ تم الاستعادة', description: 'تم استعادة البيانات ورفعها للسحاب بنجاح. جاري إعادة التحميل...' });
+    } else {
+      toast({ title: '⚠️ تم الاستعادة محلياً', description: 'تم استعادة البيانات محلياً لكن فشل الرفع للسحاب. حاول مرة أخرى.', variant: 'destructive' });
+    }
+    setTimeout(() => window.location.reload(), 1500);
   };
 
   return (
