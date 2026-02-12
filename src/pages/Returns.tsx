@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RotateCcw, ArrowLeftRight, Search, Calendar, Package, Coffee, Plus, Minus, Check, Share2, Printer, Trash2, ClipboardList } from 'lucide-react';
+import ScrollableList from '@/components/ScrollableList';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -516,7 +517,7 @@ const Returns = () => {
                 value={productSearch}
                 onChange={e => setProductSearch(e.target.value)}
               />
-              <div className="max-h-60 overflow-y-auto space-y-2">
+              <ScrollableList className="space-y-2">
                 {filteredProducts.length === 0 ? (
                   <p className="text-center text-sm text-muted-foreground py-4">لا توجد منتجات قابلة للإرجاع</p>
                 ) : (
@@ -560,7 +561,7 @@ const Returns = () => {
                     );
                   })
                 )}
-              </div>
+              </ScrollableList>
             </div>
 
             {/* Exchange items */}

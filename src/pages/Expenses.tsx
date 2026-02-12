@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getSales, getProducts, getTransactions, getInventory, getExpenses, addExpense, deleteExpense, getWorkers, getAttendance } from '@/lib/store';
 import { Expense } from '@/lib/types';
+import ScrollableList from '@/components/ScrollableList';
 import PasswordConfirmDialog from '@/components/PasswordConfirmDialog';
 
 const Expenses = () => {
@@ -335,7 +336,7 @@ const Expenses = () => {
       {filteredExpenses.length > 0 && (
         <div className="glass-card rounded-xl p-4">
           <h3 className="font-bold text-foreground mb-3">بنود المصروفات</h3>
-          <div className="space-y-2 max-h-60 overflow-y-auto">
+          <ScrollableList className="space-y-2">
             {filteredExpenses.slice().reverse().map(e => (
               <motion.div key={e.id} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
                 className="flex items-center justify-between p-3 rounded-lg bg-secondary">
@@ -355,7 +356,7 @@ const Expenses = () => {
                 </div>
               </motion.div>
             ))}
-          </div>
+          </ScrollableList>
         </div>
       )}
 
@@ -367,7 +368,7 @@ const Expenses = () => {
       {filteredTxns.length > 0 && (
         <div className="glass-card rounded-xl p-4">
           <h3 className="font-bold text-foreground mb-3">معاملات العمال</h3>
-          <div className="space-y-2 max-h-60 overflow-y-auto">
+          <ScrollableList className="space-y-2">
             {filteredTxns.slice().reverse().map((t, i) => (
               <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-secondary">
                 <div>
@@ -379,7 +380,7 @@ const Expenses = () => {
                 </span>
               </div>
             ))}
-          </div>
+          </ScrollableList>
         </div>
       )}
 
