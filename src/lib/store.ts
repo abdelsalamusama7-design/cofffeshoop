@@ -473,7 +473,7 @@ export const syncLocalStorageToCloud = async (): Promise<boolean> => {
     const returns = getReturns();
     const returnsLog = getReturnsLog();
 
-    // Delete all existing cloud data first, then upsert
+    // Delete all existing cloud data first
     await Promise.all([
       (supabase.from('workers') as any).delete().neq('id', ''),
       (supabase.from('products') as any).delete().neq('id', ''),
@@ -486,16 +486,111 @@ export const syncLocalStorageToCloud = async (): Promise<boolean> => {
       (supabase.from('returns_log') as any).delete().neq('id', ''),
     ]);
 
-    // Now upsert all data
-    if (workers.length > 0) dbUpsertWorkers(workers);
-    if (products.length > 0) dbUpsertProducts(products);
-    if (inventory.length > 0) dbUpsertInventory(inventory);
-    if (sales.length > 0) dbUpsertSales(sales);
-    if (attendance.length > 0) dbUpsertAttendance(attendance);
-    if (transactions.length > 0) dbUpsertTransactions(transactions);
-    if (expenses.length > 0) dbUpsertExpenses(expenses);
-    if (returns.length > 0) dbUpsertReturns(returns);
-    if (returnsLog.length > 0) dbUpsertReturnsLog(returnsLog);
+    // Now upsert all data - AWAIT all upserts to ensure data reaches cloud before page reload
+    const upsertPromises: Promise<any>[] = [];
+
+    if (workers.length > 0) {
+      upsertPromises.push(
+        (supabase.from('workers') as any).upsert(
+          workers.map(w => ({ id: w.id, name: w.name, role: w.role, password: w.password, salary: w.salary })),
+          { onConflict: 'id' }
+        ).then((r: any) => r)
+      );
+    }
+    if (products.length > 0) {
+      upsertPromises.push(
+        (supabase.from('products') as any).upsert(
+          products.map(p => ({
+            id: p.id, name: p.name, sell_price: p.sellPrice, cost_price: p.costPrice,
+            category: p.category || null, ingredients: JSON.parse(JSON.stringify(p.ingredients || [])),
+          })),
+          { onConflict: 'id' }
+        ).then((r: any) => r)
+      );
+    }
+    if (inventory.length > 0) {
+      upsertPromises.push(
+        (supabase.from('inventory') as any).upsert(
+          inventory.map(i => ({
+            id: i.id, name: i.name, unit: i.unit, quantity: i.quantity,
+            cost_per_unit: i.costPerUnit, sell_price: i.sellPrice ?? null, category: i.category || null,
+          })),
+          { onConflict: 'id' }
+        ).then((r: any) => r)
+      );
+    }
+    if (sales.length > 0) {
+      upsertPromises.push(
+        (supabase.from('sales') as any).upsert(
+          sales.map(s => ({
+            id: s.id, items: JSON.parse(JSON.stringify(s.items)), total: s.total,
+            discount: s.discount ? JSON.parse(JSON.stringify(s.discount)) : null,
+            worker_id: s.workerId, worker_name: s.workerName, date: s.date, time: s.time,
+          })),
+          { onConflict: 'id' }
+        ).then((r: any) => r)
+      );
+    }
+    if (attendance.length > 0) {
+      upsertPromises.push(
+        (supabase.from('attendance') as any).upsert(
+          attendance.map(a => ({
+            id: a.id, worker_id: a.workerId, worker_name: a.workerName, date: a.date,
+            check_in: a.checkIn || null, check_out: a.checkOut || null, type: a.type,
+            shift: a.shift || null, hours_worked: a.hoursWorked ?? null,
+          })),
+          { onConflict: 'id' }
+        ).then((r: any) => r)
+      );
+    }
+    if (transactions.length > 0) {
+      upsertPromises.push(
+        (supabase.from('transactions') as any).upsert(
+          transactions.map(t => ({
+            id: t.id, worker_id: t.workerId, worker_name: t.workerName,
+            type: t.type, amount: t.amount, note: t.note, date: t.date,
+          })),
+          { onConflict: 'id' }
+        ).then((r: any) => r)
+      );
+    }
+    if (expenses.length > 0) {
+      upsertPromises.push(
+        (supabase.from('expenses') as any).upsert(
+          expenses.map(e => ({
+            id: e.id, name: e.name, amount: e.amount, category: e.category,
+            note: e.note, date: e.date,
+          })),
+          { onConflict: 'id' }
+        ).then((r: any) => r)
+      );
+    }
+    if (returns.length > 0) {
+      upsertPromises.push(
+        (supabase.from('returns') as any).upsert(
+          returns.map(r => ({
+            id: r.id, sale_id: r.saleId, type: r.type, items: JSON.parse(JSON.stringify(r.items)),
+            exchange_items: r.exchangeItems ? JSON.parse(JSON.stringify(r.exchangeItems)) : null,
+            refund_amount: r.refundAmount, reason: r.reason, worker_id: r.workerId,
+            worker_name: r.workerName, date: r.date, time: r.time,
+          })),
+          { onConflict: 'id' }
+        ).then((r: any) => r)
+      );
+    }
+    if (returnsLog.length > 0) {
+      upsertPromises.push(
+        (supabase.from('returns_log') as any).upsert(
+          returnsLog.map(l => ({
+            id: l.id, action: l.action, return_record: JSON.parse(JSON.stringify(l.returnRecord)),
+            action_by: l.actionBy, action_date: l.actionDate, action_time: l.actionTime,
+          })),
+          { onConflict: 'id' }
+        ).then((r: any) => r)
+      );
+    }
+
+    await Promise.all(upsertPromises);
 
     return true;
   } catch (err) {
