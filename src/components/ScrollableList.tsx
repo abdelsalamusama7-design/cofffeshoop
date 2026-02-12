@@ -35,15 +35,18 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60' }: Scrolla
 
   return (
     <div className="relative">
-      {/* Up arrow */}
+      {/* Up fade + arrow */}
       {canScrollUp && (
-        <button
-          onClick={() => scrollBy(-120)}
-          className="absolute -left-1 top-1 z-10 w-7 h-7 rounded-full bg-primary/90 text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary transition-colors"
-          type="button"
-        >
-          <ChevronUp size={16} />
-        </button>
+        <>
+          <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-card to-transparent z-10 pointer-events-none rounded-t-xl" />
+          <button
+            onClick={() => scrollBy(-120)}
+            className="absolute left-1/2 -translate-x-1/2 top-0 z-20 w-8 h-5 rounded-b-lg bg-primary text-primary-foreground shadow-md flex items-center justify-center hover:bg-primary/80 transition-all animate-bounce"
+            type="button"
+          >
+            <ChevronUp size={14} strokeWidth={3} />
+          </button>
+        </>
       )}
 
       <div
@@ -54,15 +57,18 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60' }: Scrolla
         {children}
       </div>
 
-      {/* Down arrow */}
+      {/* Down fade + arrow */}
       {canScrollDown && (
-        <button
-          onClick={() => scrollBy(120)}
-          className="absolute -left-1 bottom-1 z-10 w-7 h-7 rounded-full bg-primary/90 text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary transition-colors"
-          type="button"
-        >
-          <ChevronDown size={16} />
-        </button>
+        <>
+          <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-card to-transparent z-10 pointer-events-none rounded-b-xl" />
+          <button
+            onClick={() => scrollBy(120)}
+            className="absolute left-1/2 -translate-x-1/2 bottom-0 z-20 w-8 h-5 rounded-t-lg bg-primary text-primary-foreground shadow-md flex items-center justify-center hover:bg-primary/80 transition-all animate-bounce"
+            type="button"
+          >
+            <ChevronDown size={14} strokeWidth={3} />
+          </button>
+        </>
       )}
     </div>
   );
