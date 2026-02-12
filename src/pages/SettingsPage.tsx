@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { getSales, getProducts, getInventory, getWorkers, getAttendance, getExpenses, getTransactions, getCurrentUser, getLastAutoBackupTime, downloadAutoBackup, performAutoBackup, syncLocalStorageToCloud } from '@/lib/store';
+import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 type BackupFrequency = 'daily' | 'weekly' | 'monthly';
@@ -171,18 +172,33 @@ const SettingsPage = () => {
   };
 
   // === Backup & Restore ===
-  const handleBackupDownload = () => {
+  const handleBackupDownload = async () => {
     const backupData: Record<string, any> = {};
     BACKUP_STORAGE_KEYS.forEach(key => {
       const val = localStorage.getItem(key);
       if (val) backupData[key] = JSON.parse(val);
     });
+    // Also include returns and returns_log
+    const returnsVal = localStorage.getItem('cafe_returns');
+    if (returnsVal) backupData['cafe_returns'] = JSON.parse(returnsVal);
+    const returnsLogVal = localStorage.getItem('cafe_returns_log');
+    if (returnsLogVal) backupData['cafe_returns_log'] = JSON.parse(returnsLogVal);
+
     backupData._meta = {
       version: 1,
       date: new Date().toISOString(),
       app: 'بن العميد',
     };
 
+    // Save to cloud
+    const user = getCurrentUser();
+    await (supabase.from('backups') as any).upsert({
+      id: 'latest',
+      backup_data: backupData,
+      created_by: user?.name || 'غير معروف',
+    }, { onConflict: 'id' });
+
+    // Also download as file
     const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -190,11 +206,26 @@ const SettingsPage = () => {
     a.download = `نسخه احتياطيه العميد ${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast({ title: '✅ تم', description: 'تم تحميل النسخة الاحتياطية بنجاح' });
+    toast({ title: '✅ تم', description: 'تم حفظ النسخة الاحتياطية في السحاب وتحميلها' });
   };
 
-  const handleRestoreClick = () => {
-    fileInputRef.current?.click();
+  const [isRestoring, setIsRestoring] = useState(false);
+
+  const handleRestoreClick = async () => {
+    setIsRestoring(true);
+    try {
+      const { data, error } = await (supabase.from('backups') as any).select('backup_data, created_at, created_by').eq('id', 'latest').single();
+      if (error || !data) {
+        toast({ title: '❌ لا توجد نسخة', description: 'لا توجد نسخة احتياطية محفوظة في السحاب. احفظ نسخة أولاً.', variant: 'destructive' });
+        setIsRestoring(false);
+        return;
+      }
+      setPendingRestore(data.backup_data);
+      setShowRestoreConfirm(true);
+    } catch {
+      toast({ title: '❌ خطأ', description: 'فشل تحميل النسخة الاحتياطية من السحاب', variant: 'destructive' });
+    }
+    setIsRestoring(false);
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -345,19 +376,13 @@ const SettingsPage = () => {
 
           <Button
             onClick={handleRestoreClick}
+            disabled={isRestoring}
             variant="outline"
             className="h-12 text-sm font-bold gap-2 border-accent/30 text-accent hover:bg-accent/10"
           >
             <Upload size={18} />
-            استعادة نسخة احتياطية
+            {isRestoring ? 'جاري التحميل من السحاب...' : 'استعادة نسخة احتياطية من السحاب'}
           </Button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
-            className="hidden"
-            onChange={handleFileSelect}
-          />
         </div>
 
         <div className="bg-warning/10 rounded-xl p-3 flex items-start gap-2">
