@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Lock, Clock, ShoppingCart, Share2, Mail, FileText, MessageCircle, RotateCcw, Trash2 } from 'lucide-react';
-import { getCurrentUser, getSales, getAttendance, setAttendance, getWorkers, getReturns, getReturnsLog } from '@/lib/store';
+import { getCurrentUser, getSales, setSales, getAttendance, setAttendance, getWorkers, getReturns, setReturns, getReturnsLog, setReturnsLog } from '@/lib/store';
 import { Sale, ReturnRecord, ReturnLogEntry } from '@/lib/types';
 import { toast } from 'sonner';
 
@@ -387,14 +387,27 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                     return;
                   }
                   const today = new Date().toISOString().slice(0, 10);
+                  // Clear attendance
                   const attendance = getAttendance();
-                  const updated = attendance.filter(r => !(r.workerId === user.id && r.date === today));
-                  setAttendance(updated);
+                  const updatedAttendance = attendance.filter(r => !(r.workerId === user.id && r.date === today));
+                  setAttendance(updatedAttendance);
+                  // Clear sales
+                  const sales = getSales();
+                  const updatedSales = sales.filter(s => !(s.workerId === user.id && s.date === today));
+                  setSales(updatedSales);
+                  // Clear returns
+                  const returns = getReturns();
+                  const updatedReturns = returns.filter(r => !(r.workerId === user.id && r.date === today));
+                  setReturns(updatedReturns);
+                  // Clear returns log
+                  const returnsLog = getReturnsLog();
+                  const updatedLog = returnsLog.filter(e => !(e.returnRecord.workerId === user.id && e.actionDate === today));
+                  setReturnsLog(updatedLog);
                   setShowResetConfirm(false);
                   setResetPassword('');
                   setResetError('');
                   handleClose();
-                  toast.success('تم تصفير الشيفت بنجاح ✅ يمكنك تسجيل حضور جديد');
+                  toast.success('تم تصفير الشيفت بنجاح ✅ تم مسح جميع المعاملات');
                 }} className="space-y-2">
                   <div className="relative">
                     <Lock size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />

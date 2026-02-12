@@ -101,6 +101,7 @@ export const setProducts = (p: Product[]) => set(STORAGE_KEYS.products, p);
 
 // Sales
 export const getSales = (): Sale[] => get(STORAGE_KEYS.sales, []);
+export const setSales = (s: Sale[]) => set(STORAGE_KEYS.sales, s);
 export const addSale = (sale: Sale) => {
   const sales = getSales();
   sales.push(sale);
@@ -192,6 +193,7 @@ export const deleteReturn = (id: string) => {
 
 // Returns Log
 export const getReturnsLog = (): ReturnLogEntry[] => get(STORAGE_KEYS.returnsLog, []);
+export const setReturnsLog = (log: ReturnLogEntry[]) => set(STORAGE_KEYS.returnsLog, log);
 export const addReturnLogEntry = (entry: ReturnLogEntry) => {
   const log = getReturnsLog();
   log.push(entry);
