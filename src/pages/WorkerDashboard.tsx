@@ -1,16 +1,21 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Clock, LogIn, LogOut, HandCoins, Gift, ShoppingCart, CalendarCheck, TrendingUp } from 'lucide-react';
+import { Clock, LogIn, LogOut, HandCoins, Gift, ShoppingCart, CalendarCheck, TrendingUp, RotateCcw, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getCurrentUser, getAttendance, setAttendance, getTransactions, getSales } from '@/lib/store';
+import { Input } from '@/components/ui/input';
+import { getCurrentUser, getAttendance, setAttendance, getTransactions, getSales, getWorkers } from '@/lib/store';
 import { AttendanceRecord } from '@/lib/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
 const WorkerDashboard = () => {
   const user = getCurrentUser();
   const [records, setRecords] = useState(getAttendance());
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetError, setResetError] = useState('');
   const today = new Date().toISOString().split('T')[0];
   const now = new Date();
 
@@ -155,11 +160,20 @@ const WorkerDashboard = () => {
             </Button>
           </div>
         ) : (
-          <div className="bg-muted/50 rounded-xl p-4 text-center space-y-1">
+          <div className="bg-muted/50 rounded-xl p-4 text-center space-y-2">
             <p className="text-sm font-medium text-foreground">✅ تم تسجيل حضورك وانصرافك اليوم</p>
             <p className="text-xs text-muted-foreground">
               {todayRecord?.checkIn} → {todayRecord?.checkOut} • {todayRecord?.hoursWorked?.toFixed(1)} ساعة
             </p>
+            <Button
+              onClick={() => setShowResetDialog(true)}
+              variant="outline"
+              size="sm"
+              className="mt-2 border-destructive/30 text-destructive hover:bg-destructive/10"
+            >
+              <RotateCcw size={14} className="ml-1" />
+              تصفير الشيفت
+            </Button>
           </div>
         )}
       </motion.div>
@@ -285,6 +299,56 @@ const WorkerDashboard = () => {
           <p className="text-sm text-muted-foreground text-center py-2">لا توجد سلف أو مكافآت هذا الشهر</p>
         )}
       </motion.div>
+
+      {/* Reset Shift Dialog */}
+      <Dialog open={showResetDialog} onOpenChange={(open) => { setShowResetDialog(open); if (!open) { setResetPassword(''); setResetError(''); } }}>
+        <DialogContent className="max-w-sm" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-lg flex items-center gap-2 justify-center">
+              <RotateCcw size={20} />
+              تصفير الشيفت
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              سيتم مسح سجل الحضور والانصراف اليوم حتى تتمكن من تسجيل شيفت جديد غداً. أدخل كلمة المرور للتأكيد.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            if (!user) return;
+            const workers = getWorkers();
+            const worker = workers.find(w => w.id === user.id && w.password === resetPassword);
+            if (!worker) {
+              setResetError('كلمة المرور غير صحيحة');
+              return;
+            }
+            // Remove today's attendance record for this worker
+            const updated = records.filter(r => !(r.workerId === user.id && r.date === today));
+            setRecords(updated);
+            setAttendance(updated);
+            setShowResetDialog(false);
+            setResetPassword('');
+            setResetError('');
+            toast.success('تم تصفير الشيفت بنجاح ✅ يمكنك تسجيل حضور جديد');
+          }} className="space-y-4 mt-2">
+            <div className="relative">
+              <Lock size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="password"
+                placeholder="كلمة المرور"
+                value={resetPassword}
+                onChange={e => setResetPassword(e.target.value)}
+                className="pr-10 text-right"
+                autoFocus
+              />
+            </div>
+            {resetError && <p className="text-sm text-destructive text-center">{resetError}</p>}
+            <DialogFooter className="flex gap-2 justify-center sm:justify-center">
+              <Button type="submit" variant="destructive">تأكيد التصفير</Button>
+              <Button type="button" variant="outline" onClick={() => setShowResetDialog(false)}>إلغاء</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
