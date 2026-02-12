@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, ReactNode } from 'react';
-import { ChevronDown } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
 
 interface ScrollableListProps {
@@ -41,35 +41,6 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60' }: Scrolla
 
   return (
     <div className="relative flex gap-2">
-      {/* Scroll track - full height */}
-      {canScroll && (
-        <div className="flex flex-col items-center shrink-0 self-stretch">
-          {/* Full-height track */}
-          <div className="relative w-3 h-full min-h-full rounded-full bg-primary/15 overflow-hidden">
-            {/* Progress thumb */}
-            <div
-              className="absolute left-0 right-0 w-full rounded-full bg-primary transition-all duration-200"
-              style={{
-                height: '25%',
-                top: `${scrollProgress * 75}%`,
-              }}
-            />
-          </div>
-          {/* Arrow button at bottom */}
-          <button
-            onClick={() => scrollBy(atBottom ? -9999 : 120)}
-            className="mt-1 w-7 h-7 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/80 transition-all"
-            type="button"
-          >
-            <ChevronDown
-              size={16}
-              strokeWidth={3}
-              className={cn('transition-transform duration-200', atBottom && 'rotate-180')}
-            />
-          </button>
-        </div>
-      )}
-
       {/* Content */}
       <div
         ref={scrollRef}
@@ -78,6 +49,29 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60' }: Scrolla
       >
         {children}
       </div>
+
+      {/* Scroll track - spans full height of content */}
+      {canScroll && (
+        <div className="relative w-3 shrink-0 self-stretch rounded-full bg-primary/15 overflow-hidden cursor-pointer"
+          onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const clickRatio = (e.clientY - rect.top) / rect.height;
+            const el = scrollRef.current;
+            if (el) {
+              el.scrollTo({ top: clickRatio * (el.scrollHeight - el.clientHeight), behavior: 'smooth' });
+            }
+          }}
+        >
+          {/* Progress thumb */}
+          <div
+            className="absolute left-0 right-0 w-full rounded-full bg-primary transition-all duration-200"
+            style={{
+              height: '25%',
+              top: `${scrollProgress * 75}%`,
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };
