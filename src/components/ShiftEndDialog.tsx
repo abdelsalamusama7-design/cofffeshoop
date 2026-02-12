@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Lock, Clock, ShoppingCart, Share2, Mail, FileText, MessageCircle, RotateCcw, Trash2 } from 'lucide-react';
-import { getCurrentUser, getSales, getAttendance, getWorkers, getReturns, getReturnsLog } from '@/lib/store';
+import { getCurrentUser, getSales, getAttendance, setAttendance, getWorkers, getReturns, getReturnsLog } from '@/lib/store';
 import { Sale, ReturnRecord, ReturnLogEntry } from '@/lib/types';
 import { toast } from 'sonner';
 
@@ -18,6 +18,9 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
   const [error, setError] = useState('');
   const [shiftSales, setShiftSales] = useState<Sale[]>([]);
   const [shiftReturnsLog, setShiftReturnsLog] = useState<ReturnLogEntry[]>([]);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetError, setResetError] = useState('');
 
   const user = getCurrentUser();
 
@@ -73,6 +76,9 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
     setError('');
     setShiftSales([]);
     setShiftReturnsLog([]);
+    setShowResetConfirm(false);
+    setResetPassword('');
+    setResetError('');
     onOpenChange(false);
   };
 
@@ -356,6 +362,59 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                 PDF
               </Button>
             </div>
+
+            {/* Reset Shift Button */}
+            {!showResetConfirm ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full border-destructive/30 text-destructive hover:bg-destructive/10"
+                onClick={() => setShowResetConfirm(true)}
+              >
+                <RotateCcw size={14} className="ml-1" />
+                تصفير الشيفت
+              </Button>
+            ) : (
+              <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-3 space-y-3">
+                <p className="text-xs text-center text-muted-foreground">أدخل كلمة المرور لتأكيد تصفير الشيفت</p>
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!user) return;
+                  const workers = getWorkers();
+                  const worker = workers.find(w => w.id === user.id && w.password === resetPassword);
+                  if (!worker) {
+                    setResetError('كلمة المرور غير صحيحة');
+                    return;
+                  }
+                  const today = new Date().toISOString().slice(0, 10);
+                  const attendance = getAttendance();
+                  const updated = attendance.filter(r => !(r.workerId === user.id && r.date === today));
+                  setAttendance(updated);
+                  setShowResetConfirm(false);
+                  setResetPassword('');
+                  setResetError('');
+                  handleClose();
+                  toast.success('تم تصفير الشيفت بنجاح ✅ يمكنك تسجيل حضور جديد');
+                }} className="space-y-2">
+                  <div className="relative">
+                    <Lock size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="password"
+                      placeholder="كلمة المرور"
+                      value={resetPassword}
+                      onChange={e => setResetPassword(e.target.value)}
+                      className="pr-9 text-right h-9 text-sm"
+                      autoFocus
+                    />
+                  </div>
+                  {resetError && <p className="text-xs text-destructive text-center">{resetError}</p>}
+                  <div className="flex gap-2">
+                    <Button type="submit" variant="destructive" size="sm" className="flex-1">تأكيد التصفير</Button>
+                    <Button type="button" variant="outline" size="sm" className="flex-1" onClick={() => { setShowResetConfirm(false); setResetPassword(''); setResetError(''); }}>إلغاء</Button>
+                  </div>
+                </form>
+              </div>
+            )}
 
             <Button variant="ghost" onClick={handleClose} className="w-full mt-1">إغلاق</Button>
           </>
