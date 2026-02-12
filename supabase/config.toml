@@ -2,3 +2,6 @@ project_id = "jzsltodmnfsvbrddhezt"
 
 [functions.chat]
 verify_jwt = false
+
+[functions.send-shift-report]
+verify_jwt = false
