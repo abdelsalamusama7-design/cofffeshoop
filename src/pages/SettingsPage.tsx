@@ -518,17 +518,35 @@ const SettingsPage = () => {
           <AlertDialogFooter className="flex gap-2">
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                BACKUP_STORAGE_KEYS.forEach(key => {
-                  if (key !== 'cafe_workers') {
-                    localStorage.removeItem(key);
-                  }
-                });
-                localStorage.removeItem('cafe_auto_backup');
-                localStorage.removeItem('cafe_auto_backup_time');
-                setShowResetConfirm(false);
-                toast({ title: '✅ تم التصفير', description: 'تم مسح البيانات المحلية. جاري إعادة التحميل...' });
-                setTimeout(() => window.location.reload(), 1000);
+              onClick={async () => {
+                try {
+                  // Clear all cloud data except backups
+                  await Promise.all([
+                    supabase.from('sales').delete().neq('id', ''),
+                    supabase.from('products').delete().neq('id', ''),
+                    supabase.from('inventory').delete().neq('id', ''),
+                    supabase.from('expenses').delete().neq('id', ''),
+                    supabase.from('attendance').delete().neq('id', ''),
+                    supabase.from('transactions').delete().neq('id', ''),
+                    supabase.from('returns').delete().neq('id', ''),
+                    supabase.from('returns_log').delete().neq('id', ''),
+                    supabase.from('shift_resets').delete().neq('id', ''),
+                  ]);
+
+                  // Clear local storage except workers and current user
+                  BACKUP_STORAGE_KEYS.forEach(key => {
+                    if (key !== 'cafe_workers') {
+                      localStorage.removeItem(key);
+                    }
+                  });
+                  localStorage.removeItem('cafe_auto_backup');
+                  localStorage.removeItem('cafe_auto_backup_time');
+                  setShowResetConfirm(false);
+                  toast({ title: '✅ تم التصفير', description: 'تم مسح كل البيانات من السيستم والسحاب (ماعدا النسخ الاحتياطية). جاري إعادة التحميل...' });
+                  setTimeout(() => window.location.reload(), 1000);
+                } catch (error) {
+                  toast({ title: '❌ خطأ', description: 'حصل مشكلة أثناء التصفير', variant: 'destructive' });
+                }
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
