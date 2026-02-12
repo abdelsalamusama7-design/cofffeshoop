@@ -338,7 +338,11 @@ const Returns = () => {
                 value={productSearch}
                 onChange={e => setProductSearch(e.target.value)}
               />
-              <ScrollableList className="space-y-2">
+            </div>
+
+            <ScrollableList className="space-y-4" maxHeight="max-h-[50vh]">
+              {/* Products list */}
+              <div className="space-y-2">
                 {filteredProducts.length === 0 ? (
                   <p className="text-center text-sm text-muted-foreground py-4">لا توجد منتجات قابلة للإرجاع</p>
                 ) : (
@@ -382,87 +386,87 @@ const Returns = () => {
                     );
                   })
                 )}
-              </ScrollableList>
-            </div>
-
-            {/* Exchange items */}
-            {returnType === 'exchange' && (
-              <div className="space-y-2 border-t border-border pt-3">
-                <label className="text-sm font-medium text-foreground">أصناف البدل</label>
-                <Select onValueChange={addExchangeItem}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر صنف للبدل..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sellableItems.map(item => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.name} - {item.sellPrice} ج.م
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {exchangeItems.length > 0 && (
-                  <div className="space-y-1">
-                    {exchangeItems.map(item => (
-                      <div key={item.productId} className="flex items-center justify-between bg-accent/10 rounded-xl p-3">
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => removeExchangeItem(item.productId)} className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center">
-                            <Minus size={14} />
-                          </button>
-                          <span className="w-6 text-center font-bold text-sm">{item.quantity}</span>
-                          <button onClick={() => addExchangeItem(item.productId)} className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center">
-                            <Plus size={14} />
-                          </button>
-                        </div>
-                        <div className="text-right flex-1 mr-3">
-                          <p className="text-sm font-medium text-foreground">{item.productName}</p>
-                          <p className="text-xs text-accent">{item.total} ج.م</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
-            )}
 
-            {/* Reason */}
-            <Textarea
-              placeholder="سبب المرتجع أو البدل..."
-              value={reason}
-              onChange={e => setReason(e.target.value)}
-              rows={2}
-            />
-
-            {/* Summary */}
-            {Object.keys(selectedItems).length > 0 && (
-              <div className="bg-secondary rounded-xl p-3 space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">قيمة المرتجع</span>
-                  <span className="font-bold text-foreground">{returnTotal} ج.م</span>
+              {/* Exchange items */}
+              {returnType === 'exchange' && (
+                <div className="space-y-2 border-t border-border pt-3">
+                  <label className="text-sm font-medium text-foreground">أصناف البدل</label>
+                  <Select onValueChange={addExchangeItem}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر صنف للبدل..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sellableItems.map(item => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.name} - {item.sellPrice} ج.م
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {exchangeItems.length > 0 && (
+                    <div className="space-y-1">
+                      {exchangeItems.map(item => (
+                        <div key={item.productId} className="flex items-center justify-between bg-accent/10 rounded-xl p-3">
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => removeExchangeItem(item.productId)} className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center">
+                              <Minus size={14} />
+                            </button>
+                            <span className="w-6 text-center font-bold text-sm">{item.quantity}</span>
+                            <button onClick={() => addExchangeItem(item.productId)} className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center">
+                              <Plus size={14} />
+                            </button>
+                          </div>
+                          <div className="text-right flex-1 mr-3">
+                            <p className="text-sm font-medium text-foreground">{item.productName}</p>
+                            <p className="text-xs text-accent">{item.total} ج.م</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {returnType === 'exchange' && (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">قيمة البدل</span>
-                      <span className="font-bold text-accent">{exchangeTotal} ج.م</span>
-                    </div>
-                    <div className="flex justify-between border-t border-border pt-1">
-                      <span className="font-medium text-foreground">{refundAmount >= 0 ? 'مسترد للعميل' : 'مطلوب من العميل'}</span>
-                      <span className="font-bold text-destructive">{Math.abs(refundAmount)} ج.م</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
+              )}
 
-            <Button
-              onClick={processReturn}
-              disabled={Object.keys(selectedItems).length === 0 || !reason.trim()}
-              className="w-full cafe-gradient text-primary-foreground"
-            >
-              <Check size={18} className="ml-2" />
-              {returnType === 'return' ? 'تأكيد المرتجع' : 'تأكيد البدل'}
-            </Button>
+              {/* Reason */}
+              <Textarea
+                placeholder="سبب المرتجع أو البدل..."
+                value={reason}
+                onChange={e => setReason(e.target.value)}
+                rows={2}
+              />
+
+              {/* Summary */}
+              {Object.keys(selectedItems).length > 0 && (
+                <div className="bg-secondary rounded-xl p-3 space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">قيمة المرتجع</span>
+                    <span className="font-bold text-foreground">{returnTotal} ج.م</span>
+                  </div>
+                  {returnType === 'exchange' && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">قيمة البدل</span>
+                        <span className="font-bold text-accent">{exchangeTotal} ج.م</span>
+                      </div>
+                      <div className="flex justify-between border-t border-border pt-1">
+                        <span className="font-medium text-foreground">{refundAmount >= 0 ? 'مسترد للعميل' : 'مطلوب من العميل'}</span>
+                        <span className="font-bold text-destructive">{Math.abs(refundAmount)} ج.م</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              <Button
+                onClick={processReturn}
+                disabled={Object.keys(selectedItems).length === 0 || !reason.trim()}
+                className="w-full cafe-gradient text-primary-foreground"
+              >
+                <Check size={18} className="ml-2" />
+                {returnType === 'return' ? 'تأكيد المرتجع' : 'تأكيد البدل'}
+              </Button>
+            </ScrollableList>
           </div>
         </DialogContent>
       </Dialog>
