@@ -12,17 +12,27 @@ import { Sale, SaleItem, ReturnRecord } from '@/lib/types';
 import { toast } from 'sonner';
 import PasswordConfirmDialog from '@/components/PasswordConfirmDialog';
 
+interface AvailableProduct {
+  productId: string;
+  productName: string;
+  unitPrice: number;
+  totalSold: number;
+  totalReturned: number;
+  remaining: number;
+  // Track which sales have remaining qty for this product
+  salesBreakdown: { saleId: string; remaining: number }[];
+}
+
 const Returns = () => {
   const [, forceUpdate] = useState(0);
   const [showDialog, setShowDialog] = useState(false);
   const [returnType, setReturnType] = useState<'return' | 'exchange'>('return');
-  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [selectedItems, setSelectedItems] = useState<Record<string, number>>({});
   const [exchangeItems, setExchangeItems] = useState<SaleItem[]>([]);
   const [reason, setReason] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDate, setFilterDate] = useState('');
-  const [saleSearch, setSaleSearch] = useState('');
+  const [productSearch, setProductSearch] = useState('');
   const [pendingDeleteReturn, setPendingDeleteReturn] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'returns' | 'log'>('returns');
   const returns = getReturns();
@@ -30,6 +40,77 @@ const Returns = () => {
   const user = getCurrentUser();
   const inventory = getInventory();
   const products = getProducts();
+
+  // Build available products list (aggregated across all sales)
+  const availableProducts = useMemo(() => {
+    const productMap: Record<string, AvailableProduct> = {};
+
+    // Aggregate sold quantities per product
+    sales.forEach(sale => {
+      sale.items.forEach(item => {
+        if (!productMap[item.productId]) {
+          productMap[item.productId] = {
+            productId: item.productId,
+            productName: item.productName,
+            unitPrice: item.unitPrice,
+            totalSold: 0,
+            totalReturned: 0,
+            remaining: 0,
+            salesBreakdown: [],
+          };
+        }
+        productMap[item.productId].totalSold += item.quantity;
+        // Track per-sale breakdown
+        const existing = productMap[item.productId].salesBreakdown.find(s => s.saleId === sale.id);
+        if (existing) {
+          existing.remaining += item.quantity;
+        } else {
+          productMap[item.productId].salesBreakdown.push({ saleId: sale.id, remaining: item.quantity });
+        }
+      });
+    });
+
+    // Subtract returned quantities
+    returns.forEach(r => {
+      r.items.forEach(item => {
+        if (productMap[item.productId]) {
+          productMap[item.productId].totalReturned += item.quantity;
+          // Subtract from sales breakdown (oldest first)
+          let remaining = item.quantity;
+          for (const sb of productMap[item.productId].salesBreakdown) {
+            if (remaining <= 0) break;
+            if (sb.saleId === r.saleId) {
+              const deduct = Math.min(remaining, sb.remaining);
+              sb.remaining -= deduct;
+              remaining -= deduct;
+            }
+          }
+          // If couldn't match by saleId, deduct from any available
+          if (remaining > 0) {
+            for (const sb of productMap[item.productId].salesBreakdown) {
+              if (remaining <= 0) break;
+              const deduct = Math.min(remaining, sb.remaining);
+              sb.remaining -= deduct;
+              remaining -= deduct;
+            }
+          }
+        }
+      });
+    });
+
+    // Calculate remaining
+    Object.values(productMap).forEach(p => {
+      p.remaining = p.totalSold - p.totalReturned;
+    });
+
+    return Object.values(productMap).filter(p => p.remaining > 0);
+  }, [sales, returns]);
+
+  // Filter available products by search
+  const filteredProducts = useMemo(() => {
+    if (!productSearch) return availableProducts;
+    return availableProducts.filter(p => p.productName.includes(productSearch));
+  }, [availableProducts, productSearch]);
 
   // All sellable items for exchange
   const sellableItems = useMemo(() => {
@@ -48,15 +129,6 @@ const Returns = () => {
       })
       .sort((a, b) => new Date(b.date + ' ' + b.time).getTime() - new Date(a.date + ' ' + a.time).getTime());
   }, [returns, searchTerm, filterDate]);
-
-  const filteredSales = useMemo(() => {
-    if (!saleSearch) return sales.slice(-20).reverse();
-    return sales.filter(s =>
-      s.id.includes(saleSearch) ||
-      s.workerName.includes(saleSearch) ||
-      s.items.some(i => i.productName.includes(saleSearch))
-    ).reverse();
-  }, [sales, saleSearch]);
 
   const toggleItem = (productId: string, maxQty: number) => {
     setSelectedItems(prev => {
@@ -103,12 +175,11 @@ const Returns = () => {
   };
 
   const returnTotal = useMemo(() => {
-    if (!selectedSale) return 0;
     return Object.entries(selectedItems).reduce((sum, [productId, qty]) => {
-      const item = selectedSale.items.find(i => i.productId === productId);
-      return sum + (item ? item.unitPrice * qty : 0);
+      const product = availableProducts.find(p => p.productId === productId);
+      return sum + (product ? product.unitPrice * qty : 0);
     }, 0);
-  }, [selectedItems, selectedSale]);
+  }, [selectedItems, availableProducts]);
 
   const exchangeTotal = exchangeItems.reduce((sum, i) => sum + i.total, 0);
   const refundAmount = returnType === 'exchange' ? returnTotal - exchangeTotal : returnTotal;
@@ -116,14 +187,12 @@ const Returns = () => {
   const restoreInventory = (items: SaleItem[]) => {
     let updatedInventory = [...inventory];
     items.forEach(cartItem => {
-      // Check if it's a direct inventory item
       if (cartItem.productId.startsWith('inv_')) {
         const invId = cartItem.productId.replace('inv_', '');
         updatedInventory = updatedInventory.map(inv =>
           inv.id === invId ? { ...inv, quantity: inv.quantity + cartItem.quantity } : inv
         );
       } else if (cartItem.productId.startsWith('product_')) {
-        // Restore ingredients
         const prodId = cartItem.productId.replace('product_', '');
         const product = products.find(p => p.id === prodId);
         if (product?.ingredients) {
@@ -141,23 +210,47 @@ const Returns = () => {
   };
 
   const processReturn = () => {
-    if (!selectedSale || !user || Object.keys(selectedItems).length === 0) return;
+    if (!user || Object.keys(selectedItems).length === 0) return;
     if (!reason.trim()) {
       toast.error('يرجى إدخال سبب المرتجع');
       return;
     }
 
-    const returnedItems: SaleItem[] = Object.entries(selectedItems).map(([productId, qty]) => {
-      const item = selectedSale.items.find(i => i.productId === productId)!;
-      return { ...item, quantity: qty, total: qty * item.unitPrice };
+    // For each selected product, find the best matching sale (oldest with remaining qty)
+    // Group returns by saleId
+    const returnsBySale: Record<string, SaleItem[]> = {};
+
+    Object.entries(selectedItems).forEach(([productId, qty]) => {
+      const product = availableProducts.find(p => p.productId === productId);
+      if (!product) return;
+
+      let remaining = qty;
+      for (const sb of product.salesBreakdown) {
+        if (remaining <= 0) break;
+        if (sb.remaining <= 0) continue;
+        const take = Math.min(remaining, sb.remaining);
+        if (!returnsBySale[sb.saleId]) returnsBySale[sb.saleId] = [];
+        returnsBySale[sb.saleId].push({
+          productId,
+          productName: product.productName,
+          quantity: take,
+          unitPrice: product.unitPrice,
+          total: take * product.unitPrice,
+        });
+        remaining -= take;
+      }
     });
 
     const now = new Date();
+    // Create a return record per sale (or group them under a single record with the first sale)
+    const allReturnedItems: SaleItem[] = Object.values(returnsBySale).flat();
+    const firstSaleId = Object.keys(returnsBySale)[0] || 'direct';
+
     const record: ReturnRecord = {
       id: Date.now().toString(),
-      saleId: selectedSale.id,
+      saleId: firstSaleId,
       type: returnType,
-      items: returnedItems,
+      items: allReturnedItems,
       exchangeItems: returnType === 'exchange' ? exchangeItems : undefined,
       refundAmount: Math.max(0, refundAmount),
       reason,
@@ -167,9 +260,7 @@ const Returns = () => {
       time: now.toLocaleTimeString('ar-EG'),
     };
 
-    // Restore returned items to inventory
-    restoreInventory(returnedItems);
-
+    restoreInventory(allReturnedItems);
     addReturn(record);
     toast.success(returnType === 'return' ? 'تم تسجيل المرتجع بنجاح' : 'تم تسجيل البدل بنجاح');
     resetDialog();
@@ -177,18 +268,16 @@ const Returns = () => {
 
   const resetDialog = () => {
     setShowDialog(false);
-    setSelectedSale(null);
     setSelectedItems({});
     setExchangeItems([]);
     setReason('');
     setReturnType('return');
-    setSaleSearch('');
+    setProductSearch('');
   };
 
   const buildReturnText = (r: ReturnRecord) => {
     let text = `إيصال ${r.type === 'return' ? 'مرتجع' : 'بدل'} - بن العميد\n`;
     text += `التاريخ: ${r.date} - ${r.time}\n`;
-    text += `رقم الفاتورة: #${r.saleId}\n`;
     text += `بواسطة: ${r.workerName}\n`;
     text += `────────────\n`;
     text += `الأصناف المرتجعة:\n`;
@@ -226,7 +315,7 @@ const Returns = () => {
     @media print{@page{margin:10mm;size:80mm auto}}</style></head><body>
     <div class="header"><h1>بن العميد</h1>
     <span class="badge ${r.type === 'return' ? 'return' : 'exchange'}">${r.type === 'return' ? 'مرتجع' : 'بدل'}</span>
-    <p style="font-size:12px;color:#666;margin:8px 0 0">${r.date} - ${r.time}<br/>فاتورة #${r.saleId} | ${r.workerName}</p></div>
+    <p style="font-size:12px;color:#666;margin:8px 0 0">${r.date} - ${r.time}<br/>${r.workerName}</p></div>
     <p class="section">الأصناف المرتجعة:</p>
     ${r.items.map(i => `<div class="line"><span>${i.productName} x${i.quantity}</span><span>${i.total} ج.م</span></div>`).join('')}
     ${r.type === 'exchange' && r.exchangeItems?.length ? `<p class="section">أصناف البدل:</p>${r.exchangeItems.map(i => `<div class="line"><span>${i.productName} x${i.quantity}</span><span>${i.total} ج.م</span></div>`).join('')}` : ''}
@@ -299,8 +388,6 @@ const Returns = () => {
       ) : (
       <>
       {/* Returns List */}
-
-      {/* Returns Log */}
       {filteredReturns.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <RotateCcw size={48} className="mx-auto mb-4 opacity-30" />
@@ -322,7 +409,6 @@ const Returns = () => {
                   }`}>
                     {r.type === 'return' ? 'مرتجع' : 'بدل'}
                   </span>
-                  <span className="text-xs text-muted-foreground">#{r.saleId}</span>
                 </div>
                 <div className="text-left text-xs text-muted-foreground">
                   <p>{r.date}</p>
@@ -422,219 +508,139 @@ const Returns = () => {
               </button>
             </div>
 
-            {/* Sale Selection */}
-            {!selectedSale ? (
-              <div className="space-y-3">
-                <label className="text-sm font-medium text-foreground">اختر الفاتورة</label>
-                <Input
-                  placeholder="بحث برقم الفاتورة أو اسم العامل..."
-                  value={saleSearch}
-                  onChange={e => setSaleSearch(e.target.value)}
-                />
-                <div className="max-h-48 overflow-y-auto space-y-2">
-                  {filteredSales.map(sale => {
-                    // Calculate remaining returnable qty per item
-                    const saleReturns = returns.filter(r => r.saleId === sale.id);
-                    const returnedQtyMap: Record<string, number> = {};
-                    saleReturns.forEach(r => r.items.forEach(i => {
-                      returnedQtyMap[i.productId] = (returnedQtyMap[i.productId] || 0) + i.quantity;
-                    }));
-                    const allReturned = sale.items.every(i => (returnedQtyMap[i.productId] || 0) >= i.quantity);
+            {/* Product Selection - Item based */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-foreground">اختر المنتجات للإرجاع</label>
+              <Input
+                placeholder="بحث بالمنتج..."
+                value={productSearch}
+                onChange={e => setProductSearch(e.target.value)}
+              />
+              <div className="max-h-60 overflow-y-auto space-y-2">
+                {filteredProducts.length === 0 ? (
+                  <p className="text-center text-sm text-muted-foreground py-4">لا توجد منتجات قابلة للإرجاع</p>
+                ) : (
+                  filteredProducts.map(product => {
+                    const qty = selectedItems[product.productId] || 0;
                     return (
-                      <button
-                        key={sale.id}
-                        onClick={() => !allReturned && setSelectedSale(sale)}
-                        disabled={allReturned}
-                        className={`w-full text-right rounded-xl p-3 transition-colors ${
-                          allReturned
-                            ? 'bg-muted/50 opacity-50 cursor-not-allowed border border-muted'
-                            : 'bg-secondary hover:bg-accent/10'
+                      <div
+                        key={product.productId}
+                        className={`flex items-center justify-between rounded-xl p-3 transition-all ${
+                          qty > 0 ? 'bg-destructive/10 ring-1 ring-destructive/30' : 'bg-secondary'
                         }`}
                       >
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">#{sale.id}</span>
-                            {allReturned && (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-destructive/15 text-destructive">تم الإرجاع بالكامل</span>
-                            )}
-                          </div>
-                          <span className="font-bold text-sm text-foreground">{sale.total} ج.م</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
-                          <p>{sale.date} - {sale.workerName}</p>
-                          {sale.items.map(item => {
-                            const returned = returnedQtyMap[item.productId] || 0;
-                            const fullyReturned = returned >= item.quantity;
-                            return (
-                              <span key={item.productId} className={`inline-block ml-2 ${fullyReturned ? 'line-through opacity-50' : ''}`}>
-                                {item.productName} x{item.quantity}{returned > 0 && !fullyReturned ? ` (مرتجع: ${returned})` : ''}
-                                {fullyReturned ? ' ✓' : ''}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              <>
-                {/* Selected Sale Info */}
-                <div className="bg-secondary rounded-xl p-3">
-                  <div className="flex justify-between items-center">
-                    <Button variant="ghost" size="sm" onClick={() => { setSelectedSale(null); setSelectedItems({}); }}>
-                      تغيير
-                    </Button>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-foreground">فاتورة #{selectedSale.id}</p>
-                      <p className="text-xs text-muted-foreground">{selectedSale.date} - {selectedSale.total} ج.م</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Items to return */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">اختر الأصناف للإرجاع</label>
-                  {(() => {
-                    // Calculate already returned quantities for this sale
-                    const saleReturns = returns.filter(r => r.saleId === selectedSale.id);
-                    const returnedQtyMap: Record<string, number> = {};
-                    saleReturns.forEach(r => r.items.forEach(i => {
-                      returnedQtyMap[i.productId] = (returnedQtyMap[i.productId] || 0) + i.quantity;
-                    }));
-                    return selectedSale.items.map(item => {
-                      const alreadyReturned = returnedQtyMap[item.productId] || 0;
-                      const remainingQty = item.quantity - alreadyReturned;
-                      const qty = selectedItems[item.productId] || 0;
-                      if (remainingQty <= 0) {
-                        return (
-                          <div key={item.productId} className="flex items-center justify-between rounded-xl p-3 bg-muted/50 opacity-50">
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-destructive/15 text-destructive">تم إرجاعه</span>
-                            <div className="text-right flex-1 mr-3">
-                              <p className="text-sm font-medium text-foreground line-through">{item.productName}</p>
-                              <p className="text-xs text-muted-foreground">x{item.quantity} - {item.unitPrice} ج.م/وحدة</p>
-                            </div>
-                          </div>
-                        );
-                      }
-                      return (
-                        <div key={item.productId} className={`flex items-center justify-between rounded-xl p-3 transition-all ${
-                          qty > 0 ? 'bg-destructive/10 ring-1 ring-destructive/30' : 'bg-secondary'
-                        }`}>
-                          <div className="flex items-center gap-2">
-                            {qty > 0 ? (
-                              <>
-                                <button onClick={() => decrementItem(item.productId)} className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center">
-                                  <Minus size={14} />
-                                </button>
-                                <span className="w-6 text-center font-bold text-sm">{qty}</span>
-                                <button
-                                  onClick={() => toggleItem(item.productId, remainingQty)}
-                                  className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center"
-                                  disabled={qty >= remainingQty}
-                                >
-                                  <Plus size={14} />
-                                </button>
-                              </>
-                            ) : (
-                              <button onClick={() => toggleItem(item.productId, remainingQty)} className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center">
-                                <Plus size={14} />
-                              </button>
-                            )}
-                          </div>
-                          <div className="text-right flex-1 mr-3">
-                            <p className="text-sm font-medium text-foreground">{item.productName}</p>
-                            <p className="text-xs text-muted-foreground">
-                              متبقي: {remainingQty} من {item.quantity} - {item.unitPrice} ج.م/وحدة
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
-
-                {/* Exchange items */}
-                {returnType === 'exchange' && (
-                  <div className="space-y-2 border-t border-border pt-3">
-                    <label className="text-sm font-medium text-foreground">أصناف البدل</label>
-                    <Select onValueChange={addExchangeItem}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="اختر صنف للبدل..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {sellableItems.map(item => (
-                          <SelectItem key={item.id} value={item.id}>
-                            {item.name} - {item.sellPrice} ج.م
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {exchangeItems.length > 0 && (
-                      <div className="space-y-1">
-                        {exchangeItems.map(item => (
-                          <div key={item.productId} className="flex items-center justify-between bg-accent/10 rounded-xl p-3">
-                            <div className="flex items-center gap-2">
-                              <button onClick={() => removeExchangeItem(item.productId)} className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center">
+                        <div className="flex items-center gap-2">
+                          {qty > 0 ? (
+                            <>
+                              <button onClick={() => decrementItem(product.productId)} className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center">
                                 <Minus size={14} />
                               </button>
-                              <span className="w-6 text-center font-bold text-sm">{item.quantity}</span>
-                              <button onClick={() => addExchangeItem(item.productId)} className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center">
+                              <span className="w-6 text-center font-bold text-sm">{qty}</span>
+                              <button
+                                onClick={() => toggleItem(product.productId, product.remaining)}
+                                className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center"
+                                disabled={qty >= product.remaining}
+                              >
                                 <Plus size={14} />
                               </button>
-                            </div>
-                            <div className="text-right flex-1 mr-3">
-                              <p className="text-sm font-medium text-foreground">{item.productName}</p>
-                              <p className="text-xs text-accent">{item.total} ج.م</p>
-                            </div>
-                          </div>
-                        ))}
+                            </>
+                          ) : (
+                            <button onClick={() => toggleItem(product.productId, product.remaining)} className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center">
+                              <Plus size={14} />
+                            </button>
+                          )}
+                        </div>
+                        <div className="text-right flex-1 mr-3">
+                          <p className="text-sm font-medium text-foreground">{product.productName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            متبقي: {product.remaining} - {product.unitPrice} ج.م/وحدة
+                          </p>
+                        </div>
                       </div>
-                    )}
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Exchange items */}
+            {returnType === 'exchange' && (
+              <div className="space-y-2 border-t border-border pt-3">
+                <label className="text-sm font-medium text-foreground">أصناف البدل</label>
+                <Select onValueChange={addExchangeItem}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر صنف للبدل..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sellableItems.map(item => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.name} - {item.sellPrice} ج.م
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {exchangeItems.length > 0 && (
+                  <div className="space-y-1">
+                    {exchangeItems.map(item => (
+                      <div key={item.productId} className="flex items-center justify-between bg-accent/10 rounded-xl p-3">
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => removeExchangeItem(item.productId)} className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center">
+                            <Minus size={14} />
+                          </button>
+                          <span className="w-6 text-center font-bold text-sm">{item.quantity}</span>
+                          <button onClick={() => addExchangeItem(item.productId)} className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center">
+                            <Plus size={14} />
+                          </button>
+                        </div>
+                        <div className="text-right flex-1 mr-3">
+                          <p className="text-sm font-medium text-foreground">{item.productName}</p>
+                          <p className="text-xs text-accent">{item.total} ج.م</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
-
-                {/* Reason */}
-                <Textarea
-                  placeholder="سبب المرتجع أو البدل..."
-                  value={reason}
-                  onChange={e => setReason(e.target.value)}
-                  rows={2}
-                />
-
-                {/* Summary */}
-                {Object.keys(selectedItems).length > 0 && (
-                  <div className="bg-secondary rounded-xl p-3 space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">قيمة المرتجع</span>
-                      <span className="font-bold text-foreground">{returnTotal} ج.م</span>
-                    </div>
-                    {returnType === 'exchange' && (
-                      <>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">قيمة البدل</span>
-                          <span className="font-bold text-accent">{exchangeTotal} ج.م</span>
-                        </div>
-                        <div className="flex justify-between border-t border-border pt-1">
-                          <span className="font-medium text-foreground">{refundAmount >= 0 ? 'مسترد للعميل' : 'مطلوب من العميل'}</span>
-                          <span className="font-bold text-destructive">{Math.abs(refundAmount)} ج.م</span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-
-                <Button
-                  onClick={processReturn}
-                  disabled={Object.keys(selectedItems).length === 0 || !reason.trim()}
-                  className="w-full cafe-gradient text-primary-foreground"
-                >
-                  <Check size={18} className="ml-2" />
-                  {returnType === 'return' ? 'تأكيد المرتجع' : 'تأكيد البدل'}
-                </Button>
-              </>
+              </div>
             )}
+
+            {/* Reason */}
+            <Textarea
+              placeholder="سبب المرتجع أو البدل..."
+              value={reason}
+              onChange={e => setReason(e.target.value)}
+              rows={2}
+            />
+
+            {/* Summary */}
+            {Object.keys(selectedItems).length > 0 && (
+              <div className="bg-secondary rounded-xl p-3 space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">قيمة المرتجع</span>
+                  <span className="font-bold text-foreground">{returnTotal} ج.م</span>
+                </div>
+                {returnType === 'exchange' && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">قيمة البدل</span>
+                      <span className="font-bold text-accent">{exchangeTotal} ج.م</span>
+                    </div>
+                    <div className="flex justify-between border-t border-border pt-1">
+                      <span className="font-medium text-foreground">{refundAmount >= 0 ? 'مسترد للعميل' : 'مطلوب من العميل'}</span>
+                      <span className="font-bold text-destructive">{Math.abs(refundAmount)} ج.م</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            <Button
+              onClick={processReturn}
+              disabled={Object.keys(selectedItems).length === 0 || !reason.trim()}
+              className="w-full cafe-gradient text-primary-foreground"
+            >
+              <Check size={18} className="ml-2" />
+              {returnType === 'return' ? 'تأكيد المرتجع' : 'تأكيد البدل'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -703,7 +709,6 @@ const ReturnsLogView = ({ searchTerm, filterDate }: { searchTerm: string; filter
               }`}>
                 {entry.returnRecord.type === 'return' ? 'مرتجع' : 'بدل'}
               </span>
-              <span className="text-xs text-muted-foreground">#{entry.returnRecord.saleId}</span>
             </div>
             <div className="text-left text-xs text-muted-foreground">
               <p>{entry.actionDate}</p>
