@@ -27,6 +27,7 @@ interface AvailableProduct {
 
 const Returns = () => {
   const [showDialog, setShowDialog] = useState(false);
+  const [showLogDialog, setShowLogDialog] = useState(false);
   const [returnType, setReturnType] = useState<'return' | 'exchange'>('return');
   const [selectedItems, setSelectedItems] = useState<Record<string, number>>({});
   const [exchangeItems, setExchangeItems] = useState<SaleItem[]>([]);
@@ -270,10 +271,18 @@ const Returns = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">المرتجعات والبدل</h1>
-        <Button onClick={() => setShowDialog(true)} className="cafe-gradient text-primary-foreground">
-          <RotateCcw size={18} className="ml-2" />
-          مرتجع / بدل جديد
-        </Button>
+        <div className="flex items-center gap-2">
+          {user?.role === 'admin' && (
+            <Button variant="outline" onClick={() => setShowLogDialog(true)}>
+              <ClipboardList size={18} className="ml-2" />
+              سجل المرتجعات
+            </Button>
+          )}
+          <Button onClick={() => setShowDialog(true)} className="cafe-gradient text-primary-foreground">
+            <RotateCcw size={18} className="ml-2" />
+            مرتجع / بدل جديد
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -472,6 +481,94 @@ const Returns = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Full Returns Log Dialog - Admin Only */}
+      <Dialog open={showLogDialog} onOpenChange={setShowLogDialog}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardList size={20} />
+              سجل المرتجعات الكامل
+            </DialogTitle>
+          </DialogHeader>
+          <FullReturnsLog />
+        </DialogContent>
+      </Dialog>
+
+    </div>
+  );
+};
+
+// Full Returns Log - shows ALL log entries (created + deleted) for admin
+const FullReturnsLog = () => {
+  const log = getReturnsLog();
+
+  const sortedLog = useMemo(() => {
+    return [...log].sort((a, b) => new Date(b.actionDate + ' ' + b.actionTime).getTime() - new Date(a.actionDate + ' ' + a.actionTime).getTime());
+  }, [log]);
+
+  if (sortedLog.length === 0) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        <ClipboardList size={40} className="mx-auto mb-3 opacity-30" />
+        <p className="text-sm">لا توجد سجلات بعد</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {sortedLog.map(entry => (
+        <motion.div
+          key={entry.id}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`rounded-2xl p-4 space-y-2 border-2 ${
+            entry.action === 'deleted' ? 'border-destructive/30 bg-destructive/5' : 'border-muted bg-card'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                entry.action === 'created' ? 'bg-green-500/15 text-green-600' : 'bg-destructive/15 text-destructive'
+              }`}>
+                {entry.action === 'created' ? 'تم الإنشاء' : 'تم الحذف'}
+              </span>
+              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                entry.returnRecord.type === 'return' ? 'bg-destructive/15 text-destructive' : 'bg-accent/15 text-accent'
+              }`}>
+                {entry.returnRecord.type === 'return' ? 'مرتجع' : 'بدل'}
+              </span>
+            </div>
+            <div className="text-left text-xs text-muted-foreground">
+              <p>{entry.actionDate}</p>
+              <p>{entry.actionTime}</p>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">الأصناف:</p>
+            {entry.returnRecord.items.map((item, i) => (
+              <div key={i} className="flex justify-between text-sm">
+                <span className="text-foreground">{item.productName} x{item.quantity}</span>
+                <span className="font-medium text-foreground">{item.total} ج.م</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex justify-between items-center border-t border-border pt-2 text-xs text-muted-foreground">
+            <div>
+              <p>السبب: {entry.returnRecord.reason}</p>
+              <p>بواسطة: {entry.returnRecord.workerName}</p>
+            </div>
+            <div className="text-left">
+              <p>العملية بواسطة: <span className="font-bold text-foreground">{entry.actionBy}</span></p>
+              {entry.returnRecord.refundAmount > 0 && (
+                <span className="font-bold text-destructive">مسترد: {entry.returnRecord.refundAmount} ج.م</span>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      ))}
     </div>
   );
 };
