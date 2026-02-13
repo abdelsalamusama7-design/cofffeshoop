@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import ScrollableList from '@/components/ScrollableList';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Lock, Clock, ShoppingCart, Share2, Mail, FileText, MessageCircle, RotateCcw, Trash2, Package } from 'lucide-react';
@@ -350,7 +351,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
             {/* Two-column horizontal layout */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 flex-1 overflow-hidden">
               {/* Right Column - Summary & Sales by Product */}
-              <div className="flex flex-col gap-2 overflow-auto max-h-[60vh] pl-2">
+              <ScrollableList maxHeight="max-h-[60vh]" className="pl-2 flex flex-col gap-2">
                 {/* Summary Cards */}
                 <div className="grid grid-cols-3 gap-2">
                   <div className="bg-primary/10 rounded-xl p-3 text-center">
@@ -452,10 +453,10 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                     </div>
                   </div>
                 )}
-              </div>
+              </ScrollableList>
 
               {/* Left Column - Invoices & Returns */}
-              <div className="flex flex-col gap-2 overflow-auto max-h-[60vh] pr-2 md:border-r md:border-border">
+              <ScrollableList maxHeight="max-h-[60vh]" className="pr-2 md:border-r md:border-border flex flex-col gap-2">
                 {shiftSales.length === 0 && activeReturns.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <ShoppingCart size={32} className="mx-auto mb-2 opacity-50" />
@@ -523,7 +524,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                     })}
                   </>
                 )}
-              </div>
+              </ScrollableList>
             </div>
 
             {/* Share & Actions - Full width */}
