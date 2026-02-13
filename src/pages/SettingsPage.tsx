@@ -7,7 +7,7 @@ import { toast } from '@/hooks/use-toast';
 import { getSales, getProducts, getInventory, getWorkers, getAttendance, getExpenses, getTransactions, getCurrentUser, syncLocalStorageToCloud } from '@/lib/store';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { getLastBackupTime, getBackupStatus, createBackup, restoreLatestBackup, resetLocalSystem } from '@/lib/backupService';
+import { getLastBackupTime, getBackupStatus, createBackup, restoreLatestBackup, restoreBackupById, resetLocalSystem, listBackups, type BackupInfo } from '@/lib/backupService';
 
 type BackupFrequency = 'daily' | 'weekly' | 'monthly';
 type ShareMethod = 'pdf' | 'email' | 'whatsapp';
@@ -37,6 +37,11 @@ const SettingsPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const currentUser = getCurrentUser();
   const [isRestoring, setIsRestoring] = useState(false);
+  const [showBackupList, setShowBackupList] = useState(false);
+  const [backupList, setBackupList] = useState<BackupInfo[]>([]);
+  const [loadingBackups, setLoadingBackups] = useState(false);
+  const [selectedBackupId, setSelectedBackupId] = useState<string | null>(null);
+  const [showBackupRestoreConfirm, setShowBackupRestoreConfirm] = useState(false);
 
   const getDateRange = () => {
     const now = new Date();
@@ -462,6 +467,61 @@ const SettingsPage = () => {
             {isRestoring ? 'جاري الاستعادة...' : 'استعادة آخر نسخة'}
           </Button>
         </div>
+
+        {/* Browse all backups */}
+        <Button
+          onClick={async () => {
+            setShowBackupList(!showBackupList);
+            if (!showBackupList && backupList.length === 0) {
+              setLoadingBackups(true);
+              const list = await listBackups();
+              setBackupList(list);
+              setLoadingBackups(false);
+            }
+          }}
+          variant="outline"
+          className="w-full h-10 text-sm font-medium gap-2 border-muted-foreground/20"
+        >
+          <Clock size={16} />
+          {showBackupList ? 'إخفاء قائمة النسخ' : 'عرض كل النسخ المحفوظة'}
+        </Button>
+
+        {showBackupList && (
+          <div className="bg-secondary/30 rounded-xl p-3 space-y-2 max-h-64 overflow-y-auto">
+            {loadingBackups ? (
+              <p className="text-sm text-muted-foreground text-center py-4">جاري التحميل...</p>
+            ) : backupList.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">لا توجد نسخ احتياطية محفوظة</p>
+            ) : (
+              backupList.map((backup, index) => (
+                <div key={backup.id} className="flex items-center justify-between bg-background/60 rounded-lg p-3 border border-border/50">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">
+                      {index === 0 ? '🟢 ' : ''}نسخة #{backupList.length - index}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(backup.created_at).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}
+                    </p>
+                    <p className="text-xs text-muted-foreground/70">بواسطة: {backup.created_by}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0 text-xs gap-1 border-info/30 text-info hover:bg-info/10"
+                    disabled={isRestoring}
+                    onClick={() => {
+                      setSelectedBackupId(backup.id);
+                      setShowBackupRestoreConfirm(true);
+                    }}
+                  >
+                    <Upload size={14} />
+                    استعادة
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </motion.div>
 
       {currentUser?.role === 'admin' && (
@@ -551,6 +611,43 @@ const SettingsPage = () => {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               تصفير النظام
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Backup List Restore Confirmation */}
+      <AlertDialog open={showBackupRestoreConfirm} onOpenChange={setShowBackupRestoreConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle size={20} className="text-warning" />
+              تأكيد استعادة النسخة
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-right">
+              هل أنت متأكد إنك عايز تستعيد النسخة دي؟ ده هيستبدل كل البيانات الحالية.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!selectedBackupId) return;
+                setIsRestoring(true);
+                setShowBackupRestoreConfirm(false);
+                const ok = await restoreBackupById(selectedBackupId);
+                if (ok) {
+                  toast({ title: '✅ تم الاستعادة', description: 'جاري إعادة التحميل...' });
+                  setTimeout(() => window.location.reload(), 1500);
+                } else {
+                  toast({ title: '❌ خطأ', description: 'فشل استعادة النسخة', variant: 'destructive' });
+                }
+                setIsRestoring(false);
+                setSelectedBackupId(null);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              استعادة
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
