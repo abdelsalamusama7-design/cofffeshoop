@@ -307,7 +307,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className={`${step === 'report' ? 'max-w-4xl w-[95vw]' : 'max-w-sm'} max-h-[90vh] flex flex-col`} dir="rtl">
+      <DialogContent className={`${step === 'report' ? 'max-w-4xl w-[95vw]' : 'max-w-sm'} max-h-[90vh] flex flex-col overflow-hidden`} dir="rtl">
         {step === 'password' && (
           <>
             <DialogHeader>
@@ -349,9 +349,9 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
             </DialogHeader>
 
             {/* Two-column horizontal layout */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 flex-1 overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mt-2 flex-1 overflow-auto">
               {/* Right Column - Summary & Sales by Product */}
-              <ScrollableList maxHeight="max-h-[60vh]" className="pl-2 flex flex-col gap-2">
+              <div className="flex flex-col gap-2 md:overflow-auto md:max-h-[60vh] pl-1 md:pl-2">
                 {/* Summary Cards */}
                 <div className="grid grid-cols-3 gap-2">
                   <div className="bg-primary/10 rounded-xl p-3 text-center">
@@ -394,7 +394,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                     <p className="text-xs font-bold text-muted-foreground flex items-center gap-1 mb-2">
                       🛒 تفصيل المبيعات بالأصناف
                     </p>
-                    <div className="bg-primary/5 rounded-xl p-3 space-y-1 max-h-[25vh] overflow-auto border border-primary/10">
+                    <div className="bg-primary/5 rounded-xl p-3 space-y-1 md:max-h-[25vh] overflow-auto border border-primary/10">
                       {salesByProduct.map((item, i) => (
                         <div key={i} className="flex items-center justify-between text-xs">
                           <span className="text-foreground">{item.name} <span className="text-muted-foreground">×{item.quantity}</span></span>
@@ -416,7 +416,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                       <p className="text-xs font-bold text-muted-foreground flex items-center gap-1 mb-2">
                         <Package size={12} /> 📥 رصيد المخزون أول الشيفت
                       </p>
-                      <div className="bg-muted/30 rounded-xl p-3 space-y-1 max-h-[15vh] overflow-auto">
+                      <div className="bg-muted/30 rounded-xl p-3 space-y-1 md:max-h-[15vh] overflow-auto">
                         {inventoryStartShift.map(item => (
                           <div key={item.id} className="flex items-center justify-between text-xs">
                             <span className="text-foreground">{item.name}</span>
@@ -429,7 +429,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                       <p className="text-xs font-bold text-muted-foreground flex items-center gap-1 mb-2">
                         <Package size={12} /> 📤 رصيد المخزون آخر الشيفت
                       </p>
-                      <div className="bg-muted/30 rounded-xl p-3 space-y-1 max-h-[15vh] overflow-auto">
+                      <div className="bg-muted/30 rounded-xl p-3 space-y-1 md:max-h-[15vh] overflow-auto">
                         {inventoryEndShift.map(item => {
                           const startItem = inventoryStartShift.find(s => s.id === item.id);
                           const diff = startItem ? Math.round((item.quantity - startItem.quantity) * 1000) / 1000 : 0;
@@ -453,10 +453,10 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                     </div>
                   </div>
                 )}
-              </ScrollableList>
+              </div>
 
               {/* Left Column - Invoices & Returns */}
-              <ScrollableList maxHeight="max-h-[60vh]" className="pr-2 md:border-r md:border-border flex flex-col gap-2">
+              <div className="flex flex-col gap-2 md:overflow-auto md:max-h-[60vh] pr-1 md:pr-2 md:border-r md:border-border">
                 {shiftSales.length === 0 && activeReturns.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <ShoppingCart size={32} className="mx-auto mb-2 opacity-50" />
@@ -524,7 +524,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                     })}
                   </>
                 )}
-              </ScrollableList>
+              </div>
             </div>
 
             {/* Share & Actions - Full width */}
