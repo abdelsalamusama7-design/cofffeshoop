@@ -131,7 +131,6 @@ export async function uploadBackup(): Promise<boolean> {
 
 export async function restoreLatestBackup(): Promise<boolean> {
   try {
-    // Get the most recent backup (not 'latest' alias, actual newest)
     const { data, error } = await supabase
       .from('backups')
       .select('backup_data, created_at, id')
@@ -140,22 +139,55 @@ export async function restoreLatestBackup(): Promise<boolean> {
       .maybeSingle();
 
     if (error || !data) return false;
-
-    const backupData = data.backup_data as Record<string, any>;
-
-    // Restore to localStorage
-    DATA_KEYS.forEach(key => {
-      if (backupData[key]) {
-        localStorage.setItem(key, JSON.stringify(backupData[key]));
-      }
-    });
-
-    // Sync to cloud
-    await syncLocalStorageToCloud();
-
-    return true;
+    return await restoreFromBackupData(data.backup_data as Record<string, any>);
   } catch {
     return false;
+  }
+}
+
+export async function restoreBackupById(backupId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('backups')
+      .select('backup_data')
+      .eq('id', backupId)
+      .maybeSingle();
+
+    if (error || !data) return false;
+    return await restoreFromBackupData(data.backup_data as Record<string, any>);
+  } catch {
+    return false;
+  }
+}
+
+async function restoreFromBackupData(backupData: Record<string, any>): Promise<boolean> {
+  DATA_KEYS.forEach(key => {
+    if (backupData[key]) {
+      localStorage.setItem(key, JSON.stringify(backupData[key]));
+    }
+  });
+  await syncLocalStorageToCloud();
+  return true;
+}
+
+export interface BackupInfo {
+  id: string;
+  created_at: string;
+  created_by: string;
+}
+
+export async function listBackups(): Promise<BackupInfo[]> {
+  try {
+    const { data, error } = await supabase
+      .from('backups')
+      .select('id, created_at, created_by')
+      .neq('id', 'latest')
+      .order('created_at', { ascending: false });
+
+    if (error || !data) return [];
+    return data as BackupInfo[];
+  } catch {
+    return [];
   }
 }
 
