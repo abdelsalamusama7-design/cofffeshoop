@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import ScrollableList from '@/components/ScrollableList';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Lock, Clock, ShoppingCart, Share2, Mail, FileText, MessageCircle, RotateCcw, Trash2, Package } from 'lucide-react';
@@ -348,183 +348,211 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
               <DialogDescription>{user?.name} — {new Date().toLocaleDateString('ar-EG')}</DialogDescription>
             </DialogHeader>
 
-            {/* Two-column horizontal layout */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mt-2 flex-1 overflow-auto">
-              {/* Right Column - Summary & Sales by Product */}
-              <div className="flex flex-col gap-2 md:overflow-auto md:max-h-[60vh] pl-1 md:pl-2">
-                {/* Summary Cards */}
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="bg-primary/10 rounded-xl p-3 text-center">
-                    <p className="text-xs text-muted-foreground">الفواتير</p>
-                    <p className="text-xl font-bold text-primary">{shiftSales.length}</p>
-                  </div>
-                  <div className="bg-accent/50 rounded-xl p-3 text-center">
-                    <p className="text-xs text-muted-foreground">الأصناف</p>
-                    <p className="text-xl font-bold text-foreground">{totalItems}</p>
-                  </div>
-                  <div className="bg-primary/10 rounded-xl p-3 text-center">
-                    <p className="text-xs text-muted-foreground">المبيعات</p>
-                    <p className="text-xl font-bold text-primary">{totalAmount.toFixed(0)}</p>
-                  </div>
-                </div>
+            {/* Scroll Up Arrow */}
+            <div className="flex justify-center">
+              <button
+                onClick={() => {
+                  const el = document.getElementById('shift-report-body');
+                  el?.scrollBy({ top: -200, behavior: 'smooth' });
+                }}
+                className="w-8 h-8 flex items-center justify-center rounded-full text-primary hover:bg-primary/10 active:bg-primary/20 transition-colors"
+              >
+                <ChevronUp size={20} strokeWidth={2.5} />
+              </button>
+            </div>
 
-                {/* Returns & Discount Summary */}
-                <div className="flex flex-wrap gap-2">
-                  {totalDiscount > 0 && (
-                    <div className="bg-accent/50 rounded-xl p-2 text-center flex-1">
-                      <p className="text-xs text-muted-foreground">الخصومات: <span className="font-bold text-foreground">{totalDiscount.toFixed(2)} ج.م</span></p>
+            {/* Report Body - Scrollable */}
+            <div id="shift-report-body" className="flex-1 overflow-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                {/* Right Column - Summary & Sales by Product */}
+                <div className="flex flex-col gap-2 pl-1 md:pl-2">
+                  {/* Summary Cards */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="bg-primary/10 rounded-xl p-3 text-center">
+                      <p className="text-xs text-muted-foreground">الفواتير</p>
+                      <p className="text-xl font-bold text-primary">{shiftSales.length}</p>
                     </div>
-                  )}
-                  {activeReturns.length > 0 && (
-                    <div className="bg-destructive/10 rounded-xl p-2 text-center flex-1">
-                      <p className="text-xs text-muted-foreground">المرتجعات: <span className="font-bold text-destructive">-{totalReturnsAmount.toFixed(2)} ج.م</span></p>
+                    <div className="bg-accent/50 rounded-xl p-3 text-center">
+                      <p className="text-xs text-muted-foreground">الأصناف</p>
+                      <p className="text-xl font-bold text-foreground">{totalItems}</p>
                     </div>
-                  )}
-                </div>
+                    <div className="bg-primary/10 rounded-xl p-3 text-center">
+                      <p className="text-xs text-muted-foreground">المبيعات</p>
+                      <p className="text-xl font-bold text-primary">{totalAmount.toFixed(0)}</p>
+                    </div>
+                  </div>
 
-                {/* Net Total */}
-                <div className="bg-primary/15 rounded-xl p-3 text-center border border-primary/20">
-                  <p className="text-xs text-muted-foreground">💰 صافي المبلغ للتسليم</p>
-                  <p className="text-2xl font-bold text-primary">{netTotal.toFixed(2)} ج.م</p>
-                </div>
-
-                {/* Aggregated Sales by Product */}
-                {salesByProduct.length > 0 && (
-                  <div>
-                    <p className="text-xs font-bold text-muted-foreground flex items-center gap-1 mb-2">
-                      🛒 تفصيل المبيعات بالأصناف
-                    </p>
-                    <div className="bg-primary/5 rounded-xl p-3 space-y-1 md:max-h-[25vh] overflow-auto border border-primary/10">
-                      {salesByProduct.map((item, i) => (
-                        <div key={i} className="flex items-center justify-between text-xs">
-                          <span className="text-foreground">{item.name} <span className="text-muted-foreground">×{item.quantity}</span></span>
-                          <span className="font-bold text-primary">{item.total.toFixed(2)} ج.م</span>
-                        </div>
-                      ))}
-                      <div className="border-t border-primary/10 pt-1 mt-1 flex items-center justify-between text-xs font-bold">
-                        <span className="text-foreground">الإجمالي</span>
-                        <span className="text-primary">{totalAmount.toFixed(2)} ج.م</span>
+                  {/* Returns & Discount Summary */}
+                  <div className="flex flex-wrap gap-2">
+                    {totalDiscount > 0 && (
+                      <div className="bg-accent/50 rounded-xl p-2 text-center flex-1">
+                        <p className="text-xs text-muted-foreground">الخصومات: <span className="font-bold text-foreground">{totalDiscount.toFixed(2)} ج.م</span></p>
                       </div>
-                    </div>
+                    )}
+                    {activeReturns.length > 0 && (
+                      <div className="bg-destructive/10 rounded-xl p-2 text-center flex-1">
+                        <p className="text-xs text-muted-foreground">المرتجعات: <span className="font-bold text-destructive">-{totalReturnsAmount.toFixed(2)} ج.م</span></p>
+                      </div>
+                    )}
                   </div>
-                )}
 
-                {/* Inventory */}
-                {inventoryStartShift.length > 0 && (
-                  <div className="space-y-3">
+                  {/* Net Total */}
+                  <div className="bg-primary/15 rounded-xl p-3 text-center border border-primary/20">
+                    <p className="text-xs text-muted-foreground">💰 صافي المبلغ للتسليم</p>
+                    <p className="text-2xl font-bold text-primary">{netTotal.toFixed(2)} ج.م</p>
+                  </div>
+
+                  {/* Aggregated Sales by Product */}
+                  {salesByProduct.length > 0 && (
                     <div>
                       <p className="text-xs font-bold text-muted-foreground flex items-center gap-1 mb-2">
-                        <Package size={12} /> 📥 رصيد المخزون أول الشيفت
+                        🛒 تفصيل المبيعات بالأصناف
                       </p>
-                      <div className="bg-muted/30 rounded-xl p-3 space-y-1 md:max-h-[15vh] overflow-auto">
-                        {inventoryStartShift.map(item => (
-                          <div key={item.id} className="flex items-center justify-between text-xs">
-                            <span className="text-foreground">{item.name}</span>
-                            <span className="font-bold text-muted-foreground">{item.quantity} {item.unit}</span>
+                      <div className="bg-primary/5 rounded-xl p-3 space-y-1 overflow-auto border border-primary/10">
+                        {salesByProduct.map((item, i) => (
+                          <div key={i} className="flex items-center justify-between text-xs">
+                            <span className="text-foreground">{item.name} <span className="text-muted-foreground">×{item.quantity}</span></span>
+                            <span className="font-bold text-primary">{item.total.toFixed(2)} ج.م</span>
                           </div>
                         ))}
+                        <div className="border-t border-primary/10 pt-1 mt-1 flex items-center justify-between text-xs font-bold">
+                          <span className="text-foreground">الإجمالي</span>
+                          <span className="text-primary">{totalAmount.toFixed(2)} ج.م</span>
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-bold text-muted-foreground flex items-center gap-1 mb-2">
-                        <Package size={12} /> 📤 رصيد المخزون آخر الشيفت
-                      </p>
-                      <div className="bg-muted/30 rounded-xl p-3 space-y-1 md:max-h-[15vh] overflow-auto">
-                        {inventoryEndShift.map(item => {
-                          const startItem = inventoryStartShift.find(s => s.id === item.id);
-                          const diff = startItem ? Math.round((item.quantity - startItem.quantity) * 1000) / 1000 : 0;
-                          return (
+                  )}
+
+                  {/* Inventory */}
+                  {inventoryStartShift.length > 0 && (
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-xs font-bold text-muted-foreground flex items-center gap-1 mb-2">
+                          <Package size={12} /> 📥 رصيد المخزون أول الشيفت
+                        </p>
+                        <div className="bg-muted/30 rounded-xl p-3 space-y-1 overflow-auto">
+                          {inventoryStartShift.map(item => (
                             <div key={item.id} className="flex items-center justify-between text-xs">
                               <span className="text-foreground">{item.name}</span>
-                              <div className="flex items-center gap-2">
-                                {diff !== 0 && (
-                                  <span className={`text-[10px] ${diff < 0 ? 'text-destructive' : 'text-success'}`}>
-                                    ({diff > 0 ? '+' : ''}{diff})
-                                  </span>
-                                )}
-                                <span className={`font-bold ${item.quantity <= 5 ? 'text-destructive' : 'text-muted-foreground'}`}>
-                                  {item.quantity} {item.unit}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Left Column - Invoices & Returns */}
-              <div className="flex flex-col gap-2 md:overflow-auto md:max-h-[60vh] pr-1 md:pr-2 md:border-r md:border-border">
-                {shiftSales.length === 0 && activeReturns.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <ShoppingCart size={32} className="mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">لا توجد مبيعات في هذا الشيفت</p>
-                  </div>
-                ) : (
-                  <>
-                    {shiftSales.length > 0 && (
-                      <p className="text-xs font-bold text-muted-foreground flex items-center gap-1">
-                        <ShoppingCart size={12} /> الفواتير ({shiftSales.length})
-                      </p>
-                    )}
-                    {shiftSales.map((sale, idx) => (
-                      <div key={sale.id} className="bg-muted/50 rounded-xl p-3 space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium text-muted-foreground">🕐 {sale.time}</span>
-                          <span className="text-sm font-bold text-foreground">{sale.total.toFixed(2)} ج.م</span>
-                        </div>
-                        <div className="space-y-0.5">
-                          {sale.items.map((item, i) => (
-                            <div key={i} className="flex items-center justify-between text-xs text-muted-foreground">
-                              <span>{item.productName} × {item.quantity}</span>
-                              <span>{item.total.toFixed(2)} ج.م</span>
+                              <span className="font-bold text-muted-foreground">{item.quantity} {item.unit}</span>
                             </div>
                           ))}
                         </div>
-                        {sale.discount && sale.discount.amount > 0 && (
-                          <p className="text-xs text-muted-foreground/70">خصم {sale.discount.percent}% (-{sale.discount.amount.toFixed(2)} ج.م)</p>
-                        )}
                       </div>
-                    ))}
+                      <div>
+                        <p className="text-xs font-bold text-muted-foreground flex items-center gap-1 mb-2">
+                          <Package size={12} /> 📤 رصيد المخزون آخر الشيفت
+                        </p>
+                        <div className="bg-muted/30 rounded-xl p-3 space-y-1 overflow-auto">
+                          {inventoryEndShift.map(item => {
+                            const startItem = inventoryStartShift.find(s => s.id === item.id);
+                            const diff = startItem ? Math.round((item.quantity - startItem.quantity) * 1000) / 1000 : 0;
+                            return (
+                              <div key={item.id} className="flex items-center justify-between text-xs">
+                                <span className="text-foreground">{item.name}</span>
+                                <div className="flex items-center gap-2">
+                                  {diff !== 0 && (
+                                    <span className={`text-[10px] ${diff < 0 ? 'text-destructive' : 'text-success'}`}>
+                                      ({diff > 0 ? '+' : ''}{diff})
+                                    </span>
+                                  )}
+                                  <span className={`font-bold ${item.quantity <= 5 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                                    {item.quantity} {item.unit}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
-                    {(activeReturns.length > 0 || deletedReturns.length > 0) && (
-                      <p className="text-xs font-bold text-muted-foreground flex items-center gap-1 mt-3">
-                        <RotateCcw size={12} /> المرتجعات ({activeReturns.length})
-                      </p>
-                    )}
-                    {activeReturns.map((entry) => {
-                      const isDeleted = deletedReturnIds.has(entry.returnRecord.id);
-                      return (
-                        <div key={entry.id} className={`rounded-xl p-3 space-y-1 border ${isDeleted ? 'bg-muted/30 border-dashed border-muted-foreground/20 opacity-60' : 'bg-destructive/5 border-destructive/15'}`}>
+                {/* Left Column - Invoices & Returns */}
+                <div className="flex flex-col gap-2 pr-1 md:pr-2 md:border-r md:border-border">
+                  {shiftSales.length === 0 && activeReturns.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <ShoppingCart size={32} className="mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">لا توجد مبيعات في هذا الشيفت</p>
+                    </div>
+                  ) : (
+                    <>
+                      {shiftSales.length > 0 && (
+                        <p className="text-xs font-bold text-muted-foreground flex items-center gap-1">
+                          <ShoppingCart size={12} /> الفواتير ({shiftSales.length})
+                        </p>
+                      )}
+                      {shiftSales.map((sale, idx) => (
+                        <div key={sale.id} className="bg-muted/50 rounded-xl p-3 space-y-1">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-muted-foreground">🕐 {entry.returnRecord.time}</span>
-                            <div className="flex items-center gap-1">
-                              {isDeleted && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground flex items-center gap-0.5">
-                                  <Trash2 size={10} /> محذوف
-                                </span>
-                              )}
-                              <span className={`text-sm font-bold ${isDeleted ? 'line-through text-muted-foreground' : 'text-destructive'}`}>
-                                -{entry.returnRecord.refundAmount.toFixed(2)} ج.م
-                              </span>
-                            </div>
+                            <span className="text-xs font-medium text-muted-foreground">🕐 {sale.time}</span>
+                            <span className="text-sm font-bold text-foreground">{sale.total.toFixed(2)} ج.م</span>
                           </div>
                           <div className="space-y-0.5">
-                            {entry.returnRecord.items.map((item, i) => (
-                              <div key={i} className={`flex items-center justify-between text-xs ${isDeleted ? 'text-muted-foreground/50 line-through' : 'text-muted-foreground'}`}>
+                            {sale.items.map((item, i) => (
+                              <div key={i} className="flex items-center justify-between text-xs text-muted-foreground">
                                 <span>{item.productName} × {item.quantity}</span>
-                                <span>-{item.total.toFixed(2)} ج.م</span>
+                                <span>{item.total.toFixed(2)} ج.م</span>
                               </div>
                             ))}
                           </div>
+                          {sale.discount && sale.discount.amount > 0 && (
+                            <p className="text-xs text-muted-foreground/70">خصم {sale.discount.percent}% (-{sale.discount.amount.toFixed(2)} ج.م)</p>
+                          )}
                         </div>
-                      );
-                    })}
-                  </>
-                )}
+                      ))}
+
+                      {(activeReturns.length > 0 || deletedReturns.length > 0) && (
+                        <p className="text-xs font-bold text-muted-foreground flex items-center gap-1 mt-3">
+                          <RotateCcw size={12} /> المرتجعات ({activeReturns.length})
+                        </p>
+                      )}
+                      {activeReturns.map((entry) => {
+                        const isDeleted = deletedReturnIds.has(entry.returnRecord.id);
+                        return (
+                          <div key={entry.id} className={`rounded-xl p-3 space-y-1 border ${isDeleted ? 'bg-muted/30 border-dashed border-muted-foreground/20 opacity-60' : 'bg-destructive/5 border-destructive/15'}`}>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-medium text-muted-foreground">🕐 {entry.returnRecord.time}</span>
+                              <div className="flex items-center gap-1">
+                                {isDeleted && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground flex items-center gap-0.5">
+                                    <Trash2 size={10} /> محذوف
+                                  </span>
+                                )}
+                                <span className={`text-sm font-bold ${isDeleted ? 'line-through text-muted-foreground' : 'text-destructive'}`}>
+                                  -{entry.returnRecord.refundAmount.toFixed(2)} ج.م
+                                </span>
+                              </div>
+                            </div>
+                            <div className="space-y-0.5">
+                              {entry.returnRecord.items.map((item, i) => (
+                                <div key={i} className={`flex items-center justify-between text-xs ${isDeleted ? 'text-muted-foreground/50 line-through' : 'text-muted-foreground'}`}>
+                                  <span>{item.productName} × {item.quantity}</span>
+                                  <span>-{item.total.toFixed(2)} ج.م</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
+                </div>
               </div>
+            </div>
+
+            {/* Scroll Down Arrow */}
+            <div className="flex justify-center">
+              <button
+                onClick={() => {
+                  const el = document.getElementById('shift-report-body');
+                  el?.scrollBy({ top: 200, behavior: 'smooth' });
+                }}
+                className="w-8 h-8 flex items-center justify-center rounded-full text-primary hover:bg-primary/10 active:bg-primary/20 transition-colors"
+              >
+                <ChevronDown size={20} strokeWidth={2.5} />
+              </button>
             </div>
 
             {/* Share & Actions - Full width */}
