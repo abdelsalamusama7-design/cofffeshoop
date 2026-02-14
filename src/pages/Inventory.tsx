@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import IngredientsEditor from '@/components/IngredientsEditor';
+import ScrollableList from '@/components/ScrollableList';
 import { Ingredient } from '@/lib/types';
 
 const Inventory = () => {
@@ -148,7 +149,7 @@ const Inventory = () => {
             </div>
           )}
 
-          <div className="grid gap-3">
+          <ScrollableList maxHeight="max-h-[60vh]" className="grid gap-3">
             {inventory.map((item, i) => (
               <motion.div
                 key={item.id}
@@ -190,7 +191,7 @@ const Inventory = () => {
                 )}
               </motion.div>
             ))}
-          </div>
+          </ScrollableList>
         </TabsContent>
 
         {/* Products Tab */}
@@ -205,7 +206,7 @@ const Inventory = () => {
             </div>
           )}
 
-          <div className="grid gap-3">
+          <ScrollableList maxHeight="max-h-[60vh]" className="grid gap-3">
             {productsList.map((product, i) => (
               <motion.div
                 key={product.id}
@@ -242,11 +243,11 @@ const Inventory = () => {
                 )}
               </motion.div>
             ))}
-          </div>
+          </ScrollableList>
         </TabsContent>
       </Tabs>
       ) : (
-        <div className="grid gap-3">
+        <ScrollableList maxHeight="max-h-[60vh]" className="grid gap-3">
           {inventory.map((item, i) => (
             <motion.div
               key={item.id}
@@ -269,7 +270,7 @@ const Inventory = () => {
               </div>
             </motion.div>
           ))}
-        </div>
+        </ScrollableList>
       )}
 
       {/* Add Inventory Item Dialog */}

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import ScrollableList from '@/components/ScrollableList';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, Plus, Minus, Receipt, Share2, Printer, Coffee, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -253,32 +254,34 @@ const Sales = () => {
             <p className="text-muted-foreground text-sm text-center py-8">السلة فارغة</p>
           ) : (
             <div className="space-y-3">
-              <AnimatePresence>
-                {cart.map(item => (
-                  <motion.div
-                    key={item.productId}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    className="flex items-center justify-between bg-secondary rounded-xl p-3"
-                  >
-                    <div className="flex-1">
-                      <p className="font-medium text-sm text-foreground">{item.productName}</p>
-                      <p className="text-xs text-muted-foreground">{item.unitPrice} ج.م</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => updateQuantity(item.productId, -1)} className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center text-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors">
-                        <Minus size={14} />
-                      </button>
-                      <span className="w-6 text-center font-bold text-sm text-foreground">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.productId, 1)} className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center text-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
-                        <Plus size={14} />
-                      </button>
-                    </div>
-                    <p className="font-bold text-sm mr-3 text-foreground">{item.total} ج.م</p>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+              <ScrollableList maxHeight="max-h-60">
+                <AnimatePresence>
+                  {cart.map(item => (
+                    <motion.div
+                      key={item.productId}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      className="flex items-center justify-between bg-secondary rounded-xl p-3 mb-2"
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium text-sm text-foreground">{item.productName}</p>
+                        <p className="text-xs text-muted-foreground">{item.unitPrice} ج.م</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => updateQuantity(item.productId, -1)} className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center text-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors">
+                          <Minus size={14} />
+                        </button>
+                        <span className="w-6 text-center font-bold text-sm text-foreground">{item.quantity}</span>
+                        <button onClick={() => updateQuantity(item.productId, 1)} className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center text-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
+                          <Plus size={14} />
+                        </button>
+                      </div>
+                      <p className="font-bold text-sm mr-3 text-foreground">{item.total} ج.م</p>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </ScrollableList>
 
               <div className="border-t border-border pt-3 mt-3 space-y-3">
                 {/* Discount input */}

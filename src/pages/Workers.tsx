@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import ScrollableList from '@/components/ScrollableList';
 import { motion } from 'framer-motion';
 import { Users, Plus, Trash2, Key, Save, Mail, MessageCircle, TrendingUp, HandCoins, Gift, CircleDollarSign, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -118,7 +119,7 @@ const Workers = () => {
         </Button>
       </div>
 
-      <div className="grid gap-3">
+      <ScrollableList maxHeight="max-h-[50vh]" className="grid gap-3">
         {workersList.map((worker, i) => (
           <motion.div
             key={worker.id}
@@ -155,7 +156,7 @@ const Workers = () => {
             </div>
           </motion.div>
         ))}
-      </div>
+      </ScrollableList>
 
       {/* Salary Reports Section */}
       <SalaryReportsSection workers={workersList} transactions={transactions} />
@@ -422,7 +423,7 @@ const SalaryReportsSection = ({ workers, transactions }: { workers: Worker[]; tr
       </motion.div>
 
       {/* Per Worker Cards */}
-      <div className="grid gap-3">
+      <ScrollableList maxHeight="max-h-[50vh]" className="grid gap-3">
         {report.map((r, i) => (
           <motion.div
             key={r.worker.id}
@@ -470,7 +471,7 @@ const SalaryReportsSection = ({ workers, transactions }: { workers: Worker[]; tr
         {report.length === 0 && (
           <p className="text-center text-muted-foreground py-8">لا يوجد عمال لعرض التقرير</p>
         )}
-      </div>
+      </ScrollableList>
     </div>
   );
 };
@@ -536,7 +537,7 @@ const AdvancesSection = ({
       </div>
 
       {/* Transactions List */}
-      <div className="space-y-2">
+      <ScrollableList maxHeight="max-h-[50vh]" className="space-y-2">
         {filteredTxns.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">لا توجد سلف أو مكافآت مسجلة</p>
         ) : (
@@ -574,7 +575,7 @@ const AdvancesSection = ({
             </motion.div>
           ))
         )}
-      </div>
+      </ScrollableList>
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>

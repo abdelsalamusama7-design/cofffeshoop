@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import ScrollableList from '@/components/ScrollableList';
 import { motion } from 'framer-motion';
 import { ClipboardCheck, Plus, Calendar, Clock, Save, Share2, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -229,7 +230,7 @@ const Attendance = () => {
             <p className="text-muted-foreground">لم يتم تسجيل حضور اليوم بعد</p>
           </div>
         ) : (
-          <div className="grid gap-3">
+          <ScrollableList maxHeight="max-h-[50vh]" className="grid gap-3">
             {todayRecords.map((record, i) => (
               <motion.div
                 key={record.id}
@@ -272,14 +273,14 @@ const Attendance = () => {
                 )}
               </motion.div>
             ))}
-          </div>
+          </ScrollableList>
         )}
       </div>
 
       {/* Monthly Summary */}
       <div>
         <h2 className="font-bold text-foreground mb-3">ملخص الشهر</h2>
-        <div className="grid gap-3">
+        <ScrollableList maxHeight="max-h-[50vh]" className="grid gap-3">
           {workerSummaries.map((summary, i) => (
             <motion.div
               key={summary.worker.id}
@@ -312,7 +313,7 @@ const Attendance = () => {
               </div>
             </motion.div>
           ))}
-        </div>
+        </ScrollableList>
       </div>
 
       {/* Worker Reports Section */}
