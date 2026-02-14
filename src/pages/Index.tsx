@@ -17,7 +17,7 @@ const Dashboard = () => {
   const user = getCurrentUser();
   const inventory = getInventory();
   const returns = getReturns();
-  const [showSalesDetail, setShowSalesDetail] = useState(false);
+  const [activeStatDialog, setActiveStatDialog] = useState<'sales' | 'orders' | 'items' | 'profit' | null>(null);
   const [, forceUpdate] = useState(0);
   const [passwordAction, setPasswordAction] = useState<{ type: 'edit' | 'delete'; sale: Sale } | null>(null);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
@@ -70,11 +70,13 @@ const Dashboard = () => {
     return Object.values(map).filter(p => p.quantity > 0).sort((a, b) => b.total - a.total);
   }, [displaySales, displayReturns]);
 
+  const netProfit = todayTotal - totalCost;
+
   const stats = [
-    { label: 'مبيعات اليوم', value: `${todayTotal} ج.م`, icon: DollarSign, gradient: 'from-green-500 to-emerald-600', clickable: true },
-    { label: 'عدد الطلبات', value: displaySales.length.toString(), icon: ShoppingCart, gradient: 'from-blue-500 to-blue-600', clickable: true },
-    { label: 'الأصناف المباعة', value: todayCount.toString(), icon: TrendingUp, gradient: 'from-purple-500 to-purple-600', clickable: true },
-    ...(user?.role === 'admin' ? [{ label: 'صافي الربح', value: `${todayTotal - totalCost} ج.م`, icon: BarChart3, gradient: 'from-amber-500 to-orange-600', clickable: false }] : []),
+    { label: 'مبيعات اليوم', value: `${todayTotal} ج.م`, icon: DollarSign, gradient: 'from-green-500 to-emerald-600', dialogKey: 'sales' as const },
+    { label: 'عدد الطلبات', value: displaySales.length.toString(), icon: ShoppingCart, gradient: 'from-blue-500 to-blue-600', dialogKey: 'orders' as const },
+    { label: 'الأصناف المباعة', value: todayCount.toString(), icon: TrendingUp, gradient: 'from-purple-500 to-purple-600', dialogKey: 'items' as const },
+    ...(user?.role === 'admin' ? [{ label: 'صافي الربح', value: `${netProfit} ج.م`, icon: BarChart3, gradient: 'from-amber-500 to-orange-600', dialogKey: 'profit' as const }] : []),
   ];
 
   // Low stock items
@@ -96,8 +98,8 @@ const Dashboard = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className={`glass-card rounded-2xl p-4 ${stat.clickable ? 'cursor-pointer hover:shadow-xl active:scale-[0.98] transition-all' : ''}`}
-            onClick={() => { if (stat.clickable) setShowSalesDetail(true); }}
+            className="glass-card rounded-2xl p-4 cursor-pointer hover:shadow-xl active:scale-[0.98] transition-all"
+            onClick={() => setActiveStatDialog(stat.dialogKey)}
           >
             <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center mb-3`}>
               <stat.icon size={20} className="text-primary-foreground" />
@@ -105,7 +107,7 @@ const Dashboard = () => {
             <p className="text-2xl font-bold text-foreground">{stat.value}</p>
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted-foreground">{stat.label}</p>
-              {stat.clickable && <ChevronLeft size={14} className="text-muted-foreground" />}
+              <ChevronLeft size={14} className="text-muted-foreground" />
             </div>
           </motion.div>
         ))}
@@ -220,85 +222,167 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Sales Detail Dialog */}
-      <Dialog open={showSalesDetail} onOpenChange={setShowSalesDetail}>
+      {/* Stat Detail Dialog */}
+      <Dialog open={!!activeStatDialog} onOpenChange={(open) => { if (!open) setActiveStatDialog(null); }}>
         <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-center">تفاصيل مبيعات اليوم</DialogTitle>
+            <DialogTitle className="text-center">
+              {activeStatDialog === 'sales' && 'تفاصيل مبيعات اليوم'}
+              {activeStatDialog === 'orders' && 'تفاصيل الطلبات'}
+              {activeStatDialog === 'items' && 'الأصناف المباعة'}
+              {activeStatDialog === 'profit' && 'تفاصيل صافي الربح'}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Summary cards */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-primary/10 rounded-xl p-3 text-center">
-                <p className="text-xl font-bold text-primary">{todayTotal}</p>
-                <p className="text-[10px] text-muted-foreground">ج.م إجمالي</p>
-              </div>
-              <div className="bg-accent/10 rounded-xl p-3 text-center">
-                <p className="text-xl font-bold text-accent-foreground">{displaySales.length}</p>
-                <p className="text-[10px] text-muted-foreground">طلب</p>
-              </div>
-              <div className="bg-info/10 rounded-xl p-3 text-center">
-                <p className="text-xl font-bold text-info">{todayCount}</p>
-                <p className="text-[10px] text-muted-foreground">صنف مباع</p>
-              </div>
-            </div>
 
-            {/* Product breakdown */}
-            {productBreakdown.length > 0 && (
-              <div>
-                <h3 className="font-bold text-foreground text-sm mb-2">الأصناف المباعة</h3>
-                <div className="space-y-1.5">
-                  {productBreakdown.map((p, i) => (
-                    <div key={i} className="flex items-center justify-between bg-secondary rounded-lg p-2.5">
-                      <span className="text-sm font-medium text-foreground">{p.name}</span>
-                      <div className="flex items-center gap-3 text-sm">
-                        <span className="text-muted-foreground">{p.quantity}x</span>
-                        <span className="font-bold text-foreground">{p.total} ج.م</span>
-                      </div>
-                    </div>
-                  ))}
+            {/* === Sales Dialog === */}
+            {activeStatDialog === 'sales' && (
+              <>
+                <div className="bg-gradient-to-br from-green-500/10 to-emerald-600/10 rounded-xl p-4 text-center">
+                  <p className="text-3xl font-bold text-foreground">{todayTotal} ج.م</p>
+                  <p className="text-xs text-muted-foreground mt-1">إجمالي المبيعات بعد خصم المرتجعات</p>
                 </div>
-              </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-secondary rounded-xl p-3 text-center">
+                    <p className="text-lg font-bold text-foreground">{displaySales.reduce((s, sale) => s + sale.total, 0)} ج.م</p>
+                    <p className="text-[10px] text-muted-foreground">إجمالي قبل المرتجعات</p>
+                  </div>
+                  <div className="bg-destructive/10 rounded-xl p-3 text-center">
+                    <p className="text-lg font-bold text-destructive">-{todayReturnsTotal} ج.م</p>
+                    <p className="text-[10px] text-muted-foreground">مرتجعات</p>
+                  </div>
+                </div>
+                {displaySales.length > 0 && (
+                  <div>
+                    <h3 className="font-bold text-foreground text-sm mb-2">الطلبات</h3>
+                    <ScrollableList className="space-y-2">
+                      {displaySales.slice().reverse().map((sale) => (
+                        <div key={sale.id} className="bg-muted/30 rounded-lg p-3 text-sm">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-muted-foreground">{sale.time}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-primary">{sale.total} ج.م</span>
+                              <button onClick={() => setPasswordAction({ type: 'edit', sale })} className="w-6 h-6 rounded-md bg-muted flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"><Edit3 size={12} /></button>
+                              <button onClick={() => setPasswordAction({ type: 'delete', sale })} className="w-6 h-6 rounded-md bg-muted flex items-center justify-center text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"><Trash2 size={12} /></button>
+                            </div>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">{sale.items.map(it => `${it.productName} x${it.quantity}`).join(' • ')}</p>
+                          {sale.discount && sale.discount.percent > 0 && <p className="text-xs text-destructive mt-1">خصم {sale.discount.percent}%: -{sale.discount.amount} ج.م</p>}
+                        </div>
+                      ))}
+                    </ScrollableList>
+                  </div>
+                )}
+              </>
             )}
 
-            {/* Order by order */}
-            {displaySales.length > 0 ? (
-              <div>
-                <h3 className="font-bold text-foreground text-sm mb-2">تفاصيل الطلبات</h3>
-                <ScrollableList className="space-y-2">
-                  {displaySales.slice().reverse().map((sale) => (
-                    <div key={sale.id} className="bg-muted/30 rounded-lg p-3 text-sm">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-muted-foreground">{sale.time}</span>
+            {/* === Orders Dialog === */}
+            {activeStatDialog === 'orders' && (
+              <>
+                <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-xl p-4 text-center">
+                  <p className="text-3xl font-bold text-foreground">{displaySales.length}</p>
+                  <p className="text-xs text-muted-foreground mt-1">إجمالي عدد الطلبات اليوم</p>
+                </div>
+                {displaySales.length > 0 ? (
+                  <ScrollableList className="space-y-2">
+                    {displaySales.slice().reverse().map((sale, i) => (
+                      <div key={sale.id} className="bg-muted/30 rounded-lg p-3 text-sm">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">{displaySales.length - i}</span>
+                            <span className="text-xs text-muted-foreground">{sale.time}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-primary">{sale.total} ج.م</span>
+                            <button onClick={() => setPasswordAction({ type: 'edit', sale })} className="w-6 h-6 rounded-md bg-muted flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"><Edit3 size={12} /></button>
+                            <button onClick={() => setPasswordAction({ type: 'delete', sale })} className="w-6 h-6 rounded-md bg-muted flex items-center justify-center text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"><Trash2 size={12} /></button>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">{sale.items.map(it => `${it.productName} x${it.quantity}`).join(' • ')}</p>
+                        <p className="text-[10px] text-muted-foreground/60 mt-0.5">العامل: {sale.workerName}</p>
+                      </div>
+                    ))}
+                  </ScrollableList>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">لم تسجل طلبات اليوم بعد</p>
+                )}
+              </>
+            )}
+
+            {/* === Items Sold Dialog === */}
+            {activeStatDialog === 'items' && (
+              <>
+                <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-xl p-4 text-center">
+                  <p className="text-3xl font-bold text-foreground">{todayCount}</p>
+                  <p className="text-xs text-muted-foreground mt-1">إجمالي الأصناف المباعة اليوم</p>
+                </div>
+                {productBreakdown.length > 0 ? (
+                  <ScrollableList className="space-y-1.5">
+                    {productBreakdown.map((p, i) => (
+                      <div key={i} className="flex items-center justify-between bg-secondary rounded-lg p-3">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-primary">{sale.total} ج.م</span>
-                          <button
-                            onClick={() => setPasswordAction({ type: 'edit', sale })}
-                            className="w-6 h-6 rounded-md bg-muted flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-                          >
-                            <Edit3 size={12} />
-                          </button>
-                          <button
-                            onClick={() => setPasswordAction({ type: 'delete', sale })}
-                            className="w-6 h-6 rounded-md bg-muted flex items-center justify-center text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
-                          >
-                            <Trash2 size={12} />
-                          </button>
+                          <span className="w-6 h-6 rounded-full bg-purple-500/10 flex items-center justify-center text-[10px] font-bold text-purple-600">{i + 1}</span>
+                          <span className="text-sm font-medium text-foreground">{p.name}</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-sm">
+                          <span className="text-muted-foreground">{p.quantity}x</span>
+                          <span className="font-bold text-foreground">{p.total} ج.م</span>
                         </div>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {sale.items.map(it => `${it.productName} x${it.quantity}`).join(' • ')}
-                      </p>
-                      {sale.discount && sale.discount.percent > 0 && (
-                        <p className="text-xs text-destructive mt-1">خصم {sale.discount.percent}%: -{sale.discount.amount} ج.م</p>
-                      )}
-                    </div>
-                  ))}
-                </ScrollableList>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">لم تسجل مبيعات اليوم بعد</p>
+                    ))}
+                  </ScrollableList>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">لم تُباع أصناف اليوم بعد</p>
+                )}
+              </>
             )}
+
+            {/* === Profit Dialog (Admin only) === */}
+            {activeStatDialog === 'profit' && user?.role === 'admin' && (
+              <>
+                <div className="bg-gradient-to-br from-amber-500/10 to-orange-600/10 rounded-xl p-4 text-center">
+                  <p className="text-3xl font-bold text-foreground">{netProfit} ج.م</p>
+                  <p className="text-xs text-muted-foreground mt-1">صافي الربح اليوم</p>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-secondary rounded-xl p-3 text-center">
+                    <p className="text-lg font-bold text-foreground">{todayTotal}</p>
+                    <p className="text-[10px] text-muted-foreground">ج.م مبيعات</p>
+                  </div>
+                  <div className="bg-destructive/10 rounded-xl p-3 text-center">
+                    <p className="text-lg font-bold text-destructive">{Math.round(totalCost)}</p>
+                    <p className="text-[10px] text-muted-foreground">ج.م تكلفة</p>
+                  </div>
+                  <div className="bg-primary/10 rounded-xl p-3 text-center">
+                    <p className="text-lg font-bold text-primary">{totalCost > 0 ? Math.round((netProfit / todayTotal) * 100) || 0 : 0}%</p>
+                    <p className="text-[10px] text-muted-foreground">هامش ربح</p>
+                  </div>
+                </div>
+                {productBreakdown.length > 0 && (
+                  <div>
+                    <h3 className="font-bold text-foreground text-sm mb-2">ربح كل صنف</h3>
+                    <ScrollableList className="space-y-1.5">
+                      {productBreakdown.map((p, i) => {
+                        const product = products.find(pr => pr.name === p.name);
+                        const invItem = inventory.find(inv => inv.name === p.name);
+                        const unitCost = product ? product.costPrice : invItem ? invItem.costPerUnit : 0;
+                        const itemProfit = p.total - (unitCost * p.quantity);
+                        return (
+                          <div key={i} className="flex items-center justify-between bg-secondary rounded-lg p-3">
+                            <span className="text-sm font-medium text-foreground">{p.name}</span>
+                            <div className="flex items-center gap-3 text-sm">
+                              <span className="text-muted-foreground">{p.quantity}x</span>
+                              <span className={`font-bold ${itemProfit >= 0 ? 'text-green-600' : 'text-destructive'}`}>{Math.round(itemProfit)} ج.م</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </ScrollableList>
+                  </div>
+                )}
+              </>
+            )}
+
           </div>
         </DialogContent>
       </Dialog>
