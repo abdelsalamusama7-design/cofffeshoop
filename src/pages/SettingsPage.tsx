@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import ScrollableList from '@/components/ScrollableList';
 import { motion } from 'framer-motion';
 import { Settings, Download, Upload, Mail, MessageCircle, Calendar, Clock, CheckCircle2, ShieldCheck, AlertTriangle, RotateCcw, Circle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -487,7 +488,7 @@ const SettingsPage = () => {
         </Button>
 
         {showBackupList && (
-          <div className="bg-secondary/30 rounded-xl p-3 space-y-2 max-h-64 overflow-y-auto">
+          <ScrollableList maxHeight="max-h-64" className="bg-secondary/30 rounded-xl p-3 space-y-2">
             {loadingBackups ? (
               <p className="text-sm text-muted-foreground text-center py-4">جاري التحميل...</p>
             ) : backupList.length === 0 ? (
@@ -520,7 +521,7 @@ const SettingsPage = () => {
                 </div>
               ))
             )}
-          </div>
+          </ScrollableList>
         )}
       </motion.div>
 
