@@ -151,12 +151,14 @@ const Dashboard = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-sm text-destructive">-{ret.refundAmount} ج.م</span>
-                    <button
-                      onClick={() => setPendingDeleteReturn(ret.id)}
-                      className="w-6 h-6 rounded-md bg-muted flex items-center justify-center text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
-                    >
-                      <Trash2 size={12} />
-                    </button>
+                    {user?.role === 'admin' && (
+                      <button
+                        onClick={() => setPendingDeleteReturn(ret.id)}
+                        className="w-6 h-6 rounded-md bg-muted flex items-center justify-center text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
