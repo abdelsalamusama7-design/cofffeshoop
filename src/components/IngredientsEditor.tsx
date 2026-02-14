@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Plus, Trash2, Link } from 'lucide-react';
+import ScrollableList from '@/components/ScrollableList';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Ingredient, InventoryItem } from '@/lib/types';
@@ -154,86 +155,88 @@ const IngredientsEditor = ({ ingredients, onChange }: Props) => {
     <div className="space-y-2">
       <p className="text-sm font-medium text-foreground">المكونات والتكلفة</p>
 
-      {ingredients.map((ing, i) => {
-        const linkedItem = ing.inventoryItemId
-          ? inventoryItems.find(inv => inv.id === ing.inventoryItemId)
-          : null;
-        const subUnits = linkedItem ? getSubUnits(linkedItem.unit) : [];
-        const currentDisplayUnit = displayUnits[i] || linkedItem?.unit || '';
-        
-        return (
-          <div key={i} className="space-y-1 bg-muted/30 rounded-lg p-2">
-            <div className="flex gap-2 items-center">
-              <select
-                value={ing.inventoryItemId || ''}
-                onChange={e => handleInventorySelect(i, e.target.value)}
-                className="flex-1 rounded-lg border border-input bg-background px-2 py-1.5 text-sm text-foreground"
-              >
-                <option value="">اختر من المخزن (اختياري)</option>
-                {inventoryItems.map(inv => (
-                  <option key={inv.id} value={inv.id}>
-                    {inv.name} ({inv.quantity} {inv.unit})
-                  </option>
-                ))}
-              </select>
-              <Button variant="ghost" size="icon" onClick={() => removeIngredient(i)} className="text-destructive shrink-0">
-                <Trash2 size={14} />
-              </Button>
-            </div>
-            <div className="flex gap-2 items-center">
-              <Input
-                value={ing.name}
-                onChange={e => updateIngredient(i, { name: e.target.value })}
-                placeholder="اسم المكون"
-                className="flex-1"
-                disabled={!!ing.inventoryItemId}
-              />
-              {ing.inventoryItemId && (
-                <>
-                  <Input
-                    inputMode="decimal"
-                    value={getDisplayQty(i, ing)}
-                    onChange={e => {
-                      const val = +e.target.value.replace(/[^0-9.]/g, '');
-                      handleQtyUsedChange(i, val);
-                    }}
-                    placeholder="الكمية"
-                    className="w-20"
-                  />
-                  {subUnits.length > 1 ? (
-                    <select
-                      value={currentDisplayUnit}
-                      onChange={e => handleUnitChange(i, e.target.value)}
-                      className="w-20 rounded-lg border border-input bg-background px-1.5 py-1.5 text-xs text-foreground"
-                    >
-                      {subUnits.map(u => (
-                        <option key={u.label} value={u.label}>{u.label}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <span className="text-xs text-muted-foreground w-16 text-center">{linkedItem?.unit}</span>
-                  )}
-                </>
+      <ScrollableList maxHeight="max-h-48">
+        {ingredients.map((ing, i) => {
+          const linkedItem = ing.inventoryItemId
+            ? inventoryItems.find(inv => inv.id === ing.inventoryItemId)
+            : null;
+          const subUnits = linkedItem ? getSubUnits(linkedItem.unit) : [];
+          const currentDisplayUnit = displayUnits[i] || linkedItem?.unit || '';
+          
+          return (
+            <div key={i} className="space-y-1 bg-muted/30 rounded-lg p-2 mb-1">
+              <div className="flex gap-2 items-center">
+                <select
+                  value={ing.inventoryItemId || ''}
+                  onChange={e => handleInventorySelect(i, e.target.value)}
+                  className="flex-1 rounded-lg border border-input bg-background px-2 py-1.5 text-sm text-foreground"
+                >
+                  <option value="">اختر من المخزن (اختياري)</option>
+                  {inventoryItems.map(inv => (
+                    <option key={inv.id} value={inv.id}>
+                      {inv.name} ({inv.quantity} {inv.unit})
+                    </option>
+                  ))}
+                </select>
+                <Button variant="ghost" size="icon" onClick={() => removeIngredient(i)} className="text-destructive shrink-0">
+                  <Trash2 size={14} />
+                </Button>
+              </div>
+              <div className="flex gap-2 items-center">
+                <Input
+                  value={ing.name}
+                  onChange={e => updateIngredient(i, { name: e.target.value })}
+                  placeholder="اسم المكون"
+                  className="flex-1"
+                  disabled={!!ing.inventoryItemId}
+                />
+                {ing.inventoryItemId && (
+                  <>
+                    <Input
+                      inputMode="decimal"
+                      value={getDisplayQty(i, ing)}
+                      onChange={e => {
+                        const val = +e.target.value.replace(/[^0-9.]/g, '');
+                        handleQtyUsedChange(i, val);
+                      }}
+                      placeholder="الكمية"
+                      className="w-20"
+                    />
+                    {subUnits.length > 1 ? (
+                      <select
+                        value={currentDisplayUnit}
+                        onChange={e => handleUnitChange(i, e.target.value)}
+                        className="w-20 rounded-lg border border-input bg-background px-1.5 py-1.5 text-xs text-foreground"
+                      >
+                        {subUnits.map(u => (
+                          <option key={u.label} value={u.label}>{u.label}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="text-xs text-muted-foreground w-16 text-center">{linkedItem?.unit}</span>
+                    )}
+                  </>
+                )}
+                <Input
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={ing.cost || ''}
+                  onChange={e => updateIngredient(i, { cost: +e.target.value.replace(/[^0-9.]/g, '') })}
+                  placeholder="التكلفة"
+                  className="w-24"
+                  disabled={!!ing.inventoryItemId}
+                />
+              </div>
+              {linkedItem && (
+                <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                  <Link size={10} />
+                  مرتبط بـ {linkedItem.name} • المتاح: {linkedItem.quantity} {linkedItem.unit} • {linkedItem.costPerUnit} ج.م/{linkedItem.unit}
+                </p>
               )}
-              <Input
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={ing.cost || ''}
-                onChange={e => updateIngredient(i, { cost: +e.target.value.replace(/[^0-9.]/g, '') })}
-                placeholder="التكلفة"
-                className="w-24"
-                disabled={!!ing.inventoryItemId}
-              />
             </div>
-            {linkedItem && (
-              <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                <Link size={10} />
-                مرتبط بـ {linkedItem.name} • المتاح: {linkedItem.quantity} {linkedItem.unit} • {linkedItem.costPerUnit} ج.م/{linkedItem.unit}
-              </p>
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </ScrollableList>
 
       {/* Add new ingredient */}
       <div className="space-y-1 border border-dashed border-border rounded-lg p-2">
