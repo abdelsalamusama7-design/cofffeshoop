@@ -83,7 +83,7 @@ const Reports = () => {
     if (method === 'whatsapp') {
       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
     } else {
-      window.open(`mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(text)}`, '_blank');
+      window.open(`mailto:alameedbon1@gmail.com?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(text)}`, '_blank');
     }
   };
 
