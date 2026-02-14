@@ -36,7 +36,8 @@ const Dashboard = () => {
 
   const todayReturnsTotal = displayReturns.reduce((sum, r) => sum + r.refundAmount, 0);
   const todayTotal = displaySales.reduce((sum, s) => sum + s.total, 0) - todayReturnsTotal;
-  const todayCount = displaySales.reduce((sum, s) => sum + s.items.reduce((c, i) => c + i.quantity, 0), 0);
+  const todayReturnedCount = displayReturns.reduce((sum, r) => sum + r.items.reduce((c, i) => c + i.quantity, 0), 0);
+  const todayCount = displaySales.reduce((sum, s) => sum + s.items.reduce((c, i) => c + i.quantity, 0), 0) - todayReturnedCount;
 
   const totalCost = displaySales.reduce((sum, s) => {
     return sum + s.items.reduce((c, item) => {
@@ -47,7 +48,7 @@ const Dashboard = () => {
     }, 0);
   }, 0);
 
-  // Product breakdown for detail dialog
+  // Product breakdown for detail dialog (subtract returns)
   const productBreakdown = useMemo(() => {
     const map: Record<string, { name: string; quantity: number; total: number }> = {};
     displaySales.forEach(sale => {
@@ -57,8 +58,17 @@ const Dashboard = () => {
         map[item.productId].total += item.total;
       });
     });
-    return Object.values(map).sort((a, b) => b.total - a.total);
-  }, [displaySales]);
+    // Subtract returned items
+    displayReturns.forEach(ret => {
+      ret.items.forEach(item => {
+        if (map[item.productId]) {
+          map[item.productId].quantity -= item.quantity;
+          map[item.productId].total -= item.total;
+        }
+      });
+    });
+    return Object.values(map).filter(p => p.quantity > 0).sort((a, b) => b.total - a.total);
+  }, [displaySales, displayReturns]);
 
   const stats = [
     { label: 'مبيعات اليوم', value: `${todayTotal} ج.م`, icon: DollarSign, gradient: 'from-green-500 to-emerald-600', clickable: true },
