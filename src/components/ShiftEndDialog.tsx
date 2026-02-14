@@ -283,7 +283,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
   const shareEmail = () => {
     const text = generateReportText();
     const subject = `تقرير شيفت ${user?.name} - ${new Date().toLocaleDateString('ar-EG')}`;
-    window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`, '_blank');
+    window.open(`mailto:alameedbon1@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`, '_blank');
   };
 
   const sharePDF = () => {

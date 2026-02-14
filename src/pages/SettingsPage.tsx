@@ -184,7 +184,7 @@ const SettingsPage = () => {
       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
       toast({ title: '✅', description: 'تم فتح الواتساب' });
     } else if (method === 'email') {
-      window.open(`mailto:?subject=${encodeURIComponent(report.title)}&body=${encodeURIComponent(text)}`, '_blank');
+      window.open(`mailto:alameedbon1@gmail.com?subject=${encodeURIComponent(report.title)}&body=${encodeURIComponent(text)}`, '_blank');
       toast({ title: '✅', description: 'تم فتح البريد' });
     }
   };

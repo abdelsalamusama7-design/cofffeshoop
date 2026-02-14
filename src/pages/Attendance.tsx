@@ -55,7 +55,7 @@ const WorkerReportsSection = ({ workers, records }: { workers: { id: string; nam
     if (method === 'whatsapp') {
       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
     } else {
-      window.open(`mailto:?subject=${encodeURIComponent(`تقرير ${period} - بن العميد`)}&body=${encodeURIComponent(text)}`, '_blank');
+      window.open(`mailto:alameedbon1@gmail.com?subject=${encodeURIComponent(`تقرير ${period} - بن العميد`)}&body=${encodeURIComponent(text)}`, '_blank');
     }
   };
 

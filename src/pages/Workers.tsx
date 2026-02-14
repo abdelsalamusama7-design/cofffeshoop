@@ -381,7 +381,7 @@ const SalaryReportsSection = ({ workers, transactions }: { workers: Worker[]; tr
   };
 
   const shareViaEmail = () => {
-    window.open(`mailto:?subject=${encodeURIComponent(`تقرير المرتبات - ${periodLabel}`)}&body=${encodeURIComponent(generateReportText())}`, '_blank');
+    window.open(`mailto:alameedbon1@gmail.com?subject=${encodeURIComponent(`تقرير المرتبات - ${periodLabel}`)}&body=${encodeURIComponent(generateReportText())}`, '_blank');
   };
 
   return (
