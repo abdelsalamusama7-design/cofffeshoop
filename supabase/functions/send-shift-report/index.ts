@@ -99,7 +99,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: 'بن العميد <onboarding@resend.dev>',
-        to: ['m.samiiir21114@gmail.com'],
+        to: ['alameedbon1@gmail.com'],
         subject: `تقرير شيفت ${workerName || ''} - ${date || new Date().toLocaleDateString('ar-EG')}`,
         html: htmlBody,
       }),
