@@ -636,13 +636,15 @@ const ReturnsLogView = ({ searchTerm, filterDate }: { searchTerm: string; filter
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleDeleteClick(r.id)}
-                  className="w-8 h-8 rounded-lg bg-destructive/10 text-destructive flex items-center justify-center hover:bg-destructive/20 transition-all"
-                  title="حذف المرتجع"
-                >
-                  <Trash2 size={16} />
-                </button>
+                {getCurrentUser()?.role === 'admin' && (
+                  <button
+                    onClick={() => handleDeleteClick(r.id)}
+                    className="w-8 h-8 rounded-lg bg-destructive/10 text-destructive flex items-center justify-center hover:bg-destructive/20 transition-all"
+                    title="حذف المرتجع"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
                 <div className="text-left text-xs text-muted-foreground">
                   <p>{r.date}</p>
                   <p>{r.time}</p>
