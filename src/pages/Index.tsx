@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ShoppingCart, BarChart3, Package, TrendingUp, DollarSign, Coffee, ChevronLeft, Trash2, Edit3, X, Check, RotateCcw } from 'lucide-react';
+import { ShoppingCart, BarChart3, Package, TrendingUp, DollarSign, Coffee, ChevronLeft, Trash2, Edit3, X, Check, RotateCcw, ArrowLeftRight } from 'lucide-react';
 import { getProducts, getSales, getInventory, deleteSale, updateSale, getReturns, deleteReturn } from '@/lib/store';
 import ScrollableList from '@/components/ScrollableList';
 import { getCurrentUser } from '@/lib/store';
@@ -17,7 +17,7 @@ const Dashboard = () => {
   const user = getCurrentUser();
   const inventory = getInventory();
   const returns = getReturns();
-  const [activeStatDialog, setActiveStatDialog] = useState<'sales' | 'orders' | 'items' | 'profit' | null>(null);
+  const [activeStatDialog, setActiveStatDialog] = useState<'sales' | 'orders' | 'items' | 'profit' | 'returns' | null>(null);
   const [, forceUpdate] = useState(0);
   const [passwordAction, setPasswordAction] = useState<{ type: 'edit' | 'delete'; sale: Sale } | null>(null);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
@@ -76,6 +76,7 @@ const Dashboard = () => {
     { label: 'مبيعات اليوم', value: `${todayTotal} ج.م`, icon: DollarSign, gradient: 'from-green-500 to-emerald-600', dialogKey: 'sales' as const },
     { label: 'عدد الطلبات', value: displaySales.length.toString(), icon: ShoppingCart, gradient: 'from-blue-500 to-blue-600', dialogKey: 'orders' as const },
     { label: 'الأصناف المباعة', value: todayCount.toString(), icon: TrendingUp, gradient: 'from-purple-500 to-purple-600', dialogKey: 'items' as const },
+    { label: 'المرتجعات', value: displayReturns.length.toString(), icon: RotateCcw, gradient: 'from-red-500 to-rose-600', dialogKey: 'returns' as const },
     ...(user?.role === 'admin' ? [{ label: 'صافي الربح', value: `${netProfit} ج.م`, icon: BarChart3, gradient: 'from-amber-500 to-orange-600', dialogKey: 'profit' as const }] : []),
   ];
 
@@ -333,6 +334,66 @@ const Dashboard = () => {
                   </ScrollableList>
                 ) : (
                   <p className="text-sm text-muted-foreground text-center py-4">لم تُباع أصناف اليوم بعد</p>
+                )}
+              </>
+            )}
+
+            {/* === Returns Dialog === */}
+            {activeStatDialog === 'returns' && (
+              <>
+                <div className="bg-gradient-to-br from-red-500/10 to-rose-600/10 rounded-xl p-4 text-center">
+                  <p className="text-3xl font-bold text-foreground">{displayReturns.length}</p>
+                  <p className="text-xs text-muted-foreground mt-1">مرتجعات واستبدالات اليوم</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-destructive/10 rounded-xl p-3 text-center">
+                    <p className="text-lg font-bold text-destructive">{displayReturns.filter(r => r.type === 'return').length}</p>
+                    <p className="text-[10px] text-muted-foreground">مرتجع</p>
+                  </div>
+                  <div className="bg-amber-500/10 rounded-xl p-3 text-center">
+                    <p className="text-lg font-bold text-amber-600">{displayReturns.filter(r => r.type === 'exchange').length}</p>
+                    <p className="text-[10px] text-muted-foreground">استبدال</p>
+                  </div>
+                </div>
+                {todayReturnsTotal > 0 && (
+                  <div className="bg-destructive/10 rounded-xl p-3 text-center">
+                    <p className="text-lg font-bold text-destructive">-{todayReturnsTotal} ج.م</p>
+                    <p className="text-[10px] text-muted-foreground">إجمالي قيمة المرتجعات</p>
+                  </div>
+                )}
+                {displayReturns.length > 0 ? (
+                  <ScrollableList className="space-y-2">
+                    {displayReturns.slice().reverse().map((ret) => (
+                      <div key={ret.id} className="bg-muted/30 rounded-lg p-3 text-sm">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${ret.type === 'return' ? 'bg-destructive/15 text-destructive' : 'bg-amber-500/15 text-amber-600'}`}>
+                              {ret.type === 'return' ? 'مرتجع' : 'استبدال'}
+                            </span>
+                            <span className="text-xs text-muted-foreground">{ret.time}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm text-destructive">-{ret.refundAmount} ج.م</span>
+                            {user?.role === 'admin' && (
+                              <button
+                                onClick={() => setPendingDeleteReturn(ret.id)}
+                                className="w-6 h-6 rounded-md bg-muted flex items-center justify-center text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {ret.items.map(i => `${i.productName} x${i.quantity}`).join(' • ')}
+                        </p>
+                        {ret.reason && <p className="text-xs text-muted-foreground/70 mt-0.5">السبب: {ret.reason}</p>}
+                        <p className="text-[10px] text-muted-foreground/60 mt-0.5">العامل: {ret.workerName} • فاتورة #{ret.saleId}</p>
+                      </div>
+                    ))}
+                  </ScrollableList>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">لا توجد مرتجعات اليوم</p>
                 )}
               </>
             )}
