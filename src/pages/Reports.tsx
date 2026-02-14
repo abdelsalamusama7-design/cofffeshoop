@@ -3,11 +3,12 @@ import { motion } from 'framer-motion';
 import {
   BarChart3, Calendar, Share2, Download, TrendingUp, DollarSign,
   ShoppingCart, Users, ClipboardCheck, Wallet, Clock, ArrowUpDown, RotateCcw, ArrowLeftRight,
-  Trash2, Edit3, X, Check, History
+  Trash2, Edit3, X, Check, History, AlertTriangle, Package, Mail
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getSales, getProducts, getCurrentUser, getWorkers, getAttendance, getTransactions, getInventory, getReturns, deleteSale, updateSale, getShiftResets } from '@/lib/store';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { supabase } from '@/integrations/supabase/client';
 import ScrollableList from '@/components/ScrollableList';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
@@ -673,6 +674,132 @@ const Reports = () => {
     );
   };
 
+  // ===== Low Stock Report =====
+  const LowStockReport = () => {
+    const LOW_STOCK_THRESHOLD = 5;
+    const [sending, setSending] = useState(false);
+
+    const lowStockItems = inventory.filter(item => item.quantity <= LOW_STOCK_THRESHOLD);
+
+    const affectedProducts: { name: string; missingIngredient: string; remaining: number; unit: string }[] = [];
+    products.forEach(product => {
+      if (product.ingredients && Array.isArray(product.ingredients)) {
+        (product.ingredients as any[]).forEach(ing => {
+          const invItem = inventory.find(i => i.id === ing.inventoryItemId);
+          if (invItem && invItem.quantity <= LOW_STOCK_THRESHOLD) {
+            affectedProducts.push({
+              name: product.name,
+              missingIngredient: invItem.name,
+              remaining: invItem.quantity,
+              unit: invItem.unit,
+            });
+          }
+        });
+      }
+    });
+
+    let text = `⚠️ تقرير نقص المخزون\n`;
+    text += `التاريخ: ${today}\n────────────\n`;
+    text += `عدد الأصناف المنخفضة: ${lowStockItems.length}\n\n`;
+    if (lowStockItems.length > 0) {
+      text += `📦 أصناف منخفضة:\n`;
+      lowStockItems.forEach(item => {
+        text += `• ${item.name}: ${item.quantity} ${item.unit} ${item.quantity <= 0 ? '🔴 نفذ' : '🟡 منخفض'}\n`;
+      });
+    }
+    if (affectedProducts.length > 0) {
+      text += `\n☕ منتجات متأثرة:\n`;
+      affectedProducts.forEach(p => {
+        text += `• ${p.name} — ${p.missingIngredient} (متبقي: ${p.remaining} ${p.unit})\n`;
+      });
+    }
+
+    const sendEmailNow = async () => {
+      setSending(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('send-low-stock-report');
+        if (error) throw error;
+        toast.success('تم إرسال تقرير نقص المخزون بالإيميل 📧');
+      } catch (err) {
+        console.error(err);
+        toast.error('فشل إرسال الإيميل');
+      } finally {
+        setSending(false);
+      }
+    };
+
+    return (
+      <div className="space-y-4 mt-4">
+        <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+          <AlertTriangle size={20} className="text-destructive" />
+          أصناف قاربت على الانتهاء
+        </h3>
+
+        {lowStockItems.length === 0 && affectedProducts.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Package size={32} className="mx-auto mb-2 opacity-50" />
+            <p className="text-sm">جميع الأصناف في مستوى آمن ✅</p>
+          </div>
+        ) : (
+          <>
+            {lowStockItems.length > 0 && (
+              <div className="glass-card rounded-xl p-4">
+                <h4 className="font-bold text-foreground mb-3">📦 أصناف المخزون المنخفضة ({lowStockItems.length})</h4>
+                <div className="space-y-2">
+                  {lowStockItems.sort((a, b) => a.quantity - b.quantity).map(item => (
+                    <div key={item.id} className={`flex items-center justify-between p-3 rounded-lg ${item.quantity <= 0 ? 'bg-destructive/10 border border-destructive/30' : 'bg-warning/10 border border-warning/30'}`}>
+                      <span className="text-sm font-medium text-foreground">{item.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-sm font-bold ${item.quantity <= 0 ? 'text-destructive' : 'text-warning'}`}>
+                          {item.quantity} {item.unit}
+                        </span>
+                        <span className="text-xs">{item.quantity <= 0 ? '🔴' : '🟡'}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {affectedProducts.length > 0 && (
+              <div className="glass-card rounded-xl p-4">
+                <h4 className="font-bold text-foreground mb-3">☕ منتجات متأثرة بنقص المواد الخام</h4>
+                <div className="space-y-2">
+                  {affectedProducts.map((p, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-warning/10 border border-warning/30">
+                      <div>
+                        <span className="text-sm font-medium text-foreground">{p.name}</span>
+                        <p className="text-xs text-muted-foreground">المادة الناقصة: {p.missingIngredient}</p>
+                      </div>
+                      <span className="text-sm font-bold text-warning">{p.remaining} {p.unit}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        <Button
+          onClick={sendEmailNow}
+          disabled={sending || (lowStockItems.length === 0 && affectedProducts.length === 0)}
+          variant="outline"
+          className="w-full border-destructive/30 text-destructive hover:bg-destructive/10"
+        >
+          <Mail size={16} className="ml-2" />
+          {sending ? 'جاري الإرسال...' : 'إرسال تنبيه للإيميل الآن'}
+        </Button>
+
+        <p className="text-xs text-muted-foreground text-center">
+          📧 يتم إرسال هذا التقرير تلقائياً كل يوم الصبح لـ alameedbon1@gmail.com
+        </p>
+
+        <ShareButtons title="تقرير نقص المخزون" text={text} />
+      </div>
+    );
+  };
+
+
   if (user?.role !== 'admin') {
     return (
       <div className="space-y-6">
@@ -721,7 +848,7 @@ const Reports = () => {
 
       {/* Report tabs */}
       <Tabs defaultValue="sales" dir="rtl">
-        <TabsList className="w-full grid grid-cols-6 h-auto">
+        <TabsList className="w-full grid grid-cols-7 h-auto">
           <TabsTrigger value="sales" className="text-xs py-2 px-1">
             <ShoppingCart size={14} className="ml-1 hidden sm:inline" />
             المبيعات
@@ -742,6 +869,10 @@ const Reports = () => {
             <ClipboardCheck size={14} className="ml-1 hidden sm:inline" />
             الحضور
           </TabsTrigger>
+          <TabsTrigger value="lowstock" className="text-xs py-2 px-1">
+            <AlertTriangle size={14} className="ml-1 hidden sm:inline" />
+            نقص المخزون
+          </TabsTrigger>
           <TabsTrigger value="resets" className="text-xs py-2 px-1">
             <History size={14} className="ml-1 hidden sm:inline" />
             التصفيرات
@@ -752,6 +883,7 @@ const Reports = () => {
         <TabsContent value="returns"><ReturnsReport /></TabsContent>
         <TabsContent value="workers"><WorkerPerformanceReport /></TabsContent>
         <TabsContent value="attendance"><AttendanceReport /></TabsContent>
+        <TabsContent value="lowstock"><LowStockReport /></TabsContent>
         <TabsContent value="resets">
           <div className="space-y-3 mt-4">
             <h3 className="text-lg font-bold text-foreground flex items-center gap-2">

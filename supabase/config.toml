@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.send-shift-report]
 verify_jwt = false
+
+[functions.send-low-stock-report]
+verify_jwt = false
