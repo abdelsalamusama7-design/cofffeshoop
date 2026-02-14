@@ -295,6 +295,7 @@ const Inventory = () => {
               <option value="جرام">جرام</option>
               <option value="كجم">كجم</option>
               <option value="لتر">لتر</option>
+              <option value="ملي">ملي</option>
               <option value="علبة">علبة</option>
               <option value="كنز">كنز</option>
               <option value="كوباية">كوباية</option>
@@ -342,6 +343,7 @@ const Inventory = () => {
                 <option value="جرام">جرام</option>
                 <option value="كجم">كجم</option>
                 <option value="لتر">لتر</option>
+                <option value="ملي">ملي</option>
                 <option value="علبة">علبة</option>
                 <option value="كنز">كنز</option>
                 <option value="كوباية">كوباية</option>
