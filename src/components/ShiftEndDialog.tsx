@@ -84,10 +84,11 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
     // Add back quantities sold from inventory items (direct sell) and product ingredients
     finalSales.forEach(sale => {
       sale.items.forEach(item => {
-        // Check if it's an inventory item sold directly
-        const invItem = currentInventory.find(inv => inv.id === item.productId);
+        // Check if it's an inventory item sold directly (productId may have 'inv_' prefix)
+        const rawId = item.productId.startsWith('inv_') ? item.productId.replace('inv_', '') : item.productId;
+        const invItem = currentInventory.find(inv => inv.id === rawId);
         if (invItem) {
-          quantityChanges[item.productId] = (quantityChanges[item.productId] || 0) + item.quantity;
+          quantityChanges[rawId] = (quantityChanges[rawId] || 0) + item.quantity;
         }
         // Check if it's a product with ingredients
         const product = products.find(p => p.id === item.productId);
@@ -106,9 +107,10 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
     const deletedIds = new Set(finalReturnsLog.filter(e => e.action === 'deleted').map(e => e.returnRecord.id));
     activeReturnEntries.filter(e => !deletedIds.has(e.returnRecord.id)).forEach(entry => {
       entry.returnRecord.items.forEach(item => {
-        const invItem = currentInventory.find(inv => inv.id === item.productId);
+        const rawId = item.productId.startsWith('inv_') ? item.productId.replace('inv_', '') : item.productId;
+        const invItem = currentInventory.find(inv => inv.id === rawId);
         if (invItem) {
-          quantityChanges[item.productId] = (quantityChanges[item.productId] || 0) - item.quantity;
+          quantityChanges[rawId] = (quantityChanges[rawId] || 0) - item.quantity;
         }
         const product = products.find(p => p.id === item.productId);
         if (product?.ingredients) {
