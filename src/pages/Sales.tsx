@@ -23,7 +23,7 @@ const Sales = () => {
   const [cart, setCart] = useState<SaleItem[]>([]);
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastSale, setLastSale] = useState<Sale | null>(null);
-  const [discountPercent, setDiscountPercent] = useState<number>(0);
+  const [discountAmount, setDiscountAmount] = useState<number>(0);
 
   const products = getProducts();
   const inventory = getInventory();
@@ -58,8 +58,8 @@ const Sales = () => {
   }, [activeTab, sellableItems]);
 
   const cartTotal = cart.reduce((sum, item) => sum + item.total, 0);
-  const discountAmount = Math.round(cartTotal * discountPercent / 100 * 100) / 100;
-  const finalTotal = cartTotal - discountAmount;
+  const clampedDiscount = Math.min(discountAmount, cartTotal);
+  const finalTotal = cartTotal - clampedDiscount;
 
   const addToCart = (item: SellableItem) => {
     setCart(prev => {
@@ -100,7 +100,7 @@ const Sales = () => {
       id: Date.now().toString(),
       items: cart,
       total: finalTotal,
-      discount: discountPercent > 0 ? { percent: discountPercent, amount: discountAmount } : undefined,
+      discount: clampedDiscount > 0 ? { percent: 0, amount: clampedDiscount } : undefined,
       workerId: user.id,
       workerName: user.name,
       date: now.toISOString().split('T')[0],
@@ -141,14 +141,14 @@ const Sales = () => {
     setLastSale(sale);
     setShowReceipt(true);
     setCart([]);
-    setDiscountPercent(0);
+    setDiscountAmount(0);
     toast.success('تم البيع بنجاح!');
   };
 
   const shareReceipt = (method: 'whatsapp' | 'email') => {
     if (!lastSale) return;
-    const discountLine = lastSale.discount && lastSale.discount.percent > 0
-      ? `\nخصم ${lastSale.discount.percent}%: -${lastSale.discount.amount} ج.م`
+    const discountLine = lastSale.discount && lastSale.discount.amount > 0
+      ? `\nخصم: -${lastSale.discount.amount} ج.م`
       : '';
     const text = `إيصال بيع - بن العميد\n` +
       `التاريخ: ${lastSale.date}\nالوقت: ${lastSale.time}\n` +
@@ -286,15 +286,14 @@ const Sales = () => {
               <div className="border-t border-border pt-3 mt-3 space-y-3">
                 {/* Discount input */}
                 <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-foreground whitespace-nowrap">خصم %</label>
+                  <label className="text-sm font-medium text-foreground whitespace-nowrap">خصم (ج.م)</label>
                   <input
                     type="number"
                     min="0"
-                    max="100"
-                    value={discountPercent || ''}
+                    value={discountAmount || ''}
                     onChange={(e) => {
-                      const val = Math.min(100, Math.max(0, Number(e.target.value)));
-                      setDiscountPercent(val);
+                      const val = Math.max(0, Number(e.target.value));
+                      setDiscountAmount(val);
                     }}
                     placeholder="0"
                     dir="ltr"
@@ -303,15 +302,15 @@ const Sales = () => {
                   />
                 </div>
 
-                {discountPercent > 0 && (
+                {clampedDiscount > 0 && (
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between text-muted-foreground">
                       <span>المجموع قبل الخصم</span>
                       <span>{cartTotal} ج.م</span>
                     </div>
                     <div className="flex justify-between text-destructive font-medium">
-                      <span>خصم {discountPercent}%</span>
-                      <span>- {discountAmount} ج.م</span>
+                      <span>خصم</span>
+                      <span>- {clampedDiscount} ج.م</span>
                     </div>
                   </div>
                 )}
@@ -351,14 +350,14 @@ const Sales = () => {
                   </div>
                 ))}
               </div>
-              {lastSale.discount && lastSale.discount.percent > 0 && (
+              {lastSale.discount && lastSale.discount.amount > 0 && (
                 <div className="border-t border-border pt-2 space-y-1 text-sm">
                   <div className="flex justify-between text-muted-foreground">
                     <span>المجموع قبل الخصم</span>
                     <span>{(lastSale.total + lastSale.discount.amount).toFixed(2)} ج.م</span>
                   </div>
                   <div className="flex justify-between text-destructive font-medium">
-                    <span>خصم {lastSale.discount.percent}%</span>
+                    <span>خصم</span>
                     <span>- {lastSale.discount.amount} ج.م</span>
                   </div>
                 </div>
