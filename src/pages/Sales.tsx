@@ -286,13 +286,14 @@ const Sales = () => {
               <div className="border-t border-border pt-3 mt-3 space-y-3">
                 {/* Discount input */}
                 <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-foreground whitespace-nowrap">خصم (ج.م)</label>
+                  <label className="text-sm font-medium text-foreground whitespace-nowrap">خصم (5-10 ج.م)</label>
                   <input
                     type="number"
-                    min="0"
+                    min="5"
+                    max="10"
                     value={discountAmount || ''}
                     onChange={(e) => {
-                      const val = Math.max(0, Number(e.target.value));
+                      const val = Math.min(10, Math.max(0, Number(e.target.value)));
                       setDiscountAmount(val);
                     }}
                     placeholder="0"
