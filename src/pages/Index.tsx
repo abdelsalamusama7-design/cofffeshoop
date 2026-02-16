@@ -73,11 +73,11 @@ const Dashboard = () => {
   const netProfit = todayTotal - totalCost;
 
   const stats = [
-    { label: 'مبيعات اليوم', value: `${todayTotal} ج.م`, icon: DollarSign, gradient: 'from-green-500 to-emerald-600', dialogKey: 'sales' as const },
+    { label: 'مبيعات اليوم', value: `${Math.round(todayTotal * 100) / 100} ج.م`, icon: DollarSign, gradient: 'from-green-500 to-emerald-600', dialogKey: 'sales' as const },
     { label: 'عدد الطلبات', value: displaySales.length.toString(), icon: ShoppingCart, gradient: 'from-blue-500 to-blue-600', dialogKey: 'orders' as const },
     { label: 'الأصناف المباعة', value: todayCount.toString(), icon: TrendingUp, gradient: 'from-purple-500 to-purple-600', dialogKey: 'items' as const },
     { label: 'المرتجعات', value: displayReturns.length.toString(), icon: RotateCcw, gradient: 'from-red-500 to-rose-600', dialogKey: 'returns' as const },
-    ...(user?.role === 'admin' ? [{ label: 'صافي الربح', value: `${netProfit} ج.م`, icon: BarChart3, gradient: 'from-amber-500 to-orange-600', dialogKey: 'profit' as const }] : []),
+    ...(user?.role === 'admin' ? [{ label: 'صافي الربح', value: `${Math.round(netProfit * 100) / 100} ج.م`, icon: BarChart3, gradient: 'from-amber-500 to-orange-600', dialogKey: 'profit' as const }] : []),
   ];
 
   // Low stock items
@@ -240,7 +240,7 @@ const Dashboard = () => {
             {activeStatDialog === 'sales' && (
               <>
                 <div className="bg-gradient-to-br from-green-500/10 to-emerald-600/10 rounded-xl p-4 text-center">
-                  <p className="text-3xl font-bold text-foreground">{todayTotal} ج.م</p>
+                  <p className="text-3xl font-bold text-foreground">{Math.round(todayTotal * 100) / 100} ج.م</p>
                   <p className="text-xs text-muted-foreground mt-1">إجمالي المبيعات بعد خصم المرتجعات</p>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -402,16 +402,16 @@ const Dashboard = () => {
             {activeStatDialog === 'profit' && user?.role === 'admin' && (
               <>
                 <div className="bg-gradient-to-br from-amber-500/10 to-orange-600/10 rounded-xl p-4 text-center">
-                  <p className="text-3xl font-bold text-foreground">{netProfit} ج.م</p>
+                  <p className="text-3xl font-bold text-foreground">{Math.round(netProfit * 100) / 100} ج.م</p>
                   <p className="text-xs text-muted-foreground mt-1">صافي الربح اليوم</p>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="bg-secondary rounded-xl p-3 text-center">
-                    <p className="text-lg font-bold text-foreground">{todayTotal}</p>
+                    <p className="text-lg font-bold text-foreground">{Math.round(todayTotal * 100) / 100}</p>
                     <p className="text-[10px] text-muted-foreground">ج.م مبيعات</p>
                   </div>
                   <div className="bg-destructive/10 rounded-xl p-3 text-center">
-                    <p className="text-lg font-bold text-destructive">{Math.round(totalCost)}</p>
+                    <p className="text-lg font-bold text-destructive">{Math.round(totalCost * 100) / 100}</p>
                     <p className="text-[10px] text-muted-foreground">ج.م تكلفة</p>
                   </div>
                   <div className="bg-primary/10 rounded-xl p-3 text-center">
