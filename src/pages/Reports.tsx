@@ -321,14 +321,25 @@ const Reports = () => {
 
   // ===== 2. Profits Report =====
   const ProfitsReport = () => {
-    const totalSales = filteredSales.reduce((sum, s) => sum + s.total, 0);
-    const totalCost = filteredSales.reduce((sum, s) =>
+    const filteredReturns = returns.filter(r => endDate ? r.date === endDate : r.date >= startDate);
+    const totalReturnsAmount = filteredReturns.reduce((sum, r) => sum + r.refundAmount, 0);
+    const grossSales = filteredSales.reduce((sum, s) => sum + s.total, 0);
+    const totalSales = grossSales - totalReturnsAmount;
+    const grossCost = filteredSales.reduce((sum, s) =>
       sum + s.items.reduce((c, item) => {
         const p = products.find(pr => pr.id === item.productId || `product_${pr.id}` === item.productId);
         const invItem = inventory.find(i => `inv_${i.id}` === item.productId);
         const cost = p ? p.costPrice : invItem ? invItem.costPerUnit : 0;
         return c + (cost * item.quantity);
       }, 0), 0);
+    const returnsCost = filteredReturns.reduce((sum, r) =>
+      sum + r.items.reduce((c, item) => {
+        const p = products.find(pr => pr.id === item.productId || `product_${pr.id}` === item.productId);
+        const invItem = inventory.find(i => `inv_${i.id}` === item.productId);
+        const cost = p ? p.costPrice : invItem ? invItem.costPerUnit : 0;
+        return c + (cost * item.quantity);
+      }, 0), 0);
+    const totalCost = grossCost - returnsCost;
     const profit = totalSales - totalCost;
     const margin = totalSales > 0 ? Math.round((profit / totalSales) * 100) : 0;
 
@@ -344,7 +355,19 @@ const Reports = () => {
         map[item.productId].cost += cost * item.quantity;
       });
     });
-    Object.values(map).forEach(m => productProfits.push({ ...m, profit: m.revenue - m.cost }));
+    // Subtract returns from per-product breakdown
+    filteredReturns.forEach(ret => {
+      ret.items.forEach(item => {
+        if (map[item.productId]) {
+          map[item.productId].revenue -= item.total;
+          const p = products.find(pr => pr.id === item.productId || `product_${pr.id}` === item.productId);
+          const invItem = inventory.find(i => `inv_${i.id}` === item.productId);
+          const cost = p ? p.costPrice : invItem ? invItem.costPerUnit : 0;
+          map[item.productId].cost -= cost * item.quantity;
+        }
+      });
+    });
+    Object.values(map).filter(m => m.revenue > 0).forEach(m => productProfits.push({ ...m, profit: m.revenue - m.cost }));
     productProfits.sort((a, b) => b.profit - a.profit);
 
     let text = `💰 تقرير الأرباح ${periodLabel}\n`;
@@ -363,17 +386,17 @@ const Reports = () => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
           <div className="glass-card rounded-xl p-4 text-center">
             <DollarSign size={22} className="mx-auto text-success mb-2" />
-            <p className="text-xl font-bold text-foreground">{totalSales} ج.م</p>
+            <p className="text-xl font-bold text-foreground">{Math.round(totalSales * 100) / 100} ج.م</p>
             <p className="text-xs text-muted-foreground">إيرادات</p>
           </div>
           <div className="glass-card rounded-xl p-4 text-center">
             <Wallet size={22} className="mx-auto text-destructive mb-2" />
-            <p className="text-xl font-bold text-foreground">{totalCost} ج.م</p>
+            <p className="text-xl font-bold text-foreground">{Math.round(totalCost * 100) / 100} ج.م</p>
             <p className="text-xs text-muted-foreground">تكلفة</p>
           </div>
           <div className="glass-card rounded-xl p-4 text-center">
             <TrendingUp size={22} className="mx-auto text-accent mb-2" />
-            <p className="text-xl font-bold text-foreground">{profit} ج.م</p>
+            <p className="text-xl font-bold text-foreground">{Math.round(profit * 100) / 100} ج.م</p>
             <p className="text-xs text-muted-foreground">صافي الربح</p>
           </div>
           <div className="glass-card rounded-xl p-4 text-center">
