@@ -90,8 +90,9 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
         if (invItem) {
           quantityChanges[rawId] = (quantityChanges[rawId] || 0) + item.quantity;
         }
-        // Check if it's a product with ingredients
-        const product = products.find(p => p.id === item.productId);
+        // Check if it's a product with ingredients (strip 'product_' prefix)
+        const productId = item.productId.startsWith('product_') ? item.productId.replace('product_', '') : item.productId;
+        const product = products.find(p => p.id === productId);
         if (product?.ingredients) {
           product.ingredients.forEach(ing => {
             if (ing.inventoryItemId && ing.quantityUsed) {
@@ -112,7 +113,8 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
         if (invItem) {
           quantityChanges[rawId] = (quantityChanges[rawId] || 0) - item.quantity;
         }
-        const product = products.find(p => p.id === item.productId);
+        const retProductId = item.productId.startsWith('product_') ? item.productId.replace('product_', '') : item.productId;
+        const product = products.find(p => p.id === retProductId);
         if (product?.ingredients) {
           product.ingredients.forEach(ing => {
             if (ing.inventoryItemId && ing.quantityUsed) {
