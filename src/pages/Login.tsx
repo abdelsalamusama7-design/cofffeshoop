@@ -43,7 +43,13 @@ const Login = () => {
 
     const updatedAttendance = [...attendance, newRecord];
     setAttendance(updatedAttendance);
-    toast.success(`✅ تم تسجيل حضورك تلقائياً — شيفت ${shift === 'morning' ? 'صباحي' : 'مسائي'}`, { duration: 4000 });
+    toast.success(
+      `✅ بداية شيفت جديد!`, 
+      { 
+        description: `مرحباً ${worker.name} — شيفت ${shift === 'morning' ? '☀️ صباحي' : '🌙 مسائي'}\nوقت الحضور: ${checkInTime}\nيوم: ${new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`,
+        duration: 6000 
+      }
+    );
   };
 
   const handleLogin = (e: React.FormEvent) => {
