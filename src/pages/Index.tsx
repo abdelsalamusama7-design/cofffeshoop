@@ -39,7 +39,7 @@ const Dashboard = () => {
   const todayReturnedCount = displayReturns.reduce((sum, r) => sum + r.items.reduce((c, i) => c + i.quantity, 0), 0);
   const todayCount = displaySales.reduce((sum, s) => sum + s.items.reduce((c, i) => c + i.quantity, 0), 0) - todayReturnedCount;
 
-  const totalCost = displaySales.reduce((sum, s) => {
+  const totalSalesCost = displaySales.reduce((sum, s) => {
     return sum + s.items.reduce((c, item) => {
       const product = products.find(p => p.id === item.productId || `product_${p.id}` === item.productId);
       const invItem = inventory.find(i => `inv_${i.id}` === item.productId);
@@ -47,6 +47,18 @@ const Dashboard = () => {
       return c + cost * item.quantity;
     }, 0);
   }, 0);
+
+  // Deduct cost of returned items from total cost
+  const totalReturnsCost = displayReturns.reduce((sum, r) => {
+    return sum + r.items.reduce((c, item) => {
+      const product = products.find(p => p.id === item.productId || `product_${p.id}` === item.productId);
+      const invItem = inventory.find(i => `inv_${i.id}` === item.productId);
+      const cost = product ? product.costPrice : invItem ? invItem.costPerUnit : 0;
+      return c + cost * item.quantity;
+    }, 0);
+  }, 0);
+
+  const totalCost = totalSalesCost - totalReturnsCost;
 
   // Product breakdown for detail dialog (subtract returns)
   const productBreakdown = useMemo(() => {
