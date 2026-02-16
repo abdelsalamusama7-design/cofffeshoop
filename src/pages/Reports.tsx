@@ -324,8 +324,10 @@ const Reports = () => {
     const totalSales = filteredSales.reduce((sum, s) => sum + s.total, 0);
     const totalCost = filteredSales.reduce((sum, s) =>
       sum + s.items.reduce((c, item) => {
-        const p = products.find(pr => pr.id === item.productId);
-        return c + (p ? p.costPrice * item.quantity : 0);
+        const p = products.find(pr => pr.id === item.productId || `product_${pr.id}` === item.productId);
+        const invItem = inventory.find(i => `inv_${i.id}` === item.productId);
+        const cost = p ? p.costPrice : invItem ? invItem.costPerUnit : 0;
+        return c + (cost * item.quantity);
       }, 0), 0);
     const profit = totalSales - totalCost;
     const margin = totalSales > 0 ? Math.round((profit / totalSales) * 100) : 0;
@@ -336,8 +338,10 @@ const Reports = () => {
       sale.items.forEach(item => {
         if (!map[item.productId]) map[item.productId] = { name: item.productName, revenue: 0, cost: 0 };
         map[item.productId].revenue += item.total;
-        const p = products.find(pr => pr.id === item.productId);
-        if (p) map[item.productId].cost += p.costPrice * item.quantity;
+        const p = products.find(pr => pr.id === item.productId || `product_${pr.id}` === item.productId);
+        const invItem = inventory.find(i => `inv_${i.id}` === item.productId);
+        const cost = p ? p.costPrice : invItem ? invItem.costPerUnit : 0;
+        map[item.productId].cost += cost * item.quantity;
       });
     });
     Object.values(map).forEach(m => productProfits.push({ ...m, profit: m.revenue - m.cost }));
