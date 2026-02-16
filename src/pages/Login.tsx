@@ -3,8 +3,9 @@ import { motion } from 'framer-motion';
 import { Lock, User, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getWorkers, setCurrentUser } from '@/lib/store';
+import { getWorkers, setCurrentUser, getAttendance, setAttendance } from '@/lib/store';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import logo from '@/assets/logo.jpg';
 
 const Login = () => {
@@ -14,6 +15,37 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
+  const autoCheckIn = (worker: { id: string; name: string; role: string }) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const attendance = getAttendance();
+    // Check if already has attendance record today (present with check-in)
+    const existingRecord = attendance.find(
+      a => a.workerId === worker.id && a.date === today && a.type === 'present' && a.checkIn
+    );
+    if (existingRecord) return; // Already checked in today
+
+    const now = new Date();
+    const hour = now.getHours();
+    const shift: 'morning' | 'evening' = hour < 14 ? 'morning' : 'evening';
+    const checkInTime = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+
+    const newRecord = {
+      id: Date.now().toString(),
+      workerId: worker.id,
+      workerName: worker.name,
+      date: today,
+      checkIn: checkInTime,
+      checkOut: null as string | null,
+      type: 'present' as const,
+      shift,
+      hoursWorked: 0,
+    };
+
+    const updatedAttendance = [...attendance, newRecord];
+    setAttendance(updatedAttendance);
+    toast.success(`✅ تم تسجيل حضورك تلقائياً — شيفت ${shift === 'morning' ? 'صباحي' : 'مسائي'}`, { duration: 4000 });
+  };
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -21,6 +53,8 @@ const Login = () => {
     const worker = workers.find(w => w.name === name && w.password === password);
     if (worker) {
       setCurrentUser(worker);
+      // Auto check-in for workers (and admins)
+      autoCheckIn(worker);
       navigate('/');
     } else {
       setError('اسم المستخدم أو كلمة المرور غير صحيحة');

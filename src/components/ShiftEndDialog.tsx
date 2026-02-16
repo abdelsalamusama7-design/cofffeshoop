@@ -617,10 +617,28 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                     console.error('Email send error:', err);
                   }
 
+                  // Auto check-out before clearing attendance
                   const today = new Date().toISOString().slice(0, 10);
+                  const now2 = new Date();
+                  const checkOutTime = now2.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
                   const attendance = getAttendance();
-                  const updatedAttendance = attendance.filter(r => !(r.workerId === user.id && r.date === today));
+                  const updatedAttendance = attendance.map(r => {
+                    if (r.workerId === user.id && r.date === today && r.type === 'present' && r.checkIn && !r.checkOut) {
+                      // Calculate hours worked
+                      const checkInParts = r.checkIn.match(/(\d+):(\d+)/);
+                      let hoursWorked = 0;
+                      if (checkInParts) {
+                        const startMinutes = parseInt(checkInParts[1]) * 60 + parseInt(checkInParts[2]);
+                        const endMinutes = now2.getHours() * 60 + now2.getMinutes();
+                        hoursWorked = Math.round(((endMinutes - startMinutes) / 60) * 10) / 10;
+                        if (hoursWorked < 0) hoursWorked += 24;
+                      }
+                      return { ...r, checkOut: checkOutTime, hoursWorked };
+                    }
+                    return r;
+                  });
                   setAttendance(updatedAttendance);
+                  toast.success(`✅ تم تسجيل انصرافك تلقائياً — ${checkOutTime}`, { duration: 4000 });
                   const sales = getSales();
                   const updatedSales = sales.filter(s => !(s.workerId === user.id && s.date === today));
                   setSales(updatedSales);
