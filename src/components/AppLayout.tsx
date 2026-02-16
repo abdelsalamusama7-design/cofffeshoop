@@ -1,4 +1,4 @@
-import { ReactNode, useState, useMemo } from 'react';
+import { ReactNode, useState, useMemo, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -18,6 +18,8 @@ import {
   X,
   RotateCcw,
   Clock,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 import logo from '@/assets/logo.jpg';
 import { getCurrentUser, setCurrentUser, getInventory } from '@/lib/store';
@@ -55,6 +57,18 @@ const AppLayout = ({ children }: LayoutProps) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showShiftEnd, setShowShiftEnd] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const LOW_STOCK_THRESHOLD = 5;
   const lowStockItems = useMemo(() => {
@@ -82,16 +96,23 @@ const AppLayout = ({ children }: LayoutProps) => {
               <p className="text-xs text-sidebar-foreground/60">{user.name} - {user.role === 'admin' ? 'مدير' : 'عامل'}</p>
             </div>
           </div>
-          {user.role === 'admin' && (
-            <button onClick={() => setShowNotifications(!showNotifications)} className="p-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent relative">
-              <Bell size={20} />
-              {lowStockItems.length > 0 && (
-                <span className="absolute top-1 left-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
-                  {lowStockItems.length}
-                </span>
-              )}
-            </button>
-          )}
+          <div className="flex items-center gap-1">
+            {/* Online/Offline indicator */}
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium ${isOnline ? 'bg-green-500/15 text-green-400' : 'bg-destructive/15 text-destructive'}`}>
+              {isOnline ? <Wifi size={12} /> : <WifiOff size={12} />}
+              {isOnline ? 'متصل' : 'غير متصل'}
+            </div>
+            {user.role === 'admin' && (
+              <button onClick={() => setShowNotifications(!showNotifications)} className="p-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent relative">
+                <Bell size={20} />
+                {lowStockItems.length > 0 && (
+                  <span className="absolute top-1 left-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                    {lowStockItems.length}
+                  </span>
+                )}
+              </button>
+            )}
+          </div>
         </div>
 
         <nav className="flex-1 p-4 space-y-1">
@@ -137,6 +158,9 @@ const AppLayout = ({ children }: LayoutProps) => {
       {/* Mobile Top Bar */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-sidebar text-sidebar-foreground flex items-center justify-between px-4 h-14" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="flex items-center gap-1">
+          <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium ${isOnline ? 'bg-green-500/15 text-green-400' : 'bg-destructive/15 text-destructive'}`}>
+            {isOnline ? <Wifi size={10} /> : <WifiOff size={10} />}
+          </div>
           <button onClick={() => setShowShiftEnd(true)} className="p-2 rounded-lg text-sidebar-foreground/70">
             <Clock size={20} />
           </button>
