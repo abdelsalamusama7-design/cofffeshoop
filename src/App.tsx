@@ -55,6 +55,19 @@ const App = () => {
         }
       }
     });
+
+    // Re-sync from cloud when internet reconnects
+    const handleOnline = () => {
+      toast.info('🌐 تم استعادة الاتصال، جاري المزامنة...');
+      initializeFromDatabase().then((success) => {
+        if (success) {
+          toast.success('✅ تم مزامنة البيانات بنجاح');
+        }
+      });
+    };
+
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
   }, []);
 
   return (

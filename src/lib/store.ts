@@ -335,8 +335,7 @@ export const setProducts = (p: Product[]) => { setLocal(STORAGE_KEYS.products, p
 export const getSales = (): Sale[] => getLocal(STORAGE_KEYS.sales, []);
 export const setSales = (s: Sale[]) => {
   setLocal(STORAGE_KEYS.sales, s);
-  // Full replace: delete all then upsert
-  (supabase.from('sales') as any).delete().neq('id', '').then(() => { if (s.length > 0) dbUpsertSales(s); });
+  if (s.length > 0) dbUpsertSales(s);
 };
 export const addSale = (sale: Sale) => {
   const sales = getSales();
@@ -367,7 +366,7 @@ export const setWorkers = (w: Worker[]) => { setLocal(STORAGE_KEYS.workers, w); 
 export const getAttendance = (): AttendanceRecord[] => getLocal(STORAGE_KEYS.attendance, []);
 export const setAttendance = (a: AttendanceRecord[]) => {
   setLocal(STORAGE_KEYS.attendance, a);
-  (supabase.from('attendance') as any).delete().neq('id', '').then(() => { if (a.length > 0) dbUpsertAttendance(a); });
+  if (a.length > 0) dbUpsertAttendance(a);
 };
 
 // Current User
@@ -378,7 +377,7 @@ export const setCurrentUser = (u: Worker | null) => setLocal(STORAGE_KEYS.curren
 export const getTransactions = (): WorkerTransaction[] => getLocal(STORAGE_KEYS.transactions, []);
 export const setTransactions = (t: WorkerTransaction[]) => {
   setLocal(STORAGE_KEYS.transactions, t);
-  (supabase.from('transactions') as any).delete().neq('id', '').then(() => { if (t.length > 0) dbUpsertTransactions(t); });
+  if (t.length > 0) dbUpsertTransactions(t);
 };
 export const addTransaction = (t: WorkerTransaction) => {
   const txns = getTransactions();
@@ -391,7 +390,7 @@ export const addTransaction = (t: WorkerTransaction) => {
 export const getExpenses = (): Expense[] => getLocal(STORAGE_KEYS.expenses, []);
 export const setExpenses = (e: Expense[]) => {
   setLocal(STORAGE_KEYS.expenses, e);
-  (supabase.from('expenses') as any).delete().neq('id', '').then(() => { if (e.length > 0) dbUpsertExpenses(e); });
+  if (e.length > 0) dbUpsertExpenses(e);
 };
 export const addExpense = (e: Expense) => {
   const expenses = getExpenses();
@@ -409,7 +408,7 @@ export const deleteExpense = (id: string) => {
 export const getReturns = (): ReturnRecord[] => getLocal(STORAGE_KEYS.returns, []);
 export const setReturns = (r: ReturnRecord[]) => {
   setLocal(STORAGE_KEYS.returns, r);
-  (supabase.from('returns') as any).delete().neq('id', '').then(() => { if (r.length > 0) dbUpsertReturns(r); });
+  if (r.length > 0) dbUpsertReturns(r);
 };
 export const addReturn = (r: ReturnRecord) => {
   const returns = getReturns();
@@ -451,7 +450,7 @@ export const deleteReturn = (id: string) => {
 export const getReturnsLog = (): ReturnLogEntry[] => getLocal(STORAGE_KEYS.returnsLog, []);
 export const setReturnsLog = (log: ReturnLogEntry[]) => {
   setLocal(STORAGE_KEYS.returnsLog, log);
-  (supabase.from('returns_log') as any).delete().neq('id', '').then(() => { if (log.length > 0) dbUpsertReturnsLog(log); });
+  if (log.length > 0) dbUpsertReturnsLog(log);
 };
 export const addReturnLogEntry = (entry: ReturnLogEntry) => {
   const log = getReturnsLog();
