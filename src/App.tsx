@@ -21,6 +21,7 @@ import Attendance from "./pages/Attendance";
 import Expenses from "./pages/Expenses";
 import SettingsPage from "./pages/SettingsPage";
 import WorkerDashboard from "./pages/WorkerDashboard";
+import WorkerExpensesPage from "./pages/WorkerExpensesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -92,6 +93,7 @@ const App = () => {
               <Route path="/expenses" element={<ProtectedRoute adminOnly><Expenses /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute adminOnly><SettingsPage /></ProtectedRoute>} />
               <Route path="/my-dashboard" element={<ProtectedRoute><WorkerDashboard /></ProtectedRoute>} />
+              <Route path="/my-expenses" element={<ProtectedRoute><WorkerExpensesPage /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
