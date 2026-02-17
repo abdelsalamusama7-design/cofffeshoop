@@ -48,6 +48,7 @@ const workerNavItems = [
   { path: '/returns', label: 'المرتجعات', icon: RotateCcw },
   { path: '/inventory', label: 'المخزون', icon: Package },
   { path: '/my-dashboard', label: 'حسابي', icon: ClipboardCheck },
+  { path: '/my-expenses', label: 'مصروفي', icon: Wallet },
 ];
 
 const AppLayout = ({ children }: LayoutProps) => {
