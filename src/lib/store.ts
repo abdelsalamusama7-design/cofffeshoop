@@ -1,4 +1,4 @@
-import { Product, Sale, InventoryItem, Worker, AttendanceRecord, WorkerTransaction, Expense, ReturnRecord, ReturnLogEntry, ItemCategory, ShiftResetRecord } from './types';
+import { Product, Sale, InventoryItem, Worker, AttendanceRecord, WorkerTransaction, Expense, ReturnRecord, ReturnLogEntry, ItemCategory, ShiftResetRecord, WorkerExpense } from './types';
 import { supabase } from '@/integrations/supabase/client';
 
 const STORAGE_KEYS = {
@@ -12,6 +12,7 @@ const STORAGE_KEYS = {
   expenses: 'cafe_expenses',
   returns: 'cafe_returns',
   returnsLog: 'cafe_returns_log',
+  workerExpenses: 'cafe_worker_expenses',
 };
 
 const AUTO_BACKUP_KEY = 'cafe_auto_backup';
@@ -20,7 +21,7 @@ const AUTO_BACKUP_INTERVAL = 3 * 60 * 60 * 1000; // 3 hours
 
 const BACKUP_DATA_KEYS = [
   'cafe_products', 'cafe_sales', 'cafe_inventory', 'cafe_workers',
-  'cafe_attendance', 'cafe_transactions', 'cafe_expenses', 'cafe_returns', 'cafe_returns_log',
+  'cafe_attendance', 'cafe_transactions', 'cafe_expenses', 'cafe_returns', 'cafe_returns_log', 'cafe_worker_expenses',
 ];
 
 const DB_INITIALIZED_KEY = 'cafe_db_initialized';
@@ -120,6 +121,7 @@ export const initializeFromDatabase = async (): Promise<boolean> => {
       { data: expenses },
       { data: returns },
       { data: returnsLog },
+      { data: workerExpenses },
     ] = await Promise.all([
       supabase.from('workers').select('*'),
       supabase.from('products').select('*'),
@@ -130,6 +132,7 @@ export const initializeFromDatabase = async (): Promise<boolean> => {
       supabase.from('expenses').select('*'),
       supabase.from('returns').select('*'),
       supabase.from('returns_log').select('*'),
+      supabase.from('worker_expenses').select('*'),
     ]);
 
     if (workers) setLocal(STORAGE_KEYS.workers, workers.map(dbWorkerToLocal));
@@ -141,6 +144,7 @@ export const initializeFromDatabase = async (): Promise<boolean> => {
     if (expenses) setLocal(STORAGE_KEYS.expenses, expenses.map(dbExpenseToLocal));
     if (returns) setLocal(STORAGE_KEYS.returns, returns.map(dbReturnToLocal));
     if (returnsLog) setLocal(STORAGE_KEYS.returnsLog, returnsLog.map(dbReturnLogToLocal));
+    if (workerExpenses) setLocal(STORAGE_KEYS.workerExpenses, (workerExpenses as any[]).map(dbWorkerExpenseToLocal));
 
     // Restore current user session if it existed
     const currentUser = getLocal<Worker | null>(STORAGE_KEYS.currentUser, null);
@@ -219,6 +223,13 @@ function dbReturnLogToLocal(l: any): ReturnLogEntry {
   return {
     id: l.id, action: l.action, returnRecord: l.return_record,
     actionBy: l.action_by, actionDate: l.action_date, actionTime: l.action_time,
+  };
+}
+
+function dbWorkerExpenseToLocal(e: any): WorkerExpense {
+  return {
+    id: e.id, workerId: e.worker_id, workerName: e.worker_name,
+    amount: Number(e.amount), reason: e.reason || '', date: e.date, time: e.time,
   };
 }
 
@@ -318,6 +329,17 @@ function dbUpsertReturnsLog(log: ReturnLogEntry[]) {
     })) as any,
     { onConflict: 'id' }
   ).then(({ error }) => { if (error) console.error('DB sync returns_log error:', error); });
+}
+
+function dbUpsertWorkerExpenses(items: WorkerExpense[]) {
+  if (items.length === 0) return;
+  supabase.from('worker_expenses').upsert(
+    items.map(e => ({
+      id: e.id, worker_id: e.workerId, worker_name: e.workerName,
+      amount: e.amount, reason: e.reason, date: e.date, time: e.time,
+    })) as any,
+    { onConflict: 'id' }
+  ).then(({ error }) => { if (error) console.error('DB sync worker_expenses error:', error); });
 }
 
 function dbDeleteById(table: string, id: string) {
@@ -459,6 +481,24 @@ export const addReturnLogEntry = (entry: ReturnLogEntry) => {
   dbUpsertReturnsLog([entry]);
 };
 
+// Worker Expenses (cash withdrawals by workers)
+export const getWorkerExpenses = (): WorkerExpense[] => getLocal(STORAGE_KEYS.workerExpenses, []);
+export const setWorkerExpenses = (e: WorkerExpense[]) => {
+  setLocal(STORAGE_KEYS.workerExpenses, e);
+  if (e.length > 0) dbUpsertWorkerExpenses(e);
+};
+export const addWorkerExpense = (e: WorkerExpense) => {
+  const expenses = getWorkerExpenses();
+  expenses.push(e);
+  setLocal(STORAGE_KEYS.workerExpenses, expenses);
+  dbUpsertWorkerExpenses([e]);
+};
+export const deleteWorkerExpense = (id: string) => {
+  const expenses = getWorkerExpenses().filter(e => e.id !== id);
+  setLocal(STORAGE_KEYS.workerExpenses, expenses);
+  dbDeleteById('worker_expenses', id);
+};
+
 // Sync all localStorage data UP to Cloud (used after restoring a backup)
 export const syncLocalStorageToCloud = async (): Promise<boolean> => {
   try {
@@ -471,6 +511,7 @@ export const syncLocalStorageToCloud = async (): Promise<boolean> => {
     const expenses = getExpenses();
     const returns = getReturns();
     const returnsLog = getReturnsLog();
+    const workerExpensesData = getWorkerExpenses();
 
     // Delete all existing cloud data first
     await Promise.all([
@@ -483,6 +524,7 @@ export const syncLocalStorageToCloud = async (): Promise<boolean> => {
       (supabase.from('expenses') as any).delete().neq('id', ''),
       (supabase.from('returns') as any).delete().neq('id', ''),
       (supabase.from('returns_log') as any).delete().neq('id', ''),
+      (supabase.from('worker_expenses') as any).delete().neq('id', ''),
     ]);
 
     // Now upsert all data - AWAIT all upserts to ensure data reaches cloud before page reload
@@ -588,8 +630,18 @@ export const syncLocalStorageToCloud = async (): Promise<boolean> => {
         ).then((r: any) => r)
       );
     }
+    if (workerExpensesData.length > 0) {
+      upsertPromises.push(
+        (supabase.from('worker_expenses') as any).upsert(
+          workerExpensesData.map(e => ({
+            id: e.id, worker_id: e.workerId, worker_name: e.workerName,
+            amount: e.amount, reason: e.reason, date: e.date, time: e.time,
+          })),
+          { onConflict: 'id' }
+        ).then((r: any) => r)
+      );
+    }
 
-    await Promise.all(upsertPromises);
 
     return true;
   } catch (err) {

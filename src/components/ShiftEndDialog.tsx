@@ -4,8 +4,8 @@ import { ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Lock, Clock, ShoppingCart, Share2, Mail, FileText, MessageCircle, RotateCcw, Trash2, Package } from 'lucide-react';
-import { getCurrentUser, getSales, setSales, getAttendance, setAttendance, getWorkers, getReturns, setReturns, getReturnsLog, setReturnsLog, getInventory, getProducts, addShiftReset } from '@/lib/store';
-import { Sale, ReturnRecord, ReturnLogEntry, InventoryItem } from '@/lib/types';
+import { getCurrentUser, getSales, setSales, getAttendance, setAttendance, getWorkers, getReturns, setReturns, getReturnsLog, setReturnsLog, getInventory, getProducts, addShiftReset, getWorkerExpenses } from '@/lib/store';
+import { Sale, ReturnRecord, ReturnLogEntry, InventoryItem, WorkerExpense } from '@/lib/types';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -24,6 +24,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
   const [resetPassword, setResetPassword] = useState('');
   const [resetError, setResetError] = useState('');
   const [inventoryEndShift, setInventoryEndShift] = useState<InventoryItem[]>([]);
+  const [shiftWorkerExpenses, setShiftWorkerExpenses] = useState<WorkerExpense[]>([]);
   const [inventoryStartShift, setInventoryStartShift] = useState<InventoryItem[]>([]);
 
   const user = getCurrentUser();
@@ -73,7 +74,11 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
     setShiftSales(finalSales);
     setShiftReturnsLog(finalReturnsLog);
 
-    // Capture current inventory (end of shift)
+    // Get worker expenses for today
+    const allWorkerExpenses = getWorkerExpenses();
+    const todayWorkerExpenses = allWorkerExpenses.filter(e => e.workerId === user.id && e.date === today);
+    setShiftWorkerExpenses(todayWorkerExpenses);
+
     const currentInventory = getInventory();
     setInventoryEndShift(currentInventory);
 
@@ -166,6 +171,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
   );
   
   const netTotal = useMemo(() => totalAmount - totalReturnsAmount, [totalAmount, totalReturnsAmount]);
+  const totalWorkerExpenses = useMemo(() => shiftWorkerExpenses.reduce((s, e) => s + e.amount, 0), [shiftWorkerExpenses]);
 
   // Aggregate sales by product
   const salesByProduct = useMemo(() => {
@@ -266,12 +272,25 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
       });
     }
 
+    // Worker expenses section
+    if (shiftWorkerExpenses.length > 0) {
+      text += `━━━━━━━━━━━━━━━\n`;
+      text += `💸 مصروفات العامل:\n\n`;
+      shiftWorkerExpenses.forEach(exp => {
+        text += `• ${exp.reason} — ${exp.amount} ج.م (${exp.time})\n`;
+      });
+      text += `\n📊 إجمالي المصروفات: ${totalWorkerExpenses.toFixed(2)} ج.م\n`;
+    }
+
     text += `\n━━━━━━━━━━━━━━━\n`;
     text += `💵 إجمالي المبيعات: ${totalAmount.toFixed(2)} ج.م\n`;
     if (totalReturnsAmount > 0) {
       text += `🔄 إجمالي المرتجعات: -${totalReturnsAmount.toFixed(2)} ج.م\n`;
     }
-    text += `💰 صافي المبلغ للتسليم: ${netTotal.toFixed(2)} ج.م\n`;
+    if (totalWorkerExpenses > 0) {
+      text += `💸 مصروفات العامل: -${totalWorkerExpenses.toFixed(2)} ج.م\n`;
+    }
+    text += `💰 صافي المبلغ للتسليم: ${(netTotal - totalWorkerExpenses).toFixed(2)} ج.م\n`;
     text += `━━━━━━━━━━━━━━━\n`;
     text += `بن العميد ☕`;
     return text;
@@ -398,12 +417,17 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                         <p className="text-xs text-muted-foreground">المرتجعات: <span className="font-bold text-destructive">-{totalReturnsAmount.toFixed(2)} ج.م</span></p>
                       </div>
                     )}
+                    {totalWorkerExpenses > 0 && (
+                      <div className="bg-destructive/10 rounded-xl p-2 text-center flex-1">
+                        <p className="text-xs text-muted-foreground">مصروفات العامل: <span className="font-bold text-destructive">-{totalWorkerExpenses.toFixed(2)} ج.م</span></p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Net Total */}
                   <div className="bg-primary/15 rounded-xl p-3 text-center border border-primary/20">
                     <p className="text-xs text-muted-foreground">💰 صافي المبلغ للتسليم</p>
-                    <p className="text-2xl font-bold text-primary">{netTotal.toFixed(2)} ج.م</p>
+                    <p className="text-2xl font-bold text-primary">{(netTotal - totalWorkerExpenses).toFixed(2)} ج.م</p>
                   </div>
 
                   {/* Aggregated Sales by Product */}
