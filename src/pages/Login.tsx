@@ -56,7 +56,7 @@ const Login = () => {
     e.preventDefault();
     setError('');
     const workers = getWorkers();
-    const worker = workers.find(w => w.name === name && w.password === password);
+    const worker = workers.find(w => (w.name === name || w.id === name) && w.password === password);
     if (worker) {
       setCurrentUser(worker);
       // Auto check-in for workers (and admins)
