@@ -6,7 +6,7 @@ import {
   Trash2, Edit3, X, Check, History, AlertTriangle, Package, Mail
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getSales, getProducts, getCurrentUser, getWorkers, getAttendance, getTransactions, getInventory, getReturns, deleteSale, updateSale, getShiftResets } from '@/lib/store';
+import { getSales, getProducts, getCurrentUser, getWorkers, getAttendance, getTransactions, getInventory, getReturns, deleteSale, updateSale, getShiftResets, getWorkerExpenses } from '@/lib/store';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import ScrollableList from '@/components/ScrollableList';
@@ -35,6 +35,7 @@ const Reports = () => {
   const transactions = getTransactions();
   const inventory = getInventory();
   const returns = getReturns();
+  const workerExpensesData = getWorkerExpenses();
 
   const today = new Date().toISOString().split('T')[0];
   const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
@@ -826,6 +827,81 @@ const Reports = () => {
     );
   };
 
+  // ===== Worker Expenses Report =====
+  const WorkerExpensesReport = () => {
+    const filtered = workerExpensesData.filter(e => endDate ? e.date === endDate : e.date >= startDate);
+    const total = filtered.reduce((s, e) => s + e.amount, 0);
+
+    const byWorker: Record<string, { name: string; total: number; items: typeof filtered }> = {};
+    filtered.forEach(e => {
+      if (!byWorker[e.workerId]) byWorker[e.workerId] = { name: e.workerName, total: 0, items: [] };
+      byWorker[e.workerId].total += e.amount;
+      byWorker[e.workerId].items.push(e);
+    });
+
+    let text = `💰 تقرير مصروفات العمال ${periodLabel}\n`;
+    text += `التاريخ: ${today}\n────────────\n`;
+    text += `إجمالي المصروفات: ${total} ج.م\n\n`;
+    Object.values(byWorker).forEach(w => {
+      text += `👤 ${w.name}: ${w.total} ج.م\n`;
+      w.items.forEach(e => { text += `  • ${e.reason} — ${e.amount} ج.م (${e.time})\n`; });
+      text += `\n`;
+    });
+
+    return (
+      <div className="space-y-4 mt-4">
+        <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+          <Wallet size={20} />
+          مصروفات العمال (سحب نقدية)
+        </h3>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="glass-card rounded-xl p-4 text-center">
+            <Wallet size={22} className="mx-auto text-destructive mb-2" />
+            <p className="text-xl font-bold text-foreground">{Math.round(total * 100) / 100} ج.م</p>
+            <p className="text-xs text-muted-foreground">إجمالي المصروفات</p>
+          </div>
+          <div className="glass-card rounded-xl p-4 text-center">
+            <Users size={22} className="mx-auto text-accent mb-2" />
+            <p className="text-xl font-bold text-foreground">{Object.keys(byWorker).length}</p>
+            <p className="text-xs text-muted-foreground">عدد العمال</p>
+          </div>
+        </div>
+
+        {Object.values(byWorker).length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Wallet size={32} className="mx-auto mb-2 opacity-50" />
+            <p className="text-sm">لا توجد مصروفات عمال في هذه الفترة</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {Object.values(byWorker).sort((a, b) => b.total - a.total).map((w, i) => (
+              <div key={i} className="glass-card rounded-xl p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-foreground">👤 {w.name}</span>
+                  <span className="text-sm font-bold text-destructive">{w.total} ج.م</span>
+                </div>
+                <div className="space-y-1">
+                  {w.items.sort((a, b) => b.time.localeCompare(a.time)).map(e => (
+                    <div key={e.id} className="flex items-center justify-between p-2 rounded-lg bg-secondary text-sm">
+                      <div>
+                        <span className="text-foreground">{e.reason}</span>
+                        <span className="text-xs text-muted-foreground mr-2">{e.date} • {e.time}</span>
+                      </div>
+                      <span className="font-bold text-destructive">{e.amount} ج.م</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <ShareButtons title={`تقرير مصروفات العمال ${periodLabel}`} text={text} />
+      </div>
+    );
+  };
+
 
   if (user?.role !== 'admin') {
     return (
@@ -875,7 +951,7 @@ const Reports = () => {
 
       {/* Report tabs */}
       <Tabs defaultValue="sales" dir="rtl">
-        <TabsList className="w-full grid grid-cols-7 h-auto">
+        <TabsList className="w-full grid grid-cols-4 sm:grid-cols-8 h-auto">
           <TabsTrigger value="sales" className="text-xs py-2 px-1">
             <ShoppingCart size={14} className="ml-1 hidden sm:inline" />
             المبيعات
@@ -896,6 +972,10 @@ const Reports = () => {
             <ClipboardCheck size={14} className="ml-1 hidden sm:inline" />
             الحضور
           </TabsTrigger>
+          <TabsTrigger value="workerexpenses" className="text-xs py-2 px-1">
+            <Wallet size={14} className="ml-1 hidden sm:inline" />
+            مصروفات العمال
+          </TabsTrigger>
           <TabsTrigger value="lowstock" className="text-xs py-2 px-1">
             <AlertTriangle size={14} className="ml-1 hidden sm:inline" />
             نقص المخزون
@@ -910,6 +990,7 @@ const Reports = () => {
         <TabsContent value="returns"><ReturnsReport /></TabsContent>
         <TabsContent value="workers"><WorkerPerformanceReport /></TabsContent>
         <TabsContent value="attendance"><AttendanceReport /></TabsContent>
+        <TabsContent value="workerexpenses"><WorkerExpensesReport /></TabsContent>
         <TabsContent value="lowstock"><LowStockReport /></TabsContent>
         <TabsContent value="resets">
           <div className="space-y-3 mt-4">

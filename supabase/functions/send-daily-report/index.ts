@@ -36,6 +36,7 @@ serve(async (req) => {
       { data: inventory },
       { data: products },
       { data: workers },
+      { data: workerExpenses },
     ] = await Promise.all([
       supabase.from('sales').select('*').eq('date', yesterdayStr),
       supabase.from('returns').select('*').eq('date', yesterdayStr),
@@ -44,6 +45,7 @@ serve(async (req) => {
       supabase.from('inventory').select('*'),
       supabase.from('products').select('*'),
       supabase.from('workers').select('*'),
+      supabase.from('worker_expenses').select('*').eq('date', yesterdayStr),
     ]);
 
     const safeArr = (arr: any) => arr || [];
@@ -102,7 +104,17 @@ serve(async (req) => {
     // ===== Expenses =====
     const totalExpenses = safeArr(expenses).reduce((s: number, e: any) => s + (e.amount || 0), 0);
 
-    // ===== Low Stock =====
+    // ===== Worker Expenses =====
+    const totalWorkerExpenses = safeArr(workerExpenses).reduce((s: number, e: any) => s + (e.amount || 0), 0);
+    const workerExpensesByWorker: Record<string, { name: string; total: number; items: { reason: string; amount: number; time: string }[] }> = {};
+    safeArr(workerExpenses).forEach((e: any) => {
+      if (!workerExpensesByWorker[e.worker_id]) {
+        workerExpensesByWorker[e.worker_id] = { name: e.worker_name, total: 0, items: [] };
+      }
+      workerExpensesByWorker[e.worker_id].total += e.amount;
+      workerExpensesByWorker[e.worker_id].items.push({ reason: e.reason, amount: e.amount, time: e.time });
+    });
+
     const LOW_STOCK_THRESHOLD = 5;
     const lowStockItems = safeArr(inventory).filter((item: any) => item.quantity <= LOW_STOCK_THRESHOLD);
 
@@ -270,6 +282,31 @@ serve(async (req) => {
               <div class="item-row" style="background:#fef2f2;border-right-color:#dc2626;margin-top:8px;">
                 <span><strong>إجمالي المصروفات</strong></span>
                 <span style="font-weight:bold;color:#dc2626;">${totalExpenses} ج.م</span>
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Worker Expenses -->
+          ${safeArr(workerExpenses).length > 0 ? `
+            <div class="section">
+              <div class="section-title">💰 مصروفات العمال (سحب نقدية)</div>
+              ${Object.values(workerExpensesByWorker).map((w: any) => `
+                <div style="margin-bottom:12px;">
+                  <div class="item-row" style="border-right-color:#f59e0b;background:#fffbeb;">
+                    <span><strong>👤 ${w.name}</strong></span>
+                    <span style="font-weight:bold;color:#f59e0b;">إجمالي: ${w.total} ج.م</span>
+                  </div>
+                  ${w.items.map((item: any) => `
+                    <div class="item-row" style="border-right-color:#e5e7eb;margin-right:12px;">
+                      <span>${item.reason} <span style="color:#999;font-size:12px;">(${item.time})</span></span>
+                      <span style="font-weight:bold;color:#dc2626;">${item.amount} ج.م</span>
+                    </div>
+                  `).join('')}
+                </div>
+              `).join('')}
+              <div class="item-row" style="background:#fffbeb;border-right-color:#f59e0b;margin-top:8px;">
+                <span><strong>إجمالي مصروفات العمال</strong></span>
+                <span style="font-weight:bold;color:#f59e0b;">${totalWorkerExpenses} ج.م</span>
               </div>
             </div>
           ` : ''}
