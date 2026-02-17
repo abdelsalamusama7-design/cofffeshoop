@@ -147,3 +147,13 @@ export interface ShiftResetRecord {
   resetTime: string;
   reportSummary?: string;
 }
+
+export interface WorkerExpense {
+  id: string;
+  workerId: string;
+  workerName: string;
+  amount: number;
+  reason: string;
+  date: string;
+  time: string;
+}

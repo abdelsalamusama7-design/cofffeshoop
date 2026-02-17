@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Clock, LogIn, LogOut, HandCoins, Gift, ShoppingCart, CalendarCheck, TrendingUp, RotateCcw, Lock } from 'lucide-react';
+import { Clock, LogIn, LogOut, HandCoins, Gift, ShoppingCart, CalendarCheck, TrendingUp, RotateCcw, Lock, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getCurrentUser, getAttendance, setAttendance, getTransactions, getSales, getWorkers, addShiftReset } from '@/lib/store';
@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import WorkerExpensesTab from '@/components/WorkerExpensesTab';
 
 const WorkerDashboard = () => {
   const user = getCurrentUser();
@@ -100,6 +101,16 @@ const WorkerDashboard = () => {
   const totalHours = Math.round(myMonthRecords.reduce((s, r) => s + (r.hoursWorked || 0), 0) * 10) / 10;
 
   return (
+    <Tabs defaultValue="dashboard" dir="rtl" className="space-y-4">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="dashboard">📊 لوحتي</TabsTrigger>
+        <TabsTrigger value="expenses" className="flex items-center gap-1">
+          <Wallet size={14} />
+          مصروفي
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="dashboard">
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center">
@@ -363,6 +374,12 @@ const WorkerDashboard = () => {
         </DialogContent>
       </Dialog>
     </div>
+      </TabsContent>
+
+      <TabsContent value="expenses">
+        <WorkerExpensesTab />
+      </TabsContent>
+    </Tabs>
   );
 };
 
