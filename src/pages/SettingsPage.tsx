@@ -22,6 +22,7 @@ type ShareMethod = 'pdf' | 'email' | 'whatsapp';
 const BACKUP_STORAGE_KEYS = [
   'cafe_products', 'cafe_sales', 'cafe_inventory', 'cafe_workers',
   'cafe_attendance', 'cafe_categories', 'cafe_transactions', 'cafe_expenses',
+  'cafe_worker_expenses',
 ];
 
 const BackupStatusIndicator = () => {
