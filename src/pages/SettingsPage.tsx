@@ -259,6 +259,14 @@ const SettingsPage = () => {
 
 
   const handleRestoreClick = async () => {
+    if (!navigator.onLine) {
+      toast({
+        title: '📴 غير متصل بالإنترنت',
+        description: 'استخدم زر "استعادة من ملف JSON" بدلاً من ذلك — وهو يعمل بدون إنترنت.',
+        variant: 'destructive',
+      });
+      return;
+    }
     setIsRestoring(true);
     try {
       const { data, error } = await (supabase.from('backups') as any).select('backup_data, created_at, created_by').eq('id', 'latest').maybeSingle();
@@ -619,6 +627,14 @@ const SettingsPage = () => {
           </Button>
           <Button
             onClick={async () => {
+              if (!navigator.onLine) {
+                toast({
+                  title: '📴 غير متصل بالإنترنت',
+                  description: 'استخدم زر "استعادة من ملف JSON" — يعمل بدون إنترنت.',
+                  variant: 'destructive',
+                });
+                return;
+              }
               setIsRestoring(true);
               const ok = await restoreLatestBackup();
               if (ok) {
