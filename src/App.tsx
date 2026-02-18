@@ -93,6 +93,18 @@ const App = () => {
     // Re-sync from cloud when internet reconnects - flush queue first then sync
     const handleOnline = async () => {
       const queueCount = getQueueCount();
+      // Check if there's a pending restore sync
+      const hasPendingRestore = localStorage.getItem('cafe_pending_restore_sync');
+      if (hasPendingRestore) {
+        toast.info('🌐 تم استعادة الاتصال، جاري رفع البيانات المستعادة للسحاب...');
+        const { syncLocalStorageToCloud } = await import('@/lib/store');
+        const ok = await syncLocalStorageToCloud();
+        if (ok) {
+          localStorage.removeItem('cafe_pending_restore_sync');
+          toast.success('✅ تم رفع البيانات المستعادة للسحاب بنجاح');
+        }
+        return;
+      }
       if (queueCount > 0) {
         toast.info(`🌐 تم استعادة الاتصال، جاري رفع ${queueCount} عملية معلقة...`);
         const flushed = await flushQueue();

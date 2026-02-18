@@ -281,7 +281,10 @@ const SettingsPage = () => {
     reader.onload = (ev) => {
       try {
         const data = JSON.parse(ev.target?.result as string);
-        if (!data._meta || !data.cafe_products) {
+        // Validate: must have _meta and at least one data key
+        const hasData = ['cafe_products', 'cafe_workers', 'cafe_sales', 'cafe_inventory', 'cafe_attendance', 'cafe_expenses']
+          .some(k => data[k] && Array.isArray(data[k]));
+        if (!data._meta || !hasData) {
           toast({ title: '❌ خطأ', description: 'الملف مش ملف نسخة احتياطية صحيح', variant: 'destructive' });
           return;
         }
@@ -297,26 +300,40 @@ const SettingsPage = () => {
 
   const confirmRestore = async () => {
     if (!pendingRestore) return;
-    BACKUP_STORAGE_KEYS.forEach(key => {
-      if (pendingRestore[key]) {
+
+    // Step 1: Write to localStorage immediately (works offline)
+    const ALL_RESTORE_KEYS = [
+      ...BACKUP_STORAGE_KEYS,
+      'cafe_returns', 'cafe_returns_log',
+    ];
+    ALL_RESTORE_KEYS.forEach(key => {
+      if (pendingRestore[key] !== undefined) {
         localStorage.setItem(key, JSON.stringify(pendingRestore[key]));
       }
     });
-    // Also handle returns and returns_log if present in backup
-    if (pendingRestore['cafe_returns']) {
-      localStorage.setItem('cafe_returns', JSON.stringify(pendingRestore['cafe_returns']));
-    }
-    if (pendingRestore['cafe_returns_log']) {
-      localStorage.setItem('cafe_returns_log', JSON.stringify(pendingRestore['cafe_returns_log']));
-    }
+
     setPendingRestore(null);
     setShowRestoreConfirm(false);
+
+    const isOnline = navigator.onLine;
+
+    if (!isOnline) {
+      // Offline: data is saved locally, mark pending sync
+      localStorage.setItem('cafe_pending_restore_sync', 'true');
+      toast({ title: '✅ تم الاستعادة محلياً', description: 'البيانات اتعادت على الجهاز. هيتم مزامنتها مع السحاب فور اتصالك بالإنترنت.' });
+      setTimeout(() => window.location.reload(), 1500);
+      return;
+    }
+
+    // Step 2: Online — sync to cloud
     toast({ title: '⏳ جاري الرفع', description: 'جاري رفع البيانات للسحاب...' });
     const success = await syncLocalStorageToCloud();
     if (success) {
+      localStorage.removeItem('cafe_pending_restore_sync');
       toast({ title: '✅ تم الاستعادة', description: 'تم استعادة البيانات ورفعها للسحاب بنجاح. جاري إعادة التحميل...' });
     } else {
-      toast({ title: '⚠️ تم الاستعادة محلياً', description: 'تم استعادة البيانات محلياً لكن فشل الرفع للسحاب. حاول مرة أخرى.', variant: 'destructive' });
+      localStorage.setItem('cafe_pending_restore_sync', 'true');
+      toast({ title: '✅ تم الاستعادة محلياً', description: 'البيانات اتعادت على الجهاز. فشل الرفع للسحاب وهيتم تلقائياً عند الاتصال.' });
     }
     setTimeout(() => window.location.reload(), 1500);
   };
