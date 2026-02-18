@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 import { getCurrentUser, initializeFromDatabase } from "@/lib/store";
 import { startAutoBackup } from "@/lib/backupService";
+import { flushQueue, getQueueCount } from "@/lib/offlineQueue";
 import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
 import SplashScreen from "@/components/SplashScreen";
@@ -23,6 +24,8 @@ import SettingsPage from "./pages/SettingsPage";
 import WorkerDashboard from "./pages/WorkerDashboard";
 import WorkerExpensesPage from "./pages/WorkerExpensesPage";
 import NotFound from "./pages/NotFound";
+import { useRegisterSW } from "virtual:pwa-register/react";
+
 
 const queryClient = new QueryClient();
 
@@ -36,6 +39,36 @@ const ProtectedRoute = ({ children, adminOnly }: { children: React.ReactNode; ad
 const App = () => {
   const [showSplash, setShowSplash] = useState(true);
   const [dbReady, setDbReady] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+
+  // PWA update registration
+  const { needRefresh, updateServiceWorker } = useRegisterSW({
+    onRegistered(r) { console.log('SW registered:', r); },
+    onRegisterError(error) { console.log('SW registration error:', error); },
+  });
+
+  // Listen for install prompt
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  // Show update notification
+  useEffect(() => {
+    if (needRefresh) {
+      toast.info('🔄 يوجد تحديث جديد للتطبيق', {
+        duration: 0,
+        action: {
+          label: 'تحديث الآن',
+          onClick: () => updateServiceWorker(true),
+        },
+      });
+    }
+  }, [needRefresh]);
 
   useEffect(() => {
     // Load data from database on startup
@@ -57,11 +90,20 @@ const App = () => {
       }
     });
 
-    // Re-sync from cloud when internet reconnects
-    const handleOnline = () => {
-      toast.info('🌐 تم استعادة الاتصال، جاري المزامنة...');
+    // Re-sync from cloud when internet reconnects - flush queue first then sync
+    const handleOnline = async () => {
+      const queueCount = getQueueCount();
+      if (queueCount > 0) {
+        toast.info(`🌐 تم استعادة الاتصال، جاري رفع ${queueCount} عملية معلقة...`);
+        const flushed = await flushQueue();
+        if (flushed) {
+          toast.success('✅ تمت مزامنة جميع العمليات المعلقة');
+        }
+      } else {
+        toast.info('🌐 تم استعادة الاتصال، جاري المزامنة...');
+      }
       initializeFromDatabase().then((success) => {
-        if (success) {
+        if (success && queueCount === 0) {
           toast.success('✅ تم مزامنة البيانات بنجاح');
         }
       });
@@ -70,6 +112,16 @@ const App = () => {
     window.addEventListener('online', handleOnline);
     return () => window.removeEventListener('online', handleOnline);
   }, []);
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setInstallPrompt(null);
+      toast.success('✅ تم تثبيت التطبيق بنجاح!');
+    }
+  };
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -96,6 +148,14 @@ const App = () => {
               <Route path="/my-expenses" element={<ProtectedRoute><WorkerExpensesPage /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
+            {/* Install App Banner */}
+            {installPrompt && (
+              <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-72 z-50 bg-primary text-primary-foreground rounded-2xl shadow-2xl p-3 flex items-center gap-3">
+                <span className="text-sm font-medium flex-1">📱 ثبّت التطبيق على جهازك للعمل بدون إنترنت</span>
+                <button onClick={handleInstall} className="bg-primary-foreground text-primary text-xs font-bold px-3 py-1.5 rounded-lg">تثبيت</button>
+                <button onClick={() => setInstallPrompt(null)} className="text-primary-foreground/70 text-lg leading-none">×</button>
+              </div>
+            )}
           </BrowserRouter>
         )}
       </TooltipProvider>
@@ -104,3 +164,4 @@ const App = () => {
 };
 
 export default App;
+

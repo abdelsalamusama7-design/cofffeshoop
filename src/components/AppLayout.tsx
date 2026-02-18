@@ -20,11 +20,16 @@ import {
   Clock,
   Wifi,
   WifiOff,
+  Upload,
+  RefreshCw,
 } from 'lucide-react';
 import logo from '@/assets/logo.jpg';
 import { getCurrentUser, setCurrentUser, getInventory } from '@/lib/store';
+import { getQueueCount, onQueueChange, flushQueue } from '@/lib/offlineQueue';
 import ChatBot from './ChatBot';
 import ShiftEndDialog from './ShiftEndDialog';
+import { toast } from 'sonner';
+
 
 interface LayoutProps {
   children: ReactNode;
@@ -59,17 +64,37 @@ const AppLayout = ({ children }: LayoutProps) => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showShiftEnd, setShowShiftEnd] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [queueCount, setQueueCount] = useState(getQueueCount());
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+
+    // Listen for queue changes
+    const unsub = onQueueChange(() => setQueueCount(getQueueCount()));
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      unsub();
     };
   }, []);
+
+  const handleManualSync = async () => {
+    if (!isOnline || isSyncing) return;
+    setIsSyncing(true);
+    const success = await flushQueue();
+    setIsSyncing(false);
+    if (success) {
+      toast.success('✅ تمت المزامنة بنجاح');
+    } else {
+      toast.error('❌ فشلت المزامنة، حاول مرة أخرى');
+    }
+  };
+
 
   const LOW_STOCK_THRESHOLD = 5;
   const lowStockItems = useMemo(() => {
@@ -98,10 +123,22 @@ const AppLayout = ({ children }: LayoutProps) => {
             </div>
           </div>
           <div className="flex items-center gap-1">
-            {/* Online/Offline indicator */}
-            <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium ${isOnline ? 'bg-green-500/15 text-green-400' : 'bg-destructive/15 text-destructive'}`}>
-              {isOnline ? <Wifi size={12} /> : <WifiOff size={12} />}
-              {isOnline ? 'متصل' : 'غير متصل'}
+            {/* Online/Offline + Queue indicator */}
+            <div className="flex flex-col items-end gap-1">
+              <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium ${isOnline ? 'bg-green-500/15 text-green-400' : 'bg-destructive/15 text-destructive'}`}>
+                {isOnline ? <Wifi size={12} /> : <WifiOff size={12} />}
+                {isOnline ? 'متصل' : 'غير متصل'}
+              </div>
+              {queueCount > 0 && (
+                <button
+                  onClick={handleManualSync}
+                  disabled={!isOnline || isSyncing}
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 disabled:opacity-50 transition-colors"
+                >
+                  {isSyncing ? <RefreshCw size={10} className="animate-spin" /> : <Upload size={10} />}
+                  {queueCount} معلق
+                </button>
+              )}
             </div>
             {user.role === 'admin' && (
               <button onClick={() => setShowNotifications(!showNotifications)} className="p-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent relative">
@@ -162,6 +199,17 @@ const AppLayout = ({ children }: LayoutProps) => {
           <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium ${isOnline ? 'bg-green-500/15 text-green-400' : 'bg-destructive/15 text-destructive'}`}>
             {isOnline ? <Wifi size={10} /> : <WifiOff size={10} />}
           </div>
+          {/* Mobile Queue indicator */}
+          {queueCount > 0 && (
+            <button
+              onClick={handleManualSync}
+              disabled={!isOnline || isSyncing}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-500/15 text-amber-400 disabled:opacity-50"
+            >
+              {isSyncing ? <RefreshCw size={9} className="animate-spin" /> : <Upload size={9} />}
+              {queueCount}
+            </button>
+          )}
           <button onClick={() => setShowShiftEnd(true)} className="p-2 rounded-lg text-sidebar-foreground/70">
             <Clock size={20} />
           </button>
@@ -184,6 +232,7 @@ const AppLayout = ({ children }: LayoutProps) => {
           <img src={logo} alt="بن العميد" className="w-8 h-8 rounded-full object-cover" />
         </div>
       </header>
+
 
       {/* Notifications Dropdown */}
       <AnimatePresence>

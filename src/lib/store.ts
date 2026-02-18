@@ -1,5 +1,9 @@
 import { Product, Sale, InventoryItem, Worker, AttendanceRecord, WorkerTransaction, Expense, ReturnRecord, ReturnLogEntry, ItemCategory, ShiftResetRecord, WorkerExpense } from './types';
 import { supabase } from '@/integrations/supabase/client';
+import { enqueue, flushQueue, startQueueAutoFlush } from './offlineQueue';
+
+// Start auto-flush on online events
+startQueueAutoFlush();
 
 const STORAGE_KEYS = {
   products: 'cafe_products',
@@ -233,118 +237,122 @@ function dbWorkerExpenseToLocal(e: any): WorkerExpense {
   };
 }
 
-// ============ Async DB write helpers (fire-and-forget) ============
+// ============ Async DB write helpers (Offline-First) ============
+// When offline → enqueue; when online → direct upsert
+
+const isOnline = () => navigator.onLine;
 
 function dbUpsertWorkers(workers: Worker[]) {
-  supabase.from('workers').upsert(
-    workers.map(w => ({ id: w.id, name: w.name, role: w.role, password: w.password, salary: w.salary })),
-    { onConflict: 'id' }
-  ).then(({ error }) => { if (error) console.error('DB sync workers error:', error); });
+  const rows = workers.map(w => ({ id: w.id, name: w.name, role: w.role, password: w.password, salary: w.salary }));
+  if (!isOnline()) { enqueue({ type: 'upsert', table: 'workers', data: rows }); return; }
+  supabase.from('workers').upsert(rows, { onConflict: 'id' })
+    .then(({ error }) => { if (error) { enqueue({ type: 'upsert', table: 'workers', data: rows }); } });
 }
 
 function dbUpsertProducts(products: Product[]) {
-  supabase.from('products').upsert(
-    products.map(p => ({
-      id: p.id, name: p.name, sell_price: p.sellPrice, cost_price: p.costPrice,
-      category: p.category || null, ingredients: JSON.parse(JSON.stringify(p.ingredients || [])),
-    })) as any,
-    { onConflict: 'id' }
-  ).then(({ error }) => { if (error) console.error('DB sync products error:', error); });
+  const rows = products.map(p => ({
+    id: p.id, name: p.name, sell_price: p.sellPrice, cost_price: p.costPrice,
+    category: p.category || null, ingredients: JSON.parse(JSON.stringify(p.ingredients || [])),
+  }));
+  if (!isOnline()) { enqueue({ type: 'upsert', table: 'products', data: rows }); return; }
+  (supabase.from('products') as any).upsert(rows, { onConflict: 'id' })
+    .then(({ error }: any) => { if (error) { enqueue({ type: 'upsert', table: 'products', data: rows }); } });
 }
 
 function dbUpsertInventory(items: InventoryItem[]) {
-  supabase.from('inventory').upsert(
-    items.map(i => ({
-      id: i.id, name: i.name, unit: i.unit, quantity: i.quantity,
-      cost_per_unit: i.costPerUnit, sell_price: i.sellPrice ?? null, category: i.category || null,
-    })),
-    { onConflict: 'id' }
-  ).then(({ error }) => { if (error) console.error('DB sync inventory error:', error); });
+  const rows = items.map(i => ({
+    id: i.id, name: i.name, unit: i.unit, quantity: i.quantity,
+    cost_per_unit: i.costPerUnit, sell_price: i.sellPrice ?? null, category: i.category || null,
+  }));
+  if (!isOnline()) { enqueue({ type: 'upsert', table: 'inventory', data: rows }); return; }
+  supabase.from('inventory').upsert(rows, { onConflict: 'id' })
+    .then(({ error }) => { if (error) { enqueue({ type: 'upsert', table: 'inventory', data: rows }); } });
 }
 
 function dbUpsertSales(sales: Sale[]) {
   if (sales.length === 0) return;
-  supabase.from('sales').upsert(
-    sales.map(s => ({
-      id: s.id, items: JSON.parse(JSON.stringify(s.items)), total: s.total, discount: s.discount ? JSON.parse(JSON.stringify(s.discount)) : null,
-      worker_id: s.workerId, worker_name: s.workerName, date: s.date, time: s.time,
-    })) as any,
-    { onConflict: 'id' }
-  ).then(({ error }) => { if (error) console.error('DB sync sales error:', error); });
+  const rows = sales.map(s => ({
+    id: s.id, items: JSON.parse(JSON.stringify(s.items)), total: s.total,
+    discount: s.discount ? JSON.parse(JSON.stringify(s.discount)) : null,
+    worker_id: s.workerId, worker_name: s.workerName, date: s.date, time: s.time,
+  }));
+  if (!isOnline()) { enqueue({ type: 'upsert', table: 'sales', data: rows }); return; }
+  (supabase.from('sales') as any).upsert(rows, { onConflict: 'id' })
+    .then(({ error }: any) => { if (error) { enqueue({ type: 'upsert', table: 'sales', data: rows }); } });
 }
 
 function dbUpsertAttendance(records: AttendanceRecord[]) {
   if (records.length === 0) return;
-  supabase.from('attendance').upsert(
-    records.map(a => ({
-      id: a.id, worker_id: a.workerId, worker_name: a.workerName, date: a.date,
-      check_in: a.checkIn || null, check_out: a.checkOut || null, type: a.type,
-      shift: a.shift || null, hours_worked: a.hoursWorked ?? null,
-    })),
-    { onConflict: 'id' }
-  ).then(({ error }) => { if (error) console.error('DB sync attendance error:', error); });
+  const rows = records.map(a => ({
+    id: a.id, worker_id: a.workerId, worker_name: a.workerName, date: a.date,
+    check_in: a.checkIn || null, check_out: a.checkOut || null, type: a.type,
+    shift: a.shift || null, hours_worked: a.hoursWorked ?? null,
+  }));
+  if (!isOnline()) { enqueue({ type: 'upsert', table: 'attendance', data: rows }); return; }
+  supabase.from('attendance').upsert(rows, { onConflict: 'id' })
+    .then(({ error }) => { if (error) { enqueue({ type: 'upsert', table: 'attendance', data: rows }); } });
 }
 
 function dbUpsertTransactions(txns: WorkerTransaction[]) {
   if (txns.length === 0) return;
-  supabase.from('transactions').upsert(
-    txns.map(t => ({
-      id: t.id, worker_id: t.workerId, worker_name: t.workerName,
-      type: t.type, amount: t.amount, note: t.note, date: t.date,
-    })),
-    { onConflict: 'id' }
-  ).then(({ error }) => { if (error) console.error('DB sync transactions error:', error); });
+  const rows = txns.map(t => ({
+    id: t.id, worker_id: t.workerId, worker_name: t.workerName,
+    type: t.type, amount: t.amount, note: t.note, date: t.date,
+  }));
+  if (!isOnline()) { enqueue({ type: 'upsert', table: 'transactions', data: rows }); return; }
+  supabase.from('transactions').upsert(rows, { onConflict: 'id' })
+    .then(({ error }) => { if (error) { enqueue({ type: 'upsert', table: 'transactions', data: rows }); } });
 }
 
 function dbUpsertExpenses(expenses: Expense[]) {
   if (expenses.length === 0) return;
-  supabase.from('expenses').upsert(
-    expenses.map(e => ({
-      id: e.id, name: e.name, amount: e.amount, category: e.category,
-      note: e.note, date: e.date,
-    })),
-    { onConflict: 'id' }
-  ).then(({ error }) => { if (error) console.error('DB sync expenses error:', error); });
+  const rows = expenses.map(e => ({
+    id: e.id, name: e.name, amount: e.amount, category: e.category, note: e.note, date: e.date,
+  }));
+  if (!isOnline()) { enqueue({ type: 'upsert', table: 'expenses', data: rows }); return; }
+  supabase.from('expenses').upsert(rows, { onConflict: 'id' })
+    .then(({ error }) => { if (error) { enqueue({ type: 'upsert', table: 'expenses', data: rows }); } });
 }
 
 function dbUpsertReturns(returns: ReturnRecord[]) {
   if (returns.length === 0) return;
-  supabase.from('returns').upsert(
-    returns.map(r => ({
-      id: r.id, sale_id: r.saleId, type: r.type, items: JSON.parse(JSON.stringify(r.items)),
-      exchange_items: r.exchangeItems ? JSON.parse(JSON.stringify(r.exchangeItems)) : null, refund_amount: r.refundAmount,
-      reason: r.reason, worker_id: r.workerId, worker_name: r.workerName,
-      date: r.date, time: r.time,
-    })) as any,
-    { onConflict: 'id' }
-  ).then(({ error }) => { if (error) console.error('DB sync returns error:', error); });
+  const rows = returns.map(r => ({
+    id: r.id, sale_id: r.saleId, type: r.type, items: JSON.parse(JSON.stringify(r.items)),
+    exchange_items: r.exchangeItems ? JSON.parse(JSON.stringify(r.exchangeItems)) : null,
+    refund_amount: r.refundAmount, reason: r.reason, worker_id: r.workerId,
+    worker_name: r.workerName, date: r.date, time: r.time,
+  }));
+  if (!isOnline()) { enqueue({ type: 'upsert', table: 'returns', data: rows }); return; }
+  (supabase.from('returns') as any).upsert(rows, { onConflict: 'id' })
+    .then(({ error }: any) => { if (error) { enqueue({ type: 'upsert', table: 'returns', data: rows }); } });
 }
 
 function dbUpsertReturnsLog(log: ReturnLogEntry[]) {
   if (log.length === 0) return;
-  supabase.from('returns_log').upsert(
-    log.map(l => ({
-      id: l.id, action: l.action, return_record: JSON.parse(JSON.stringify(l.returnRecord)),
-      action_by: l.actionBy, action_date: l.actionDate, action_time: l.actionTime,
-    })) as any,
-    { onConflict: 'id' }
-  ).then(({ error }) => { if (error) console.error('DB sync returns_log error:', error); });
+  const rows = log.map(l => ({
+    id: l.id, action: l.action, return_record: JSON.parse(JSON.stringify(l.returnRecord)),
+    action_by: l.actionBy, action_date: l.actionDate, action_time: l.actionTime,
+  }));
+  if (!isOnline()) { enqueue({ type: 'upsert', table: 'returns_log', data: rows }); return; }
+  (supabase.from('returns_log') as any).upsert(rows, { onConflict: 'id' })
+    .then(({ error }: any) => { if (error) { enqueue({ type: 'upsert', table: 'returns_log', data: rows }); } });
 }
 
 function dbUpsertWorkerExpenses(items: WorkerExpense[]) {
   if (items.length === 0) return;
-  supabase.from('worker_expenses').upsert(
-    items.map(e => ({
-      id: e.id, worker_id: e.workerId, worker_name: e.workerName,
-      amount: e.amount, reason: e.reason, date: e.date, time: e.time,
-    })) as any,
-    { onConflict: 'id' }
-  ).then(({ error }) => { if (error) console.error('DB sync worker_expenses error:', error); });
+  const rows = items.map(e => ({
+    id: e.id, worker_id: e.workerId, worker_name: e.workerName,
+    amount: e.amount, reason: e.reason, date: e.date, time: e.time,
+  }));
+  if (!isOnline()) { enqueue({ type: 'upsert', table: 'worker_expenses', data: rows }); return; }
+  (supabase.from('worker_expenses') as any).upsert(rows, { onConflict: 'id' })
+    .then(({ error }: any) => { if (error) { enqueue({ type: 'upsert', table: 'worker_expenses', data: rows }); } });
 }
 
 function dbDeleteById(table: string, id: string) {
+  if (!isOnline()) { enqueue({ type: 'delete', table, data: id }); return; }
   (supabase.from(table as any) as any).delete().eq('id', id)
-    .then(({ error }: any) => { if (error) console.error(`DB delete ${table} error:`, error); });
+    .then(({ error }: any) => { if (error) { enqueue({ type: 'delete', table, data: id }); } });
 }
 
 // ============ Public API (same signatures as before) ============
