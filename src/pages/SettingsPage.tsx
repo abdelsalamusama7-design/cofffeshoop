@@ -769,7 +769,13 @@ const SettingsPage = () => {
                   const ok = await resetLocalSystem();
                   setShowResetConfirm(false);
                   if (ok) {
-                    toast({ title: '✅ تم التصفير', description: 'تم مسح كل البيانات (ماعدا النسخ الاحتياطية). جاري إعادة التحميل...' });
+                    const isOffline = !navigator.onLine;
+                    toast({
+                      title: '✅ تم التصفير',
+                      description: isOffline
+                        ? 'تم مسح البيانات محلياً. سيتم مسحها من السحاب فور اتصالك بالإنترنت.'
+                        : 'تم مسح كل البيانات (ماعدا النسخ الاحتياطية). جاري إعادة التحميل...',
+                    });
                   } else {
                     toast({ title: '❌ خطأ', description: 'حصل مشكلة أثناء التصفير', variant: 'destructive' });
                   }

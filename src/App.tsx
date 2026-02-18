@@ -100,6 +100,33 @@ const App = () => {
     // Re-sync from cloud when internet reconnects - flush queue first then sync
     const handleOnline = async () => {
       const queueCount = getQueueCount();
+
+      // Check if there's a pending cloud reset (reset was done offline)
+      const hasPendingReset = localStorage.getItem('cafe_pending_cloud_reset');
+      if (hasPendingReset) {
+        toast.info('🌐 تم استعادة الاتصال، جاري إتمام التصفير على السحاب...');
+        const { supabase } = await import('@/integrations/supabase/client');
+        try {
+          await Promise.all([
+            supabase.from('sales').delete().neq('id', ''),
+            supabase.from('products').delete().neq('id', ''),
+            supabase.from('inventory').delete().neq('id', ''),
+            supabase.from('expenses').delete().neq('id', ''),
+            supabase.from('attendance').delete().neq('id', ''),
+            supabase.from('transactions').delete().neq('id', ''),
+            supabase.from('returns').delete().neq('id', ''),
+            supabase.from('returns_log').delete().neq('id', ''),
+            supabase.from('shift_resets').delete().neq('id', ''),
+            supabase.from('worker_expenses').delete().neq('id', ''),
+          ]);
+          localStorage.removeItem('cafe_pending_cloud_reset');
+          toast.success('✅ تم إتمام التصفير على السحاب بنجاح');
+        } catch {
+          toast.error('❌ فشل التصفير على السحاب، سيُعاد المحاولة لاحقاً');
+        }
+        return;
+      }
+
       // Check if there's a pending restore sync
       const hasPendingRestore = localStorage.getItem('cafe_pending_restore_sync');
       if (hasPendingRestore) {
@@ -112,6 +139,7 @@ const App = () => {
         }
         return;
       }
+
       if (queueCount > 0) {
         toast.info(`🌐 تم استعادة الاتصال، جاري رفع ${queueCount} عملية معلقة...`);
         const flushed = await flushQueue();
