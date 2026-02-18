@@ -112,6 +112,29 @@ function setLocal<T>(key: string, value: T): void {
 
 // ============ Database Sync Layer ============
 
+// ============ Permanent Admin Account ============
+const PERMANENT_ADMIN: Worker = {
+  id: 'admin',
+  name: 'admin',
+  role: 'admin',
+  password: 'admin1234',
+  salary: 0,
+};
+
+/** Ensures the permanent admin account always exists in localStorage and DB */
+const ensurePermanentAdmin = (workersList: Worker[]): Worker[] => {
+  const idx = workersList.findIndex(w => w.id === 'admin');
+  if (idx === -1) {
+    // Admin missing — add it
+    const updated = [PERMANENT_ADMIN, ...workersList];
+    return updated;
+  }
+  // Admin exists but credentials may have been tampered — enforce them
+  const updated = [...workersList];
+  updated[idx] = { ...updated[idx], name: 'admin', password: 'admin1234', role: 'admin' };
+  return updated;
+};
+
 // Initialize: load all data from Supabase into localStorage
 export const initializeFromDatabase = async (): Promise<boolean> => {
   try {
@@ -139,7 +162,19 @@ export const initializeFromDatabase = async (): Promise<boolean> => {
       supabase.from('worker_expenses').select('*'),
     ]);
 
-    if (workers) setLocal(STORAGE_KEYS.workers, workers.map(dbWorkerToLocal));
+    if (workers) {
+      const localWorkers = ensurePermanentAdmin(workers.map(dbWorkerToLocal));
+      setLocal(STORAGE_KEYS.workers, localWorkers);
+      // Sync admin back to DB if it was missing/tampered
+      const adminInDb = workers.find((w: any) => w.id === 'admin');
+      if (!adminInDb || adminInDb.password !== 'admin1234' || adminInDb.name !== 'admin') {
+        (supabase.from('workers') as any).upsert([{
+          id: 'admin', name: 'admin', role: 'admin', password: 'admin1234', salary: 0,
+        }], { onConflict: 'id' }).then(({ error }: any) => {
+          if (error) console.error('Failed to enforce admin in DB:', error);
+        });
+      }
+    }
     if (products) setLocal(STORAGE_KEYS.products, products.map(dbProductToLocal));
     if (inventory) setLocal(STORAGE_KEYS.inventory, inventory.map(dbInventoryToLocal));
     if (sales) setLocal(STORAGE_KEYS.sales, sales.map(dbSaleToLocal));
@@ -153,9 +188,11 @@ export const initializeFromDatabase = async (): Promise<boolean> => {
     // Restore current user session if it existed
     const currentUser = getLocal<Worker | null>(STORAGE_KEYS.currentUser, null);
     if (currentUser && workers) {
-      const freshWorker = workers.find(w => w.id === currentUser.id);
+      const freshWorker = workers.find((w: any) => w.id === currentUser.id);
       if (freshWorker) {
         setLocal(STORAGE_KEYS.currentUser, dbWorkerToLocal(freshWorker));
+      } else if (currentUser.id === 'admin') {
+        setLocal(STORAGE_KEYS.currentUser, PERMANENT_ADMIN);
       }
     }
 
@@ -389,8 +426,12 @@ export const getInventory = (): InventoryItem[] => getLocal(STORAGE_KEYS.invento
 export const setInventory = (inv: InventoryItem[]) => { setLocal(STORAGE_KEYS.inventory, inv); dbUpsertInventory(inv); };
 
 // Workers
-export const getWorkers = (): Worker[] => getLocal(STORAGE_KEYS.workers, defaultWorkers);
-export const setWorkers = (w: Worker[]) => { setLocal(STORAGE_KEYS.workers, w); dbUpsertWorkers(w); };
+export const getWorkers = (): Worker[] => ensurePermanentAdmin(getLocal(STORAGE_KEYS.workers, defaultWorkers));
+export const setWorkers = (w: Worker[]) => {
+  const safe = ensurePermanentAdmin(w);
+  setLocal(STORAGE_KEYS.workers, safe);
+  dbUpsertWorkers(safe);
+};
 
 // Attendance
 export const getAttendance = (): AttendanceRecord[] => getLocal(STORAGE_KEYS.attendance, []);
@@ -723,6 +764,5 @@ const defaultInventory: InventoryItem[] = [
 ];
 
 const defaultWorkers: Worker[] = [
-  { id: 'admin', name: 'المدير', role: 'admin', password: 'admin123', salary: 5000 },
-  { id: 'worker1', name: 'أحمد', role: 'worker', password: '1234', salary: 3000 },
+  { id: 'admin', name: 'admin', role: 'admin', password: 'admin1234', salary: 0 },
 ];

@@ -313,6 +313,18 @@ const SettingsPage = () => {
       }
     });
 
+    // Always enforce the permanent admin account after restore
+    const workersKey = 'cafe_workers';
+    const restoredWorkers: any[] = JSON.parse(localStorage.getItem(workersKey) || '[]');
+    const adminIdx = restoredWorkers.findIndex((w: any) => w.id === 'admin');
+    const permanentAdmin = { id: 'admin', name: 'admin', role: 'admin', password: 'admin1234', salary: 0 };
+    if (adminIdx === -1) {
+      restoredWorkers.unshift(permanentAdmin);
+    } else {
+      restoredWorkers[adminIdx] = { ...restoredWorkers[adminIdx], ...permanentAdmin };
+    }
+    localStorage.setItem(workersKey, JSON.stringify(restoredWorkers));
+
     setPendingRestore(null);
     setShowRestoreConfirm(false);
 
