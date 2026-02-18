@@ -71,10 +71,17 @@ const App = () => {
   }, [needRefresh]);
 
   useEffect(() => {
-    // Load data from database on startup
+    // Load data from database on startup — with 5s timeout for offline mode
+    const initTimeout = setTimeout(() => {
+      console.log('⚠️ DB init timeout — using localStorage (offline mode)');
+      setDbReady(true);
+    }, 5000);
+
     initializeFromDatabase().then(() => {
+      clearTimeout(initTimeout);
       setDbReady(true);
     }).catch(() => {
+      clearTimeout(initTimeout);
       setDbReady(true); // fallback to localStorage
     });
 
