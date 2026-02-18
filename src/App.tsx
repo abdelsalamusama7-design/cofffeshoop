@@ -71,10 +71,11 @@ const App = () => {
   }, [needRefresh]);
 
   useEffect(() => {
-    // If a cloud reset is pending (reset was done offline), skip DB init entirely
-    // to prevent Supabase HTTP cache from re-populating cleared localStorage
+    // Skip DB init if there's a pending cloud reset OR pending restore sync
+    // This prevents Supabase HTTP cache from overwriting freshly cleared/restored localStorage
     const hasPendingReset = localStorage.getItem('cafe_pending_cloud_reset');
-    if (hasPendingReset) {
+    const hasPendingRestore = localStorage.getItem('cafe_pending_restore_sync');
+    if (hasPendingReset || hasPendingRestore) {
       setDbReady(true);
       return;
     }
