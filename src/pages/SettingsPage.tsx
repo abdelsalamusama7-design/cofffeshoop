@@ -524,6 +524,22 @@ const SettingsPage = () => {
             <Upload size={18} />
             {isRestoring ? 'جاري التحميل من السحاب...' : 'استعادة نسخة احتياطية من السحاب'}
           </Button>
+
+          <Button
+            onClick={() => fileInputRef.current?.click()}
+            variant="outline"
+            className="h-12 text-sm font-bold gap-2 border-primary/30 text-primary hover:bg-primary/10"
+          >
+            <Upload size={18} />
+            استعادة من ملف JSON (جهازك)
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
         </div>
 
         <div className="bg-warning/10 rounded-xl p-3 flex items-start gap-2">
