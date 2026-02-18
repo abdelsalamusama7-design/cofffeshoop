@@ -223,20 +223,20 @@ const Reports = () => {
 
     return (
       <div className="space-y-4">
-        <div className="grid grid-cols-3 gap-3">
-          <div className="glass-card rounded-xl p-4 text-center">
-            <ShoppingCart size={22} className="mx-auto text-accent mb-2" />
-            <p className="text-xl font-bold text-foreground">{filteredSales.length}</p>
-            <p className="text-xs text-muted-foreground">طلب</p>
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="glass-card rounded-xl p-3 sm:p-4 text-center">
+            <ShoppingCart size={20} className="mx-auto text-accent mb-1.5" />
+            <p className="text-lg sm:text-xl font-bold text-foreground">{filteredSales.length}</p>
+            <p className="text-[11px] text-muted-foreground">طلب</p>
           </div>
-          <div className="glass-card rounded-xl p-4 text-center">
-            <DollarSign size={22} className="mx-auto text-success mb-2" />
-            <p className="text-xl font-bold text-foreground">{totalSales} ج.م</p>
-            <p className="text-xs text-muted-foreground">مبيعات</p>
+          <div className="glass-card rounded-xl p-3 sm:p-4 text-center">
+            <DollarSign size={20} className="mx-auto text-success mb-1.5" />
+            <p className="text-sm sm:text-xl font-bold text-foreground truncate">{totalSales} ج.م</p>
+            <p className="text-[11px] text-muted-foreground">مبيعات</p>
           </div>
-          <div className="glass-card rounded-xl p-4 text-center">
-            <ArrowUpDown size={22} className="mx-auto text-info mb-2" />
-            <p className="text-xl font-bold text-foreground">{totalItems}</p>
+          <div className="glass-card rounded-xl p-3 sm:p-4 text-center">
+            <ArrowUpDown size={20} className="mx-auto text-info mb-1.5" />
+            <p className="text-lg sm:text-xl font-bold text-foreground">{totalItems}</p>
             <p className="text-xs text-muted-foreground">منتج مباع</p>
           </div>
         </div>
@@ -385,20 +385,20 @@ const Reports = () => {
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-          <div className="glass-card rounded-xl p-4 text-center">
-            <DollarSign size={22} className="mx-auto text-success mb-2" />
-            <p className="text-xl font-bold text-foreground">{Math.round(totalSales * 100) / 100} ج.م</p>
-            <p className="text-xs text-muted-foreground">إيرادات</p>
+          <div className="glass-card rounded-xl p-3 sm:p-4 text-center">
+            <DollarSign size={20} className="mx-auto text-success mb-1.5" />
+            <p className="text-sm sm:text-xl font-bold text-foreground truncate">{Math.round(totalSales * 100) / 100} ج.م</p>
+            <p className="text-[11px] text-muted-foreground">إيرادات</p>
           </div>
-          <div className="glass-card rounded-xl p-4 text-center">
-            <Wallet size={22} className="mx-auto text-destructive mb-2" />
-            <p className="text-xl font-bold text-foreground">{Math.round(totalCost * 100) / 100} ج.م</p>
-            <p className="text-xs text-muted-foreground">تكلفة</p>
+          <div className="glass-card rounded-xl p-3 sm:p-4 text-center">
+            <Wallet size={20} className="mx-auto text-destructive mb-1.5" />
+            <p className="text-sm sm:text-xl font-bold text-foreground truncate">{Math.round(totalCost * 100) / 100} ج.م</p>
+            <p className="text-[11px] text-muted-foreground">تكلفة</p>
           </div>
-          <div className="glass-card rounded-xl p-4 text-center">
-            <TrendingUp size={22} className="mx-auto text-accent mb-2" />
-            <p className="text-xl font-bold text-foreground">{Math.round(profit * 100) / 100} ج.م</p>
-            <p className="text-xs text-muted-foreground">صافي الربح</p>
+          <div className="glass-card rounded-xl p-3 sm:p-4 text-center">
+            <TrendingUp size={20} className="mx-auto text-accent mb-1.5" />
+            <p className="text-sm sm:text-xl font-bold text-foreground truncate">{Math.round(profit * 100) / 100} ج.م</p>
+            <p className="text-[11px] text-muted-foreground">صافي الربح</p>
           </div>
           <div className="glass-card rounded-xl p-4 text-center">
             <BarChart3 size={22} className="mx-auto text-info mb-2" />
