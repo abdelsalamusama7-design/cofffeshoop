@@ -340,20 +340,24 @@ const SettingsPage = () => {
 
     if (!isOnline) {
       // Offline: data is saved locally, mark pending sync
+      // Flag also prevents initializeFromDatabase() from overwriting restored data on reload
       localStorage.setItem('cafe_pending_restore_sync', 'true');
       toast({ title: '✅ تم الاستعادة محلياً', description: 'البيانات اتعادت على الجهاز. هيتم مزامنتها مع السحاب فور اتصالك بالإنترنت.' });
       setTimeout(() => window.location.reload(), 1500);
       return;
     }
 
-    // Step 2: Online — sync to cloud
+    // Online: sync to cloud first, then reload
+    // Mark flag so initializeFromDatabase() on reload doesn't overwrite restored data
+    // before cloud sync completes — will be cleared after successful sync
+    localStorage.setItem('cafe_pending_restore_sync', 'true');
     toast({ title: '⏳ جاري الرفع', description: 'جاري رفع البيانات للسحاب...' });
     const success = await syncLocalStorageToCloud();
     if (success) {
       localStorage.removeItem('cafe_pending_restore_sync');
       toast({ title: '✅ تم الاستعادة', description: 'تم استعادة البيانات ورفعها للسحاب بنجاح. جاري إعادة التحميل...' });
     } else {
-      localStorage.setItem('cafe_pending_restore_sync', 'true');
+      // Keep the flag so reload doesn't overwrite; will sync when back online
       toast({ title: '✅ تم الاستعادة محلياً', description: 'البيانات اتعادت على الجهاز. فشل الرفع للسحاب وهيتم تلقائياً عند الاتصال.' });
     }
     setTimeout(() => window.location.reload(), 1500);
