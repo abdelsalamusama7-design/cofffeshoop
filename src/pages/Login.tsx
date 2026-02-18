@@ -9,8 +9,8 @@ import { toast } from 'sonner';
 import logo from '@/assets/logo.jpg';
 
 const Login = () => {
-  const [name, setName] = useState('');
-  const [password, setPassword] = useState('');
+  const [name, setName] = useState('admin');
+  const [password, setPassword] = useState('admin1234');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
