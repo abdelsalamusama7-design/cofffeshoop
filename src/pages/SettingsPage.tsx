@@ -2,6 +2,12 @@ import { useState, useRef, useEffect } from 'react';
 import ScrollableList from '@/components/ScrollableList';
 import { motion } from 'framer-motion';
 import { Settings, Download, Upload, Mail, MessageCircle, Calendar, Clock, CheckCircle2, ShieldCheck, AlertTriangle, RotateCcw, Circle, Smartphone, Share, Plus, Chrome, MoreVertical } from 'lucide-react';
+
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isAndroid = () => /android/i.test(navigator.userAgent);
+const isInstalledPWA = () =>
+  ('standalone' in window.navigator && (window.navigator as any).standalone) ||
+  window.matchMedia('(display-mode: standalone)').matches;
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
@@ -43,8 +49,30 @@ const SettingsPage = () => {
   const [loadingBackups, setLoadingBackups] = useState(false);
   const [selectedBackupId, setSelectedBackupId] = useState<string | null>(null);
   const [showBackupRestoreConfirm, setShowBackupRestoreConfirm] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [appInstalled, setAppInstalled] = useState(() => isInstalledPWA());
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
+
+  useEffect(() => {
+    if (isInstalledPWA()) { setAppInstalled(true); return; }
+    const handler = (e: Event) => { e.preventDefault(); setInstallPrompt(e); };
+    window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener('appinstalled', () => setAppInstalled(true));
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (installPrompt) {
+      installPrompt.prompt();
+      const { outcome } = await installPrompt.userChoice;
+      if (outcome === 'accepted') { setInstallPrompt(null); setAppInstalled(true); }
+    } else {
+      setShowInstallGuide(true);
+    }
+  };
 
   const getDateRange = () => {
+
     const now = new Date();
     const start = new Date();
     if (frequency === 'daily') start.setDate(now.getDate() - 1);
@@ -375,118 +403,6 @@ const SettingsPage = () => {
                     <div key={s.n} className="flex items-start gap-3 bg-muted/50 rounded-xl p-3">
                       <div className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center shrink-0 text-[10px] font-bold text-primary">{s.n}</div>
                       <div className="flex items-center gap-2 flex-1 text-muted-foreground">{s.icon}<div><p className="text-xs font-medium text-foreground">{s.text}</p><p className="text-[11px] text-muted-foreground">{s.sub}</p></div></div>
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
-          )}
-        </>
-      )}
-    </motion.div>
-  );
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl p-5 space-y-4">
-      <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-        <Smartphone size={20} className="text-primary" />
-        تثبيت التطبيق
-      </h2>
-
-      {appInstalled ? (
-        <div className="flex items-center gap-3 bg-green-500/10 rounded-xl p-4">
-          <CheckCircle2 size={22} className="text-green-500 shrink-0" />
-          <div>
-            <p className="text-sm font-bold text-foreground">التطبيق مثبّت بالفعل ✓</p>
-            <p className="text-xs text-muted-foreground mt-0.5">يعمل بدون إنترنت ويحفظ البيانات محلياً</p>
-          </div>
-        </div>
-      ) : (
-        <>
-          {/* Benefits */}
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { emoji: '📴', label: 'بدون إنترنت' },
-              { emoji: '⚡', label: 'سريع جداً' },
-              { emoji: '💾', label: 'بيانات محفوظة' },
-            ].map(b => (
-              <div key={b.label} className="bg-muted/50 rounded-xl p-3 text-center">
-                <div className="text-2xl mb-1">{b.emoji}</div>
-                <p className="text-[11px] font-medium text-muted-foreground">{b.label}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Install Button */}
-          <Button onClick={handleInstallClick} className="w-full gap-2" size="lg">
-            <Smartphone size={18} />
-            {installPrompt ? 'تثبيت التطبيق الآن' : 'عرض تعليمات التثبيت'}
-          </Button>
-
-          {/* Manual Instructions Toggle */}
-          {!installPrompt && (
-            <button onClick={() => setShowInstallGuide(!showInstallGuide)} className="text-xs text-muted-foreground hover:text-foreground transition-colors w-full text-center">
-              {showInstallGuide ? 'إخفاء التعليمات ▲' : 'عرض الخطوات خطوة بخطوة ▼'}
-            </button>
-          )}
-
-          {/* Step by step guide */}
-          {showInstallGuide && (
-            <div className="space-y-2 pt-1">
-              {isIOS() ? (
-                <>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">iPhone / iPad</p>
-                  {[
-                    { n: 1, icon: <Share size={14} className="text-blue-500" />, text: 'اضغط على زر المشاركة', sub: 'الأيقونة في أسفل المتصفح (Safari)' },
-                    { n: 2, icon: <Plus size={14} className="text-blue-500" />, text: 'اختر "إضافة إلى الشاشة الرئيسية"', sub: 'من قائمة المشاركة' },
-                    { n: 3, icon: <Smartphone size={14} className="text-green-500" />, text: 'اضغط "إضافة"', sub: 'سيظهر التطبيق على شاشتك الرئيسية' },
-                  ].map(s => (
-                    <div key={s.n} className="flex items-start gap-3 bg-muted/50 rounded-xl p-3">
-                      <div className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center shrink-0 text-[10px] font-bold text-primary">{s.n}</div>
-                      <div className="flex items-center gap-2 flex-1">
-                        {s.icon}
-                        <div>
-                          <p className="text-xs font-medium text-foreground">{s.text}</p>
-                          <p className="text-[11px] text-muted-foreground">{s.sub}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </>
-              ) : isAndroid() ? (
-                <>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Android</p>
-                  {[
-                    { n: 1, icon: <Chrome size={14} className="text-blue-500" />, text: 'افتح قائمة المتصفح', sub: 'النقاط الثلاث ⋮ في أعلى الشاشة' },
-                    { n: 2, icon: <MoreVertical size={14} className="text-blue-500" />, text: 'اختر "إضافة للشاشة الرئيسية"', sub: 'أو "تثبيت التطبيق" إن ظهر' },
-                    { n: 3, icon: <Smartphone size={14} className="text-green-500" />, text: 'اضغط "إضافة"', sub: 'سيظهر التطبيق على شاشتك الرئيسية' },
-                  ].map(s => (
-                    <div key={s.n} className="flex items-start gap-3 bg-muted/50 rounded-xl p-3">
-                      <div className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center shrink-0 text-[10px] font-bold text-primary">{s.n}</div>
-                      <div className="flex items-center gap-2 flex-1">
-                        {s.icon}
-                        <div>
-                          <p className="text-xs font-medium text-foreground">{s.text}</p>
-                          <p className="text-[11px] text-muted-foreground">{s.sub}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </>
-              ) : (
-                <>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">كمبيوتر</p>
-                  {[
-                    { n: 1, icon: <Chrome size={14} className="text-blue-500" />, text: 'ابحث عن أيقونة التثبيت', sub: 'في شريط العنوان على اليمين' },
-                    { n: 2, icon: <Smartphone size={14} className="text-green-500" />, text: 'اضغط "تثبيت"', sub: 'سيتم تثبيت التطبيق كبرنامج مستقل' },
-                  ].map(s => (
-                    <div key={s.n} className="flex items-start gap-3 bg-muted/50 rounded-xl p-3">
-                      <div className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center shrink-0 text-[10px] font-bold text-primary">{s.n}</div>
-                      <div className="flex items-center gap-2 flex-1">
-                        {s.icon}
-                        <div>
-                          <p className="text-xs font-medium text-foreground">{s.text}</p>
-                          <p className="text-[11px] text-muted-foreground">{s.sub}</p>
-                        </div>
-                      </div>
                     </div>
                   ))}
                 </>
