@@ -107,23 +107,23 @@ const Dashboard = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
         {stats.map((stat, i) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className="glass-card rounded-2xl p-4 cursor-pointer hover:shadow-xl active:scale-[0.98] transition-all"
+            className="glass-card rounded-2xl p-3 sm:p-4 cursor-pointer hover:shadow-xl active:scale-[0.98] transition-all touch-manipulation"
             onClick={() => setActiveStatDialog(stat.dialogKey)}
           >
-            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center mb-3`}>
-              <stat.icon size={20} className="text-primary-foreground" />
+            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center mb-2`}>
+              <stat.icon size={18} className="text-primary-foreground" />
             </div>
-            <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">{stat.label}</p>
-              <ChevronLeft size={14} className="text-muted-foreground" />
+            <p className="text-lg sm:text-xl font-bold text-foreground truncate">{stat.value}</p>
+            <div className="flex items-center justify-between gap-1">
+              <p className="text-[11px] text-muted-foreground leading-tight">{stat.label}</p>
+              <ChevronLeft size={12} className="text-muted-foreground shrink-0" />
             </div>
           </motion.div>
         ))}

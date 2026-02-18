@@ -194,31 +194,28 @@ const AppLayout = ({ children }: LayoutProps) => {
       </aside>
 
       {/* Mobile Top Bar */}
-      <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-sidebar text-sidebar-foreground flex items-center justify-between px-4 h-14" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-        <div className="flex items-center gap-1">
-          <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium ${isOnline ? 'bg-green-500/15 text-green-400' : 'bg-destructive/15 text-destructive'}`}>
-            {isOnline ? <Wifi size={10} /> : <WifiOff size={10} />}
-          </div>
-          {/* Mobile Queue indicator */}
+      <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-sidebar text-sidebar-foreground flex items-center justify-between px-3 h-14" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        {/* Left: status + actions */}
+        <div className="flex items-center gap-0.5">
+          {/* Online/Offline dot */}
+          <div className={`w-2 h-2 rounded-full ml-1 ${isOnline ? 'bg-green-400' : 'bg-destructive'}`} title={isOnline ? 'متصل' : 'غير متصل'} />
+          {/* Queue sync button */}
           {queueCount > 0 && (
             <button
               onClick={handleManualSync}
               disabled={!isOnline || isSyncing}
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-500/15 text-amber-400 disabled:opacity-50"
+              className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-500/20 text-amber-400 disabled:opacity-50 ml-1"
             >
               {isSyncing ? <RefreshCw size={9} className="animate-spin" /> : <Upload size={9} />}
               {queueCount}
             </button>
           )}
-          <button onClick={() => setShowShiftEnd(true)} className="p-2 rounded-lg text-sidebar-foreground/70">
-            <Clock size={20} />
-          </button>
-          <button onClick={() => setShowLogoutConfirm(true)} className="p-2 rounded-lg text-sidebar-foreground/70">
-            <LogOut size={20} />
+          <button onClick={() => setShowShiftEnd(true)} className="p-2 rounded-lg text-sidebar-foreground/70 touch-manipulation" aria-label="إنهاء الشيفت">
+            <Clock size={19} />
           </button>
           {user.role === 'admin' && (
-            <button onClick={() => setShowNotifications(!showNotifications)} className="p-2 rounded-lg text-sidebar-foreground/70 relative">
-              <Bell size={20} />
+            <button onClick={() => setShowNotifications(!showNotifications)} className="p-2 rounded-lg text-sidebar-foreground/70 relative touch-manipulation" aria-label="الإشعارات">
+              <Bell size={19} />
               {lowStockItems.length > 0 && (
                 <span className="absolute top-1 left-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
                   {lowStockItems.length}
@@ -226,9 +223,13 @@ const AppLayout = ({ children }: LayoutProps) => {
               )}
             </button>
           )}
+          <button onClick={() => setShowLogoutConfirm(true)} className="p-2 rounded-lg text-sidebar-foreground/70 touch-manipulation" aria-label="تسجيل الخروج">
+            <LogOut size={19} />
+          </button>
         </div>
+        {/* Right: Logo + name */}
         <div className="flex items-center gap-2">
-          <span className="font-bold text-sidebar-foreground">بن العميد</span>
+          <span className="font-bold text-sm text-sidebar-foreground">بن العميد</span>
           <img src={logo} alt="بن العميد" className="w-8 h-8 rounded-full object-cover" />
         </div>
       </header>
@@ -300,21 +301,21 @@ const AppLayout = ({ children }: LayoutProps) => {
 
       {/* Mobile Bottom Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-sidebar border-t border-sidebar-border" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="flex items-center justify-around h-16">
+        <div className="flex items-center justify-around h-16 overflow-x-auto">
           {filteredNav.map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex flex-col items-center justify-center gap-1 flex-1 py-2 transition-all ${
+                className={`flex flex-col items-center justify-center gap-0.5 min-w-[52px] flex-1 py-2 transition-all touch-manipulation ${
                   isActive
                     ? 'text-sidebar-primary'
                     : 'text-sidebar-foreground/50'
                 }`}
               >
-                <item.icon size={22} />
-                <span className="text-[10px] font-medium">{item.label}</span>
+                <item.icon size={20} />
+                <span className="text-[9px] font-medium leading-tight text-center">{item.label}</span>
               </Link>
             );
           })}
