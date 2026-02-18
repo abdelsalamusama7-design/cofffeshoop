@@ -285,8 +285,27 @@ export async function listBackups(): Promise<BackupInfo[]> {
 }
 
 export async function resetLocalSystem(): Promise<boolean> {
+  // Step 1: Always clear localStorage immediately (works offline too)
+  DATA_KEYS.forEach(key => {
+    if (key !== 'cafe_workers') {
+      localStorage.removeItem(key);
+    }
+  });
+  localStorage.removeItem('cafe_auto_backup');
+  localStorage.removeItem('cafe_auto_backup_time');
+  localStorage.removeItem(LAST_BACKUP_TIME_KEY);
+  localStorage.removeItem(LAST_DATA_HASH_KEY);
+  localStorage.removeItem(OFFLINE_BACKUP_KEY);
+  localStorage.removeItem('cafe_worker_expenses');
+
+  // Step 2: If online, also clear cloud data
+  if (!navigator.onLine) {
+    // Mark pending cloud reset to be done when reconnected
+    localStorage.setItem('cafe_pending_cloud_reset', 'true');
+    return true;
+  }
+
   try {
-    // Clear cloud data except backups and workers
     await Promise.all([
       supabase.from('sales').delete().neq('id', ''),
       supabase.from('products').delete().neq('id', ''),
@@ -297,23 +316,13 @@ export async function resetLocalSystem(): Promise<boolean> {
       supabase.from('returns').delete().neq('id', ''),
       supabase.from('returns_log').delete().neq('id', ''),
       supabase.from('shift_resets').delete().neq('id', ''),
+      supabase.from('worker_expenses').delete().neq('id', ''),
     ]);
-
-    // Clear localStorage except workers and current user
-    DATA_KEYS.forEach(key => {
-      if (key !== 'cafe_workers') {
-        localStorage.removeItem(key);
-      }
-    });
-    localStorage.removeItem('cafe_auto_backup');
-    localStorage.removeItem('cafe_auto_backup_time');
-    localStorage.removeItem(LAST_BACKUP_TIME_KEY);
-    localStorage.removeItem(LAST_DATA_HASH_KEY);
-    localStorage.removeItem(OFFLINE_BACKUP_KEY);
-
+    localStorage.removeItem('cafe_pending_cloud_reset');
     return true;
   } catch {
-    return false;
+    localStorage.setItem('cafe_pending_cloud_reset', 'true');
+    return true; // Still return true since local was cleared
   }
 }
 
