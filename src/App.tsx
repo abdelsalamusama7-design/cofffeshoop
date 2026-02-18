@@ -71,6 +71,14 @@ const App = () => {
   }, [needRefresh]);
 
   useEffect(() => {
+    // If a cloud reset is pending (reset was done offline), skip DB init entirely
+    // to prevent Supabase HTTP cache from re-populating cleared localStorage
+    const hasPendingReset = localStorage.getItem('cafe_pending_cloud_reset');
+    if (hasPendingReset) {
+      setDbReady(true);
+      return;
+    }
+
     // Load data from database on startup — with 5s timeout for offline mode
     const initTimeout = setTimeout(() => {
       console.log('⚠️ DB init timeout — using localStorage (offline mode)');
