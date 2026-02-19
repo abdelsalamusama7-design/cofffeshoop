@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import ScrollableList from '@/components/ScrollableList';
 import { motion } from 'framer-motion';
-import { Settings, Download, Upload, Mail, MessageCircle, Calendar, Clock, CheckCircle2, ShieldCheck, AlertTriangle, RotateCcw, Circle, Smartphone, Share, Plus, Chrome, MoreVertical } from 'lucide-react';
+import { Settings, Download, Upload, Mail, MessageCircle, Calendar, Clock, CheckCircle2, ShieldCheck, AlertTriangle, RotateCcw, Circle, Smartphone, Share, Plus, Chrome, MoreVertical, ExternalLink } from 'lucide-react';
 
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 const isAndroid = () => /android/i.test(navigator.userAgent);
@@ -398,6 +398,18 @@ const SettingsPage = () => {
             <Smartphone size={18} />
             {installPrompt ? 'تثبيت التطبيق الآن' : 'عرض تعليمات التثبيت'}
           </Button>
+
+          {/* APK Download Link */}
+          <a
+            href="https://www.mediafire.com/file/3rqhyrvlg6g6pvq/ALameed.apk/file"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full bg-accent text-accent-foreground font-bold py-3 rounded-xl hover:opacity-90 transition-opacity text-sm"
+          >
+            <Download size={18} />
+            تحميل التطبيق (APK) للأندرويد
+            <ExternalLink size={14} />
+          </a>
 
           {!installPrompt && (
             <button onClick={() => setShowInstallGuide(!showInstallGuide)} className="text-xs text-muted-foreground hover:text-foreground transition-colors w-full text-center">
