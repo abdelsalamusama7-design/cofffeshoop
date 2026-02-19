@@ -139,6 +139,8 @@ const Attendance = () => {
   const workers = getWorkers().filter(w => w.role === 'worker');
   const [records, setRecords] = useState(getAttendance());
   const [showAdd, setShowAdd] = useState(false);
+  const [viewDate, setViewDate] = useState(new Date().toISOString().split('T')[0]);
+  const todayStr = new Date().toISOString().split('T')[0];
   const [newRecord, setNewRecord] = useState({
     workerId: '',
     date: new Date().toISOString().split('T')[0],
@@ -189,7 +191,7 @@ const Attendance = () => {
     toast.success('تم تسجيل الحضور');
   };
 
-  const todayRecords = records.filter(r => r.date === new Date().toISOString().split('T')[0]);
+  const todayRecords = records.filter(r => r.date === viewDate);
 
   // Calculate monthly summary per worker
   const currentMonth = new Date().toISOString().slice(0, 7);
@@ -219,12 +221,21 @@ const Attendance = () => {
         </Button>
       </div>
 
-      {/* Today's attendance */}
+      {/* Date filter + Today's attendance */}
       <div>
-        <h2 className="font-bold text-foreground mb-3 flex items-center gap-2">
-          <Calendar size={18} />
-          حضور اليوم
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-bold text-foreground flex items-center gap-2">
+            <Calendar size={18} />
+            {viewDate === todayStr ? 'حضور اليوم' : `حضور يوم ${viewDate}`}
+          </h2>
+        </div>
+        <div className="flex items-center gap-2 mb-3">
+          <Calendar size={16} className="text-muted-foreground shrink-0" />
+          <Input type="date" value={viewDate} onChange={e => setViewDate(e.target.value || todayStr)} className="w-auto h-9 text-sm" />
+          {viewDate !== todayStr && (
+            <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setViewDate(todayStr)}>اليوم</Button>
+          )}
+        </div>
         {todayRecords.length === 0 ? (
           <div className="glass-card rounded-xl p-6 text-center">
             <p className="text-muted-foreground">لم يتم تسجيل حضور اليوم بعد</p>

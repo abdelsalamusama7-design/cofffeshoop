@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   Wallet, ShoppingCart, DollarSign, TrendingUp, Plus, Trash2, Share2, Download,
-  Users, BarChart3, ArrowUpCircle, ArrowDownCircle, Calculator
+  Users, BarChart3, ArrowUpCircle, ArrowDownCircle, Calculator, Calendar
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,16 +26,17 @@ const Expenses = () => {
   const monthStr = today.substring(0, 7);
 
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [customDate, setCustomDate] = useState('');
   const [expenses, setExpensesState] = useState<Expense[]>(getExpenses());
   const [newName, setNewName] = useState('');
   const [newAmount, setNewAmount] = useState('');
   const [newCategory, setNewCategory] = useState('عامة');
   const [newNote, setNewNote] = useState('');
 
-  const startDate = period === 'daily' ? today : period === 'weekly' ? weekAgo : monthAgo;
-  const periodLabel = period === 'daily' ? 'يومي' : period === 'weekly' ? 'أسبوعي' : 'شهري';
+  const startDate = customDate || (period === 'daily' ? today : period === 'weekly' ? weekAgo : monthAgo);
+  const periodLabel = customDate ? `يوم ${customDate}` : period === 'daily' ? 'يومي' : period === 'weekly' ? 'أسبوعي' : 'شهري';
 
-  const filteredSales = useMemo(() => sales.filter(s => s.date >= startDate), [sales, startDate]);
+  const filteredSales = useMemo(() => sales.filter(s => customDate ? s.date === customDate : s.date >= startDate), [sales, startDate, customDate]);
 
   const expenseCategories = ['إيجار', 'كهرباء', 'مياه', 'غاز', 'صيانة', 'نقل', 'تسويق', 'عامة'];
 
@@ -61,8 +62,8 @@ const Expenses = () => {
     setExpensesState(getExpenses());
   };
 
-  const filteredTxns = transactions.filter(t => t.date >= startDate);
-  const filteredExpenses = expenses.filter(e => e.date >= startDate);
+  const filteredTxns = transactions.filter(t => customDate ? t.date === customDate : t.date >= startDate);
+  const filteredExpenses = expenses.filter(e => customDate ? e.date === customDate : e.date >= startDate);
   const advances = filteredTxns.filter(t => t.type === 'advance');
   const bonuses = filteredTxns.filter(t => t.type === 'bonus');
   const totalAdvances = advances.reduce((s, t) => s + t.amount, 0);
@@ -199,11 +200,21 @@ const Expenses = () => {
       {/* Period selector */}
       <div className="grid grid-cols-3 gap-2">
         {(['daily', 'weekly', 'monthly'] as const).map(p => (
-          <Button key={p} variant={period === p ? 'default' : 'outline'} onClick={() => setPeriod(p)}
-            className={period === p ? 'cafe-gradient text-primary-foreground' : ''}>
+          <Button key={p} variant={period === p && !customDate ? 'default' : 'outline'} onClick={() => { setPeriod(p); setCustomDate(''); }}
+            className={period === p && !customDate ? 'cafe-gradient text-primary-foreground' : ''}>
             {p === 'daily' ? 'يومي' : p === 'weekly' ? 'أسبوعي' : 'شهري'}
           </Button>
         ))}
+      </div>
+
+      {/* Date picker */}
+      <div className="flex items-center gap-2">
+        <Calendar size={16} className="text-muted-foreground shrink-0" />
+        <span className="text-sm text-muted-foreground whitespace-nowrap">فلتر تاريخ محدد:</span>
+        <Input type="date" value={customDate} onChange={e => setCustomDate(e.target.value)} className="w-auto h-9 text-sm" />
+        {customDate && (
+          <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setCustomDate('')}>مسح</Button>
+        )}
       </div>
 
       {/* Summary cards */}

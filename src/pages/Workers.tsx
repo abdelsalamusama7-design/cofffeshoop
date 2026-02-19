@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import ScrollableList from '@/components/ScrollableList';
 import { motion } from 'framer-motion';
-import { Users, Plus, Trash2, Key, Save, Mail, MessageCircle, TrendingUp, HandCoins, Gift, CircleDollarSign, Pencil } from 'lucide-react';
+import { Users, Plus, Trash2, Key, Save, Mail, MessageCircle, TrendingUp, HandCoins, Gift, CircleDollarSign, Pencil, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getWorkers, setWorkers, getCurrentUser, getAttendance, getSales, getTransactions, addTransaction, setTransactions } from '@/lib/store';
@@ -489,13 +489,15 @@ const AdvancesSection = ({
   onEdit: (txn: WorkerTransaction) => void;
 }) => {
   const [filterWorker, setFilterWorker] = useState<string>('all');
+  const [filterDate, setFilterDate] = useState<string>('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const filteredTxns = useMemo(() => {
     let txns = [...transactions].sort((a, b) => b.date.localeCompare(a.date));
     if (filterWorker !== 'all') txns = txns.filter(t => t.workerId === filterWorker);
+    if (filterDate) txns = txns.filter(t => t.date === filterDate);
     return txns;
-  }, [transactions, filterWorker]);
+  }, [transactions, filterWorker, filterDate]);
 
   const workersList = workers.filter(w => w.role !== 'admin');
 
@@ -509,18 +511,27 @@ const AdvancesSection = ({
         سجل السلف والمكافآت
       </h2>
 
-      {/* Filter */}
-      <Select value={filterWorker} onValueChange={setFilterWorker}>
-        <SelectTrigger className="w-full bg-secondary">
-          <SelectValue placeholder="كل العمال" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">كل العمال</SelectItem>
-          {workersList.map(w => (
-            <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {/* Filters */}
+      <div className="space-y-2">
+        <Select value={filterWorker} onValueChange={setFilterWorker}>
+          <SelectTrigger className="w-full bg-secondary">
+            <SelectValue placeholder="كل العمال" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">كل العمال</SelectItem>
+            {workersList.map(w => (
+              <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="flex items-center gap-2">
+          <Calendar size={16} className="text-muted-foreground shrink-0" />
+          <Input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="w-auto h-9 text-sm" />
+          {filterDate && (
+            <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setFilterDate('')}>مسح</Button>
+          )}
+        </div>
+      </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-3">
