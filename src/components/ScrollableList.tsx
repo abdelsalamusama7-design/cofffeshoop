@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, ReactNode } from 'react';
-import { ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ScrollableListProps {
@@ -64,7 +64,7 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60' }: Scrolla
             )}
             disabled={scrollProgress < 0.05}
           >
-            <ChevronUp size={16} strokeWidth={2.5} />
+            <ArrowUp size={16} strokeWidth={2.5} />
           </button>
 
           {/* Track */}
@@ -98,7 +98,7 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60' }: Scrolla
             )}
             disabled={atBottom}
           >
-            <ChevronDown size={16} strokeWidth={2.5} />
+            <ArrowDown size={16} strokeWidth={2.5} />
           </button>
         </div>
       )}
