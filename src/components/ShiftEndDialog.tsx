@@ -669,23 +669,27 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                     }
                     return r;
                   });
-                  // Remove today's attendance for this worker (fresh start)
-                  const finalAttendance = updatedAttendance.filter(r => !(r.workerId === user.id && r.date === today));
+                  // Remove today's attendance (fresh start) - admin clears all, worker clears own
+                  const isAdminUser = user.role === 'admin';
+                  const finalAttendance = updatedAttendance.filter(r => !((isAdminUser || r.workerId === user.id) && r.date === today));
                   setAttendance(finalAttendance);
                   toast.success(`✅ تم تسجيل انصرافك تلقائياً — ${checkOutTime}`, { duration: 4000 });
+                  const isAdmin = user.role === 'admin';
+                  const matchWorker = (workerId: string) => isAdmin || workerId === user.id;
+
                   const sales = getSales();
-                  const updatedSales = sales.filter(s => !(s.workerId === user.id && s.date === today));
+                  const updatedSales = sales.filter(s => !(matchWorker(s.workerId) && s.date === today));
                   setSales(updatedSales);
                   const returns = getReturns();
-                  const updatedReturns = returns.filter(r => !(r.workerId === user.id && r.date === today));
+                  const updatedReturns = returns.filter(r => !(matchWorker(r.workerId) && r.date === today));
                   setReturns(updatedReturns);
                   const returnsLog = getReturnsLog();
-                  const updatedLog = returnsLog.filter(e => !(e.returnRecord.workerId === user.id && e.actionDate === today));
+                  const updatedLog = returnsLog.filter(e => !(matchWorker(e.returnRecord.workerId) && e.actionDate === today));
                   setReturnsLog(updatedLog);
 
                   // Clear worker expenses for today
                   const allWorkerExp = getWorkerExpenses();
-                  const updatedWorkerExp = allWorkerExp.filter(e => !(e.workerId === user.id && e.date === today));
+                  const updatedWorkerExp = allWorkerExp.filter(e => !(matchWorker(e.workerId) && e.date === today));
                   setWorkerExpenses(updatedWorkerExp);
 
                   const now = new Date();
