@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { RotateCcw, ArrowLeftRight, Search, Calendar, Plus, Minus, Check, ClipboardList, Trash2 } from 'lucide-react';
+import { RotateCcw, ArrowLeftRight, Search, Calendar, Plus, Minus, Check, ClipboardList, Trash2, History } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import ScrollableList from '@/components/ScrollableList';
 import PasswordConfirmDialog from '@/components/PasswordConfirmDialog';
 import { Button } from '@/components/ui/button';
@@ -597,6 +598,8 @@ const ReturnsLogView = ({ searchTerm, filterDate }: { searchTerm: string; filter
   const today = new Date().toISOString().split('T')[0];
   const [deleteReturnId, setDeleteReturnId] = useState<string | null>(null);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [viewDate, setViewDate] = useState(today);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Refresh on shift reset or delete
   useEffect(() => {
@@ -611,10 +614,34 @@ const ReturnsLogView = ({ searchTerm, filterDate }: { searchTerm: string; filter
     };
   }, []);
 
-  // Both workers and admins see only today's returns
+  // When admin selects a different date, fetch from cloud
+  useEffect(() => {
+    if (user?.role !== 'admin') return;
+    if (viewDate === today) {
+      // Today: use local data
+      setAllReturns(getReturns());
+      return;
+    }
+    // Previous days: fetch from cloud
+    setIsLoadingHistory(true);
+    supabase.from('returns').select('*').eq('date', viewDate).then(({ data, error }) => {
+      if (!error && data) {
+        const mapped = data.map((r: any) => ({
+          id: r.id, saleId: r.sale_id, type: r.type as 'return' | 'exchange',
+          items: r.items as SaleItem[], exchangeItems: r.exchange_items as SaleItem[] | undefined,
+          refundAmount: r.refund_amount, reason: r.reason || '',
+          workerId: r.worker_id, workerName: r.worker_name, date: r.date, time: r.time,
+        }));
+        setAllReturns(mapped);
+      }
+      setIsLoadingHistory(false);
+    });
+  }, [viewDate, user?.role, today]);
+
+  // Filter by selected date
   const returns = useMemo(() => {
-    return allReturns.filter(r => r.date === today);
-  }, [allReturns, today]);
+    return allReturns.filter(r => r.date === viewDate);
+  }, [allReturns, viewDate]);
 
   // Active returns (not deleted) - shown to everyone
   const activeReturns = useMemo(() => {
@@ -641,17 +668,42 @@ const ReturnsLogView = ({ searchTerm, filterDate }: { searchTerm: string; filter
     setShowPasswordDialog(true);
   };
 
+  const dateFilterUI = user?.role === 'admin' ? (
+    <div className="flex items-center gap-2 mb-4">
+      <History size={18} className="text-muted-foreground" />
+      <span className="text-sm text-muted-foreground">عرض مرتجعات يوم:</span>
+      <input
+        type="date"
+        value={viewDate}
+        onChange={(e) => setViewDate(e.target.value)}
+        max={today}
+        className="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        dir="ltr"
+      />
+      {viewDate !== today && (
+        <Button variant="ghost" size="sm" onClick={() => setViewDate(today)}>
+          اليوم
+        </Button>
+      )}
+      {isLoadingHistory && <span className="text-xs text-muted-foreground animate-pulse">جاري التحميل...</span>}
+    </div>
+  ) : null;
+
   if (activeReturns.length === 0) {
     return (
-      <div className="text-center py-16 text-muted-foreground">
-        <ClipboardList size={48} className="mx-auto mb-4 opacity-30" />
-        <p className="text-lg font-medium">لا توجد سجلات</p>
-      </div>
+      <>
+        {dateFilterUI}
+        <div className="text-center py-16 text-muted-foreground">
+          <ClipboardList size={48} className="mx-auto mb-4 opacity-30" />
+          <p className="text-lg font-medium">لا توجد سجلات</p>
+        </div>
+      </>
     );
   }
 
   return (
     <>
+      {dateFilterUI}
       <div className="space-y-3">
         {/* Active returns */}
         {activeReturns.map(r => (
