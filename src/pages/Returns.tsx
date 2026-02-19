@@ -522,7 +522,7 @@ const FullReturnsLog = () => {
   const log = getReturnsLog();
 
   const sortedLog = useMemo(() => {
-    return [...log].sort((a, b) => compareDateTime(a.actionDate, a.actionTime, b.actionDate, b.actionTime));
+    return [...log].sort((a, b) => Number(b.id) - Number(a.id));
   }, [log]);
 
   if (sortedLog.length === 0) {
@@ -652,7 +652,7 @@ const ReturnsLogView = ({ searchTerm, filterDate }: { searchTerm: string; filter
         if (filterDate && r.date !== filterDate) return false;
         return true;
       })
-      .sort((a, b) => compareDateTime(a.date, a.time, b.date, b.time));
+      .sort((a, b) => Number(b.id) - Number(a.id));
   }, [returns, searchTerm, filterDate]);
 
 
