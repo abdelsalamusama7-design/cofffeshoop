@@ -200,33 +200,38 @@ const AppLayout = ({ children }: LayoutProps) => {
       </aside>
 
       {/* Mobile Top Bar */}
-      <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-sidebar text-sidebar-foreground flex items-center justify-between px-3 h-14" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-        {/* Left: status + actions */}
-        <div className="flex items-center gap-1">
-          {/* Status indicator */}
-          <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-medium ${isOnline ? 'bg-green-500/15 text-green-400' : 'bg-destructive/15 text-destructive'}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-400' : 'bg-destructive'}`} />
-            {isOnline ? 'متصل' : 'غير متصل'}
+      <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-sidebar text-sidebar-foreground flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        {/* Row 1: Logo + status */}
+        <div className="flex items-center justify-between px-3 h-10">
+          <div className="flex items-center gap-1">
+            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-medium ${isOnline ? 'bg-green-500/15 text-green-400' : 'bg-destructive/15 text-destructive'}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-400' : 'bg-destructive'}`} />
+              {isOnline ? 'متصل' : 'غير متصل'}
+            </div>
+            {queueCount > 0 && (
+              <button
+                onClick={handleManualSync}
+                disabled={!isOnline || isSyncing}
+                className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-amber-500/20 text-amber-400 disabled:opacity-50"
+              >
+                {isSyncing ? <RefreshCw size={9} className="animate-spin" /> : <Upload size={9} />}
+                {queueCount}
+              </button>
+            )}
           </div>
-          {queueCount > 0 && (
-            <button
-              onClick={handleManualSync}
-              disabled={!isOnline || isSyncing}
-              className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-amber-500/20 text-amber-400 disabled:opacity-50"
-            >
-              {isSyncing ? <RefreshCw size={9} className="animate-spin" /> : <Upload size={9} />}
-              {queueCount}
-            </button>
-          )}
-          {/* Divider */}
-          <div className="w-px h-5 bg-sidebar-border mx-0.5" />
-          {/* Action buttons */}
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-sm text-sidebar-foreground">بن العميد</span>
+            <img src={logo} alt="بن العميد" className="w-7 h-7 rounded-full object-cover" />
+          </div>
+        </div>
+        {/* Row 2: Action buttons */}
+        <div className="flex items-center justify-center gap-3 px-3 pb-1.5">
           <button onClick={() => setShowShiftEnd(true)} className="p-1.5 rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground touch-manipulation" aria-label="إنهاء الشيفت">
-            <Clock size={18} />
+            <Clock size={17} />
           </button>
           {user.role === 'admin' && (
             <button onClick={() => setShowNotifications(!showNotifications)} className="p-1.5 rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground relative touch-manipulation" aria-label="الإشعارات">
-              <Bell size={18} />
+              <Bell size={17} />
               {lowStockItems.length > 0 && (
                 <span className="absolute top-0 left-0 w-3.5 h-3.5 rounded-full bg-destructive text-destructive-foreground text-[8px] font-bold flex items-center justify-center">
                   {lowStockItems.length}
@@ -235,16 +240,11 @@ const AppLayout = ({ children }: LayoutProps) => {
             </button>
           )}
           <button onClick={() => window.location.reload()} className="p-1.5 rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground touch-manipulation" aria-label="تحديث الصفحة">
-            <RefreshCw size={16} />
+            <RefreshCw size={15} />
           </button>
           <button onClick={() => setShowLogoutConfirm(true)} className="p-1.5 rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground touch-manipulation" aria-label="تسجيل الخروج">
-            <LogOut size={18} />
+            <LogOut size={17} />
           </button>
-        </div>
-        {/* Right: Logo + name */}
-        <div className="flex items-center gap-2">
-          <span className="font-bold text-sm text-sidebar-foreground">بن العميد</span>
-          <img src={logo} alt="بن العميد" className="w-8 h-8 rounded-full object-cover" />
         </div>
       </header>
 
@@ -295,7 +295,7 @@ const AppLayout = ({ children }: LayoutProps) => {
       </AnimatePresence>
 
       {/* Main content */}
-      <main className="flex-1 md:mr-64 pt-14 md:pt-0 pb-20 md:pb-0">
+      <main className="flex-1 md:mr-64 pt-[4.5rem] md:pt-0 pb-20 md:pb-0">
         <motion.div
           key={location.pathname}
           initial={{ opacity: 0, y: 10 }}
