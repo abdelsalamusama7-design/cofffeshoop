@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, ReactNode } from 'react';
-import { ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ScrollableListProps {
@@ -57,14 +56,16 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60' }: Scrolla
           <button
             onClick={() => scrollBy(-100)}
             className={cn(
-              "w-6 h-6 flex items-center justify-center rounded-full transition-colors",
+              "w-7 h-7 flex items-center justify-center rounded-md transition-colors",
               scrollProgress < 0.05
                 ? "text-muted-foreground/30 cursor-default"
                 : "text-primary hover:bg-primary/10 active:bg-primary/20"
             )}
             disabled={scrollProgress < 0.05}
           >
-            <ArrowUp size={16} strokeWidth={2.5} />
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 3L12 10H2L7 3Z" fill="currentColor" />
+            </svg>
           </button>
 
           {/* Track */}
@@ -91,14 +92,16 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60' }: Scrolla
           <button
             onClick={() => scrollBy(100)}
             className={cn(
-              "w-6 h-6 flex items-center justify-center rounded-full transition-colors",
+              "w-7 h-7 flex items-center justify-center rounded-md transition-colors",
               atBottom
                 ? "text-muted-foreground/30 cursor-default"
                 : "text-primary hover:bg-primary/10 active:bg-primary/20"
             )}
             disabled={atBottom}
           >
-            <ArrowDown size={16} strokeWidth={2.5} />
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 11L2 4H12L7 11Z" fill="currentColor" />
+            </svg>
           </button>
         </div>
       )}
