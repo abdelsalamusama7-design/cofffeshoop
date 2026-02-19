@@ -55,8 +55,9 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60' }: Scrolla
           {/* Up arrow */}
           <button
             onClick={() => scrollBy(-100)}
+            onTouchEnd={(e) => { e.preventDefault(); scrollBy(-100); }}
             className={cn(
-              "w-8 h-8 flex items-center justify-center rounded-md transition-colors",
+              "w-12 h-12 flex items-center justify-center rounded-md transition-colors touch-manipulation",
               scrollProgress < 0.05
                 ? "text-muted-foreground/30 cursor-default"
                 : "text-foreground hover:bg-accent active:bg-accent/80"
@@ -91,8 +92,9 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60' }: Scrolla
           {/* Down arrow */}
           <button
             onClick={() => scrollBy(100)}
+            onTouchEnd={(e) => { e.preventDefault(); scrollBy(100); }}
             className={cn(
-              "w-8 h-8 flex items-center justify-center rounded-md transition-colors",
+              "w-12 h-12 flex items-center justify-center rounded-md transition-colors touch-manipulation",
               atBottom
                 ? "text-muted-foreground/30 cursor-default"
                 : "text-foreground hover:bg-accent active:bg-accent/80"
