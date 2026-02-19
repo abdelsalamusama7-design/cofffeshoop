@@ -286,17 +286,19 @@ export async function listBackups(): Promise<BackupInfo[]> {
 
 export async function resetLocalSystem(): Promise<boolean> {
   // Step 1: Always clear localStorage immediately (works offline too)
+  // Set empty arrays instead of removing keys, so getProducts/getInventory
+  // don't fall back to defaultProducts/defaultInventory
   DATA_KEYS.forEach(key => {
     if (key !== 'cafe_workers') {
-      localStorage.removeItem(key);
+      localStorage.setItem(key, '[]');
     }
   });
+  localStorage.setItem('cafe_worker_expenses', '[]');
   localStorage.removeItem('cafe_auto_backup');
   localStorage.removeItem('cafe_auto_backup_time');
   localStorage.removeItem(LAST_BACKUP_TIME_KEY);
   localStorage.removeItem(LAST_DATA_HASH_KEY);
   localStorage.removeItem(OFFLINE_BACKUP_KEY);
-  localStorage.removeItem('cafe_worker_expenses');
 
   // Step 2: If online, also clear cloud data
   if (!navigator.onLine) {
