@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
 import { compareDateTime } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
 import InstallPWA from '@/components/InstallPWA';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ShoppingCart, BarChart3, Package, TrendingUp, DollarSign, Coffee, ChevronLeft, Trash2, Edit3, X, Check, RotateCcw, ArrowLeftRight } from 'lucide-react';
+import { ShoppingCart, BarChart3, Package, TrendingUp, DollarSign, Coffee, ChevronLeft, Trash2, Edit3, X, Check, RotateCcw, ArrowLeftRight, Calendar } from 'lucide-react';
 import { getProducts, getSales, getInventory, deleteSale, updateSale, getReturns, deleteReturn } from '@/lib/store';
 import ScrollableList from '@/components/ScrollableList';
 import { getCurrentUser } from '@/lib/store';
@@ -28,11 +29,13 @@ const Dashboard = () => {
   const [pendingDeleteReturn, setPendingDeleteReturn] = useState<string | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
-  const todaySales = sales.filter(s => s.date === today);
+  const [selectedDate, setSelectedDate] = useState(today);
+
+  const todaySales = sales.filter(s => s.date === selectedDate);
   const workerTodaySales = user ? todaySales.filter(s => s.workerId === user.id) : [];
   const displaySales = user?.role === 'admin' ? todaySales : workerTodaySales;
 
-  const todayReturns = returns.filter(r => r.date === today);
+  const todayReturns = returns.filter(r => r.date === selectedDate);
   const workerTodayReturns = user ? todayReturns.filter(r => r.workerId === user.id) : [];
   const displayReturns = user?.role === 'admin' ? todayReturns : workerTodayReturns;
 
@@ -102,9 +105,21 @@ const Dashboard = () => {
       {/* PWA Install Banner */}
       <InstallPWA />
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">مرحباً، {user?.name} 👋</h1>
-        <p className="text-muted-foreground mt-1">لوحة التحكم الرئيسية</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">مرحباً، {user?.name} 👋</h1>
+          <p className="text-muted-foreground mt-1">لوحة التحكم الرئيسية</p>
+        </div>
+      </div>
+
+      {/* Date Filter */}
+      <div className="flex items-center gap-2">
+        <Calendar size={16} className="text-muted-foreground shrink-0" />
+        <span className="text-sm text-muted-foreground whitespace-nowrap">عرض بيانات يوم:</span>
+        <Input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value || today)} className="w-auto h-9 text-sm" />
+        {selectedDate !== today && (
+          <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setSelectedDate(today)}>اليوم</Button>
+        )}
       </div>
 
       {/* Stats */}
