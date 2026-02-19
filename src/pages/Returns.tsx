@@ -592,9 +592,19 @@ const FullReturnsLog = () => {
 
 // Returns Log View Component
 const ReturnsLogView = ({ searchTerm, filterDate }: { searchTerm: string; filterDate: string }) => {
-  const returns = getReturns();
+  const allReturns = getReturns();
+  const user = getCurrentUser();
+  const today = new Date().toISOString().split('T')[0];
   const [deleteReturnId, setDeleteReturnId] = useState<string | null>(null);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+
+  // Workers only see today's returns, admins see all
+  const returns = useMemo(() => {
+    if (user?.role === 'worker') {
+      return allReturns.filter(r => r.date === today);
+    }
+    return allReturns;
+  }, [allReturns, user, today]);
 
   // Active returns (not deleted) - shown to everyone
   const activeReturns = useMemo(() => {
