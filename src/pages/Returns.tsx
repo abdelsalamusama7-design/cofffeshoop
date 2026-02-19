@@ -598,13 +598,10 @@ const ReturnsLogView = ({ searchTerm, filterDate }: { searchTerm: string; filter
   const [deleteReturnId, setDeleteReturnId] = useState<string | null>(null);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
 
-  // Workers only see today's returns, admins see all
+  // Both workers and admins see only today's returns
   const returns = useMemo(() => {
-    if (user?.role === 'worker') {
-      return allReturns.filter(r => r.date === today);
-    }
-    return allReturns;
-  }, [allReturns, user, today]);
+    return allReturns.filter(r => r.date === today);
+  }, [allReturns, today]);
 
   // Active returns (not deleted) - shown to everyone
   const activeReturns = useMemo(() => {
