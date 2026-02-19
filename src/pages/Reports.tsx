@@ -1021,37 +1021,37 @@ const Reports = () => {
 
       {/* Report tabs */}
       <Tabs defaultValue="sales" dir="rtl">
-        <TabsList className="w-full grid grid-cols-4 sm:grid-cols-8 h-auto">
-          <TabsTrigger value="sales" className="text-xs py-2 px-1">
-            <ShoppingCart size={14} className="ml-1 hidden sm:inline" />
+        <TabsList className="w-full flex overflow-x-auto h-auto gap-1 justify-start p-1">
+          <TabsTrigger value="sales" className="text-xs py-2 px-3 whitespace-nowrap flex-shrink-0">
+            <ShoppingCart size={14} className="ml-1" />
             المبيعات
           </TabsTrigger>
-          <TabsTrigger value="profits" className="text-xs py-2 px-1">
-            <TrendingUp size={14} className="ml-1 hidden sm:inline" />
+          <TabsTrigger value="profits" className="text-xs py-2 px-3 whitespace-nowrap flex-shrink-0">
+            <TrendingUp size={14} className="ml-1" />
             الأرباح
           </TabsTrigger>
-          <TabsTrigger value="returns" className="text-xs py-2 px-1">
-            <RotateCcw size={14} className="ml-1 hidden sm:inline" />
+          <TabsTrigger value="returns" className="text-xs py-2 px-3 whitespace-nowrap flex-shrink-0">
+            <RotateCcw size={14} className="ml-1" />
             المرتجعات
           </TabsTrigger>
-          <TabsTrigger value="workers" className="text-xs py-2 px-1">
-            <Users size={14} className="ml-1 hidden sm:inline" />
+          <TabsTrigger value="workers" className="text-xs py-2 px-3 whitespace-nowrap flex-shrink-0">
+            <Users size={14} className="ml-1" />
             أداء العمال
           </TabsTrigger>
-          <TabsTrigger value="attendance" className="text-xs py-2 px-1">
-            <ClipboardCheck size={14} className="ml-1 hidden sm:inline" />
+          <TabsTrigger value="attendance" className="text-xs py-2 px-3 whitespace-nowrap flex-shrink-0">
+            <ClipboardCheck size={14} className="ml-1" />
             الحضور
           </TabsTrigger>
-          <TabsTrigger value="workerexpenses" className="text-xs py-2 px-1">
-            <Wallet size={14} className="ml-1 hidden sm:inline" />
+          <TabsTrigger value="workerexpenses" className="text-xs py-2 px-3 whitespace-nowrap flex-shrink-0">
+            <Wallet size={14} className="ml-1" />
             مصروفات العمال
           </TabsTrigger>
-          <TabsTrigger value="lowstock" className="text-xs py-2 px-1">
-            <AlertTriangle size={14} className="ml-1 hidden sm:inline" />
+          <TabsTrigger value="lowstock" className="text-xs py-2 px-3 whitespace-nowrap flex-shrink-0">
+            <AlertTriangle size={14} className="ml-1" />
             نقص المخزون
           </TabsTrigger>
-          <TabsTrigger value="resets" className="text-xs py-2 px-1">
-            <History size={14} className="ml-1 hidden sm:inline" />
+          <TabsTrigger value="resets" className="text-xs py-2 px-3 whitespace-nowrap flex-shrink-0">
+            <History size={14} className="ml-1" />
             التصفيرات
           </TabsTrigger>
         </TabsList>
