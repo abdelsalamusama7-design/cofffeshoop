@@ -122,37 +122,40 @@ const AppLayout = ({ children }: LayoutProps) => {
               <p className="text-xs text-sidebar-foreground/60">{user.name} - {user.role === 'admin' ? 'مدير' : 'عامل'}</p>
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            {/* Online/Offline + Queue indicator */}
-            <div className="flex flex-col items-end gap-1">
-              <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium ${isOnline ? 'bg-green-500/15 text-green-400' : 'bg-destructive/15 text-destructive'}`}>
-                {isOnline ? <Wifi size={12} /> : <WifiOff size={12} />}
-                {isOnline ? 'متصل' : 'غير متصل'}
-              </div>
+          <div className="flex items-center gap-2">
+            {/* Action buttons */}
+            <div className="flex items-center gap-0.5">
+              <button onClick={() => window.location.reload()} className="p-2 rounded-lg text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors" aria-label="تحديث الصفحة">
+                <RefreshCw size={17} />
+              </button>
+              {user.role === 'admin' && (
+                <button onClick={() => setShowNotifications(!showNotifications)} className="p-2 rounded-lg text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground relative transition-colors">
+                  <Bell size={17} />
+                  {lowStockItems.length > 0 && (
+                    <span className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                      {lowStockItems.length}
+                    </span>
+                  )}
+                </button>
+              )}
+            </div>
+            {/* Status pill */}
+            <div className="flex items-center gap-1.5">
               {queueCount > 0 && (
                 <button
                   onClick={handleManualSync}
                   disabled={!isOnline || isSyncing}
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 disabled:opacity-50 transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 disabled:opacity-50 transition-colors"
                 >
                   {isSyncing ? <RefreshCw size={10} className="animate-spin" /> : <Upload size={10} />}
-                  {queueCount} معلق
+                  {queueCount}
                 </button>
               )}
+              <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium ${isOnline ? 'bg-green-500/15 text-green-400' : 'bg-destructive/15 text-destructive'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-400' : 'bg-destructive'}`} />
+                {isOnline ? 'متصل' : 'غير متصل'}
+              </div>
             </div>
-            {user.role === 'admin' && (
-              <button onClick={() => setShowNotifications(!showNotifications)} className="p-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent relative">
-                <Bell size={20} />
-                {lowStockItems.length > 0 && (
-                  <span className="absolute top-1 left-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
-                    {lowStockItems.length}
-                  </span>
-                )}
-              </button>
-            )}
-            <button onClick={() => window.location.reload()} className="p-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent" aria-label="تحديث الصفحة">
-              <RefreshCw size={18} />
-            </button>
           </div>
         </div>
 
@@ -199,38 +202,43 @@ const AppLayout = ({ children }: LayoutProps) => {
       {/* Mobile Top Bar */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-sidebar text-sidebar-foreground flex items-center justify-between px-3 h-14" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         {/* Left: status + actions */}
-        <div className="flex items-center gap-0.5">
-          {/* Online/Offline dot */}
-          <div className={`w-2 h-2 rounded-full ml-1 ${isOnline ? 'bg-green-400' : 'bg-destructive'}`} title={isOnline ? 'متصل' : 'غير متصل'} />
-          {/* Queue sync button */}
+        <div className="flex items-center gap-1">
+          {/* Status indicator */}
+          <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-medium ${isOnline ? 'bg-green-500/15 text-green-400' : 'bg-destructive/15 text-destructive'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-400' : 'bg-destructive'}`} />
+            {isOnline ? 'متصل' : 'غير متصل'}
+          </div>
           {queueCount > 0 && (
             <button
               onClick={handleManualSync}
               disabled={!isOnline || isSyncing}
-              className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-500/20 text-amber-400 disabled:opacity-50 ml-1"
+              className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-amber-500/20 text-amber-400 disabled:opacity-50"
             >
               {isSyncing ? <RefreshCw size={9} className="animate-spin" /> : <Upload size={9} />}
               {queueCount}
             </button>
           )}
-          <button onClick={() => setShowShiftEnd(true)} className="p-2 rounded-lg text-sidebar-foreground/70 touch-manipulation" aria-label="إنهاء الشيفت">
-            <Clock size={19} />
+          {/* Divider */}
+          <div className="w-px h-5 bg-sidebar-border mx-0.5" />
+          {/* Action buttons */}
+          <button onClick={() => setShowShiftEnd(true)} className="p-1.5 rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground touch-manipulation" aria-label="إنهاء الشيفت">
+            <Clock size={18} />
           </button>
           {user.role === 'admin' && (
-            <button onClick={() => setShowNotifications(!showNotifications)} className="p-2 rounded-lg text-sidebar-foreground/70 relative touch-manipulation" aria-label="الإشعارات">
-              <Bell size={19} />
+            <button onClick={() => setShowNotifications(!showNotifications)} className="p-1.5 rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground relative touch-manipulation" aria-label="الإشعارات">
+              <Bell size={18} />
               {lowStockItems.length > 0 && (
-                <span className="absolute top-1 left-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                <span className="absolute top-0 left-0 w-3.5 h-3.5 rounded-full bg-destructive text-destructive-foreground text-[8px] font-bold flex items-center justify-center">
                   {lowStockItems.length}
                 </span>
               )}
             </button>
           )}
-          <button onClick={() => window.location.reload()} className="p-2 rounded-lg text-sidebar-foreground/70 touch-manipulation" aria-label="تحديث الصفحة">
-            <RefreshCw size={17} />
+          <button onClick={() => window.location.reload()} className="p-1.5 rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground touch-manipulation" aria-label="تحديث الصفحة">
+            <RefreshCw size={16} />
           </button>
-          <button onClick={() => setShowLogoutConfirm(true)} className="p-2 rounded-lg text-sidebar-foreground/70 touch-manipulation" aria-label="تسجيل الخروج">
-            <LogOut size={19} />
+          <button onClick={() => setShowLogoutConfirm(true)} className="p-1.5 rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground touch-manipulation" aria-label="تسجيل الخروج">
+            <LogOut size={18} />
           </button>
         </div>
         {/* Right: Logo + name */}
