@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Lock, Clock, ShoppingCart, Share2, Mail, FileText, MessageCircle, RotateCcw, Trash2, Package } from 'lucide-react';
-import { getCurrentUser, getSales, setSales, getAttendance, setAttendance, getWorkers, getReturns, setReturns, getReturnsLog, setReturnsLog, getInventory, getProducts, addShiftReset, getWorkerExpenses } from '@/lib/store';
+import { getCurrentUser, getSales, setSales, getAttendance, setAttendance, getWorkers, getReturns, setReturns, getReturnsLog, setReturnsLog, getInventory, getProducts, addShiftReset, getWorkerExpenses, setWorkerExpenses } from '@/lib/store';
 import { Sale, ReturnRecord, ReturnLogEntry, InventoryItem, WorkerExpense } from '@/lib/types';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -661,7 +661,9 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                     }
                     return r;
                   });
-                  setAttendance(updatedAttendance);
+                  // Remove today's attendance for this worker (fresh start)
+                  const finalAttendance = updatedAttendance.filter(r => !(r.workerId === user.id && r.date === today));
+                  setAttendance(finalAttendance);
                   toast.success(`✅ تم تسجيل انصرافك تلقائياً — ${checkOutTime}`, { duration: 4000 });
                   const sales = getSales();
                   const updatedSales = sales.filter(s => !(s.workerId === user.id && s.date === today));
@@ -672,6 +674,11 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                   const returnsLog = getReturnsLog();
                   const updatedLog = returnsLog.filter(e => !(e.returnRecord.workerId === user.id && e.actionDate === today));
                   setReturnsLog(updatedLog);
+
+                  // Clear worker expenses for today
+                  const allWorkerExp = getWorkerExpenses();
+                  const updatedWorkerExp = allWorkerExp.filter(e => !(e.workerId === user.id && e.date === today));
+                  setWorkerExpenses(updatedWorkerExp);
 
                   const now = new Date();
                   addShiftReset({
