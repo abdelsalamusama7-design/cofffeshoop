@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { ArrowUp, ArrowDown } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Lock, Clock, ShoppingCart, Share2, Mail, FileText, MessageCircle, RotateCcw, Trash2, Package } from 'lucide-react';
@@ -378,9 +378,9 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                   const el = document.getElementById('shift-report-body');
                   el?.scrollBy({ top: -200, behavior: 'smooth' });
                 }}
-                className="w-8 h-8 flex items-center justify-center rounded-full text-primary hover:bg-primary/10 active:bg-primary/20 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-md text-primary hover:bg-primary/10 active:bg-primary/20 transition-colors"
               >
-                <ArrowUp size={20} strokeWidth={2.5} />
+                <svg width="16" height="16" viewBox="0 0 14 14" fill="none"><path d="M7 3L12 10H2L7 3Z" fill="currentColor" /></svg>
               </button>
             </div>
 
@@ -577,9 +577,9 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                   const el = document.getElementById('shift-report-body');
                   el?.scrollBy({ top: 200, behavior: 'smooth' });
                 }}
-                className="w-8 h-8 flex items-center justify-center rounded-full text-primary hover:bg-primary/10 active:bg-primary/20 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-md text-primary hover:bg-primary/10 active:bg-primary/20 transition-colors"
               >
-                <ArrowDown size={20} strokeWidth={2.5} />
+                <svg width="16" height="16" viewBox="0 0 14 14" fill="none"><path d="M7 11L2 4H12L7 11Z" fill="currentColor" /></svg>
               </button>
             </div>
 
