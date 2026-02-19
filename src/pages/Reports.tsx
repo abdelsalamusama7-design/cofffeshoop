@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import ScrollableList from '@/components/ScrollableList';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Sale, SaleItem, ShiftResetRecord, ReturnRecord } from '@/lib/types';
+import { Sale, SaleItem, ShiftResetRecord, ReturnRecord, AttendanceRecord, WorkerTransaction, Expense, WorkerExpense } from '@/lib/types';
 import PasswordConfirmDialog from '@/components/PasswordConfirmDialog';
 
 const Reports = () => {
@@ -23,46 +23,88 @@ const Reports = () => {
   const [passwordAction, setPasswordAction] = useState<{ type: 'edit' | 'delete'; sale: Sale } | null>(null);
   const [shiftResets, setShiftResets] = useState<ShiftResetRecord[]>([]);
   const [cloudReturns, setCloudReturns] = useState<ReturnRecord[]>([]);
+  const [cloudSales, setCloudSales] = useState<Sale[]>([]);
+  const [cloudAttendance, setCloudAttendance] = useState<AttendanceRecord[]>([]);
+  const [cloudTransactions, setCloudTransactions] = useState<WorkerTransaction[]>([]);
+  const [cloudExpenses, setCloudExpenses] = useState<Expense[]>([]);
+  const [cloudWorkerExpenses, setCloudWorkerExpenses] = useState<WorkerExpense[]>([]);
+  const [cloudLoaded, setCloudLoaded] = useState(false);
 
   useEffect(() => {
     getShiftResets().then(setShiftResets);
-    // Fetch returns from cloud DB so they persist even after shift reset
-    const fetchCloudReturns = async () => {
+
+    const fetchAllCloud = async () => {
       try {
-        const { data, error } = await supabase.from('returns').select('*');
-        if (!error && data) {
-          const mapped = data.map((r: any) => ({
-            id: r.id,
-            saleId: r.sale_id,
-            type: r.type as 'return' | 'exchange',
-            items: r.items as SaleItem[],
-            exchangeItems: r.exchange_items as SaleItem[] | undefined,
-            refundAmount: r.refund_amount,
-            reason: r.reason || '',
-            workerId: r.worker_id,
-            workerName: r.worker_name,
-            date: r.date,
-            time: r.time,
-          }));
-          setCloudReturns(mapped);
+        const [returnsRes, salesRes, attendanceRes, transactionsRes, expensesRes, workerExpensesRes] = await Promise.all([
+          supabase.from('returns').select('*'),
+          supabase.from('sales').select('*'),
+          supabase.from('attendance').select('*'),
+          supabase.from('transactions').select('*'),
+          supabase.from('expenses').select('*'),
+          supabase.from('worker_expenses').select('*'),
+        ]);
+
+        if (returnsRes.data) {
+          setCloudReturns(returnsRes.data.map((r: any) => ({
+            id: r.id, saleId: r.sale_id, type: r.type as 'return' | 'exchange',
+            items: r.items as SaleItem[], exchangeItems: r.exchange_items as SaleItem[] | undefined,
+            refundAmount: r.refund_amount, reason: r.reason || '',
+            workerId: r.worker_id, workerName: r.worker_name, date: r.date, time: r.time,
+          })));
         }
+        if (salesRes.data) {
+          setCloudSales(salesRes.data.map((s: any) => ({
+            id: s.id, items: s.items as SaleItem[], total: s.total,
+            discount: s.discount as Sale['discount'], workerId: s.worker_id,
+            workerName: s.worker_name, date: s.date, time: s.time,
+          })));
+        }
+        if (attendanceRes.data) {
+          setCloudAttendance(attendanceRes.data.map((a: any) => ({
+            id: a.id, workerId: a.worker_id, workerName: a.worker_name,
+            date: a.date, checkIn: a.check_in, checkOut: a.check_out,
+            type: a.type as 'present' | 'absent' | 'leave',
+            shift: a.shift as 'morning' | 'evening' | undefined,
+            hoursWorked: a.hours_worked,
+          })));
+        }
+        if (transactionsRes.data) {
+          setCloudTransactions(transactionsRes.data.map((t: any) => ({
+            id: t.id, workerId: t.worker_id, workerName: t.worker_name,
+            type: t.type as 'advance' | 'bonus', amount: t.amount,
+            note: t.note || '', date: t.date,
+          })));
+        }
+        if (expensesRes.data) {
+          setCloudExpenses(expensesRes.data.map((e: any) => ({
+            id: e.id, name: e.name, amount: e.amount,
+            category: e.category, note: e.note || '', date: e.date,
+          })));
+        }
+        if (workerExpensesRes.data) {
+          setCloudWorkerExpenses(workerExpensesRes.data.map((w: any) => ({
+            id: w.id, workerId: w.worker_id, workerName: w.worker_name,
+            amount: w.amount, reason: w.reason, date: w.date, time: w.time,
+          })));
+        }
+        setCloudLoaded(true);
       } catch (e) {
-        // Fallback to local
-        setCloudReturns(getReturns());
+        // Fallback to local on error
+        setCloudLoaded(false);
       }
     };
-    fetchCloudReturns();
+    fetchAllCloud();
   }, []);
 
   const user = getCurrentUser();
-  const sales = getSales();
+  const sales = cloudLoaded ? cloudSales : getSales();
   const products = getProducts();
   const workers = getWorkers();
-  const attendance = getAttendance();
-  const transactions = getTransactions();
+  const attendance = cloudLoaded ? cloudAttendance : getAttendance();
+  const transactions = cloudLoaded ? cloudTransactions : getTransactions();
   const inventory = getInventory();
-  const returns = cloudReturns.length > 0 ? cloudReturns : getReturns();
-  const workerExpensesData = getWorkerExpenses();
+  const returns = cloudLoaded ? cloudReturns : getReturns();
+  const workerExpensesData = cloudLoaded ? cloudWorkerExpenses : getWorkerExpenses();
 
   const today = new Date().toISOString().split('T')[0];
   const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
