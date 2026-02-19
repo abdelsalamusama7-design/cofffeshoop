@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Clock, LogIn, LogOut, HandCoins, Gift, ShoppingCart, CalendarCheck, TrendingUp, RotateCcw, Lock, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getCurrentUser, getAttendance, setAttendance, getTransactions, getSales, getWorkers, addShiftReset } from '@/lib/store';
+import { getCurrentUser, getAttendance, setAttendance, getTransactions, getSales, getWorkers, addShiftReset, getReturns, setReturns } from '@/lib/store';
 import { AttendanceRecord } from '@/lib/types';
 import ScrollableList from '@/components/ScrollableList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -337,6 +337,11 @@ const WorkerDashboard = () => {
             const updated = records.filter(r => !(r.workerId === user.id && r.date === today));
             setRecords(updated);
             setAttendance(updated);
+
+            // Remove today's returns for this worker
+            const allReturns = getReturns();
+            const updatedReturns = allReturns.filter(r => !(r.workerId === user.id && r.date === today));
+            setReturns(updatedReturns);
 
             // Log the shift reset
             const now = new Date();
