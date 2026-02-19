@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   BarChart3, Calendar, Share2, Download, TrendingUp, DollarSign,
@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import ScrollableList from '@/components/ScrollableList';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Sale, SaleItem, ShiftResetRecord } from '@/lib/types';
+import { Sale, SaleItem, ShiftResetRecord, ReturnRecord } from '@/lib/types';
 import PasswordConfirmDialog from '@/components/PasswordConfirmDialog';
 
 const Reports = () => {
@@ -22,9 +22,36 @@ const Reports = () => {
   const [editDiscount, setEditDiscount] = useState<number>(0);
   const [passwordAction, setPasswordAction] = useState<{ type: 'edit' | 'delete'; sale: Sale } | null>(null);
   const [shiftResets, setShiftResets] = useState<ShiftResetRecord[]>([]);
+  const [cloudReturns, setCloudReturns] = useState<ReturnRecord[]>([]);
 
   useEffect(() => {
     getShiftResets().then(setShiftResets);
+    // Fetch returns from cloud DB so they persist even after shift reset
+    const fetchCloudReturns = async () => {
+      try {
+        const { data, error } = await supabase.from('returns').select('*');
+        if (!error && data) {
+          const mapped = data.map((r: any) => ({
+            id: r.id,
+            saleId: r.sale_id,
+            type: r.type as 'return' | 'exchange',
+            items: r.items as SaleItem[],
+            exchangeItems: r.exchange_items as SaleItem[] | undefined,
+            refundAmount: r.refund_amount,
+            reason: r.reason || '',
+            workerId: r.worker_id,
+            workerName: r.worker_name,
+            date: r.date,
+            time: r.time,
+          }));
+          setCloudReturns(mapped);
+        }
+      } catch (e) {
+        // Fallback to local
+        setCloudReturns(getReturns());
+      }
+    };
+    fetchCloudReturns();
   }, []);
 
   const user = getCurrentUser();
@@ -34,7 +61,7 @@ const Reports = () => {
   const attendance = getAttendance();
   const transactions = getTransactions();
   const inventory = getInventory();
-  const returns = getReturns();
+  const returns = cloudReturns.length > 0 ? cloudReturns : getReturns();
   const workerExpensesData = getWorkerExpenses();
 
   const today = new Date().toISOString().split('T')[0];
