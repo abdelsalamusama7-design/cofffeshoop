@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { compareDateTime } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { Clock, LogIn, LogOut, HandCoins, Gift, ShoppingCart, CalendarCheck, TrendingUp, RotateCcw, Lock, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -242,7 +243,7 @@ const WorkerDashboard = () => {
 
         {todaySales.length > 0 ? (
           <ScrollableList className="space-y-2">
-            {todaySales.map((sale, i) => (
+            {[...todaySales].sort((a, b) => compareDateTime(a.date, a.time, b.date, b.time)).map((sale, i) => (
               <div key={sale.id} className="bg-muted/30 rounded-lg p-3 flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-foreground">

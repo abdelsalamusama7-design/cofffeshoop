@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { compareDateTime } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import {
   BarChart3, Calendar, Share2, Download, TrendingUp, DollarSign,
@@ -146,7 +147,7 @@ const Reports = () => {
       ...filteredSales.map(s => ({ ...s, isReturn: false as const })),
       ...returnEntries,
     ];
-    return combined.sort((a, b) => new Date(b.date + ' ' + b.time).getTime() - new Date(a.date + ' ' + a.time).getTime());
+    return combined.sort((a, b) => compareDateTime(a.date, a.time, b.date, b.time));
   }, [filteredSales, returnEntries]);
 
   // ===== Share helper =====
@@ -951,7 +952,7 @@ const Reports = () => {
                   <span className="text-sm font-bold text-destructive">{w.total} ج.م</span>
                 </div>
                 <div className="space-y-1">
-                  {w.items.sort((a, b) => b.time.localeCompare(a.time)).map(e => (
+                  {w.items.sort((a, b) => compareDateTime(a.date || '', a.time, b.date || '', b.time)).map(e => (
                     <div key={e.id} className="flex items-center justify-between p-2 rounded-lg bg-secondary text-sm">
                       <div>
                         <span className="text-foreground">{e.reason}</span>
