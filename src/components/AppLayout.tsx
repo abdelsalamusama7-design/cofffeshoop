@@ -140,6 +140,9 @@ const AppLayout = ({ children }: LayoutProps) => {
                 </button>
               )}
             </div>
+            <button onClick={() => window.location.reload()} className="p-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent" aria-label="تحديث الصفحة">
+              <RefreshCw size={18} />
+            </button>
             {user.role === 'admin' && (
               <button onClick={() => setShowNotifications(!showNotifications)} className="p-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent relative">
                 <Bell size={20} />
@@ -212,6 +215,9 @@ const AppLayout = ({ children }: LayoutProps) => {
           )}
           <button onClick={() => setShowShiftEnd(true)} className="p-2 rounded-lg text-sidebar-foreground/70 touch-manipulation" aria-label="إنهاء الشيفت">
             <Clock size={19} />
+          </button>
+          <button onClick={() => window.location.reload()} className="p-2 rounded-lg text-sidebar-foreground/70 touch-manipulation" aria-label="تحديث الصفحة">
+            <RefreshCw size={17} />
           </button>
           {user.role === 'admin' && (
             <button onClick={() => setShowNotifications(!showNotifications)} className="p-2 rounded-lg text-sidebar-foreground/70 relative touch-manipulation" aria-label="الإشعارات">
