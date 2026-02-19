@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Lock, Clock, ShoppingCart, Share2, Mail, FileText, MessageCircle, RotateCcw, Trash2, Package } from 'lucide-react';
@@ -380,7 +380,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                 }}
                 className="w-8 h-8 flex items-center justify-center rounded-full text-primary hover:bg-primary/10 active:bg-primary/20 transition-colors"
               >
-                <ChevronUp size={20} strokeWidth={2.5} />
+                <ArrowUp size={20} strokeWidth={2.5} />
               </button>
             </div>
 
@@ -579,7 +579,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                 }}
                 className="w-8 h-8 flex items-center justify-center rounded-full text-primary hover:bg-primary/10 active:bg-primary/20 transition-colors"
               >
-                <ChevronDown size={20} strokeWidth={2.5} />
+                <ArrowDown size={20} strokeWidth={2.5} />
               </button>
             </div>
 
