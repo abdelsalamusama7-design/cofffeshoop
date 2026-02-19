@@ -63,7 +63,7 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60' }: Scrolla
             )}
             disabled={scrollProgress < 0.05}
           >
-            <svg width="18" height="18" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="28" height="28" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M7 3L12 10H2L7 3Z" fill="currentColor" />
             </svg>
           </button>
@@ -99,7 +99,7 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60' }: Scrolla
             )}
             disabled={atBottom}
           >
-            <svg width="18" height="18" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="28" height="28" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M7 11L2 4H12L7 11Z" fill="currentColor" />
             </svg>
           </button>
