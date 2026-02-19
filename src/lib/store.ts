@@ -177,13 +177,25 @@ export const initializeFromDatabase = async (): Promise<boolean> => {
     }
     if (products) setLocal(STORAGE_KEYS.products, products.map(dbProductToLocal));
     if (inventory) setLocal(STORAGE_KEYS.inventory, inventory.map(dbInventoryToLocal));
-    if (sales) setLocal(STORAGE_KEYS.sales, sales.map(dbSaleToLocal));
-    if (attendance) setLocal(STORAGE_KEYS.attendance, attendance.map(dbAttendanceToLocal));
+
+    // Check if there was a shift reset today — if so, filter out today's operational data
+    const resetInfo = localStorage.getItem('cafe_last_shift_reset');
+    const todayStr = new Date().toISOString().split('T')[0];
+    const hasResetToday = resetInfo ? JSON.parse(resetInfo).date === todayStr : false;
+    const resetTimestamp = hasResetToday ? JSON.parse(resetInfo).timestamp : null;
+
+    const filterReset = <T extends { id: string; date?: string }>(items: T[], dateField: 'date'): T[] => {
+      if (!hasResetToday) return items;
+      return items.filter(item => (item as any)[dateField] !== todayStr || Number(item.id) > Number(resetTimestamp));
+    };
+
+    if (sales) setLocal(STORAGE_KEYS.sales, filterReset(sales.map(dbSaleToLocal), 'date'));
+    if (attendance) setLocal(STORAGE_KEYS.attendance, hasResetToday ? attendance.map(dbAttendanceToLocal).filter(a => a.date !== todayStr || Number(a.id) > Number(resetTimestamp)) : attendance.map(dbAttendanceToLocal));
     if (transactions) setLocal(STORAGE_KEYS.transactions, transactions.map(dbTransactionToLocal));
     if (expenses) setLocal(STORAGE_KEYS.expenses, expenses.map(dbExpenseToLocal));
-    if (returns) setLocal(STORAGE_KEYS.returns, returns.map(dbReturnToLocal));
-    if (returnsLog) setLocal(STORAGE_KEYS.returnsLog, returnsLog.map(dbReturnLogToLocal));
-    if (workerExpenses) setLocal(STORAGE_KEYS.workerExpenses, (workerExpenses as any[]).map(dbWorkerExpenseToLocal));
+    if (returns) setLocal(STORAGE_KEYS.returns, filterReset(returns.map(dbReturnToLocal), 'date'));
+    if (returnsLog) setLocal(STORAGE_KEYS.returnsLog, hasResetToday ? returnsLog.map(dbReturnLogToLocal).filter(l => l.actionDate !== todayStr || Number(l.id) > Number(resetTimestamp)) : returnsLog.map(dbReturnLogToLocal));
+    if (workerExpenses) setLocal(STORAGE_KEYS.workerExpenses, filterReset((workerExpenses as any[]).map(dbWorkerExpenseToLocal), 'date'));
 
     // Restore current user session if it existed
     const currentUser = getLocal<Worker | null>(STORAGE_KEYS.currentUser, null);
