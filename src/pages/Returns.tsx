@@ -521,7 +521,16 @@ const FullReturnsLog = () => {
   const log = getReturnsLog();
 
   const sortedLog = useMemo(() => {
-    return [...log].sort((a, b) => new Date(b.actionDate + ' ' + b.actionTime).getTime() - new Date(a.actionDate + ' ' + a.actionTime).getTime());
+    const parseArabicTime = (t: string) => {
+      const eastern = '٠١٢٣٤٥٦٧٨٩';
+      const western = t.replace(/[٠-٩]/g, d => String(eastern.indexOf(d)));
+      return western.replace('ص', 'AM').replace('م', 'PM');
+    };
+    return [...log].sort((a, b) => {
+      const da = new Date(a.actionDate + ' ' + parseArabicTime(a.actionTime)).getTime() || 0;
+      const db = new Date(b.actionDate + ' ' + parseArabicTime(b.actionTime)).getTime() || 0;
+      return db - da;
+    });
   }, [log]);
 
   if (sortedLog.length === 0) {
@@ -651,7 +660,16 @@ const ReturnsLogView = ({ searchTerm, filterDate }: { searchTerm: string; filter
         if (filterDate && r.date !== filterDate) return false;
         return true;
       })
-      .sort((a, b) => new Date(b.date + ' ' + b.time).getTime() - new Date(a.date + ' ' + a.time).getTime());
+      .sort((a, b) => {
+        const parseArabicTime = (t: string) => {
+          const eastern = '٠١٢٣٤٥٦٧٨٩';
+          const western = t.replace(/[٠-٩]/g, d => String(eastern.indexOf(d)));
+          return western.replace('ص', 'AM').replace('م', 'PM');
+        };
+        const da = new Date(a.date + ' ' + parseArabicTime(a.time)).getTime() || 0;
+        const db = new Date(b.date + ' ' + parseArabicTime(b.time)).getTime() || 0;
+        return db - da;
+      });
   }, [returns, searchTerm, filterDate]);
 
 
