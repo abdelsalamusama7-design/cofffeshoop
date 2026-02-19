@@ -678,19 +678,51 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                   const matchWorker = (workerId: string) => isAdmin || workerId === user.id;
 
                   const sales = getSales();
+                  const salesToDelete = sales.filter(s => matchWorker(s.workerId) && s.date === today);
                   const updatedSales = sales.filter(s => !(matchWorker(s.workerId) && s.date === today));
                   setSales(updatedSales);
+
                   const returns = getReturns();
+                  const returnsToDelete = returns.filter(r => matchWorker(r.workerId) && r.date === today);
                   const updatedReturns = returns.filter(r => !(matchWorker(r.workerId) && r.date === today));
                   setReturns(updatedReturns);
+
                   const returnsLog = getReturnsLog();
+                  const logToDelete = returnsLog.filter(e => matchWorker(e.returnRecord.workerId) && e.actionDate === today);
                   const updatedLog = returnsLog.filter(e => !(matchWorker(e.returnRecord.workerId) && e.actionDate === today));
                   setReturnsLog(updatedLog);
 
                   // Clear worker expenses for today
                   const allWorkerExp = getWorkerExpenses();
+                  const expToDelete = allWorkerExp.filter(e => matchWorker(e.workerId) && e.date === today);
                   const updatedWorkerExp = allWorkerExp.filter(e => !(matchWorker(e.workerId) && e.date === today));
                   setWorkerExpenses(updatedWorkerExp);
+
+                  // Delete from cloud as well
+                  const deleteFromCloud = async () => {
+                    try {
+                      for (const s of salesToDelete) {
+                        await supabase.from('sales').delete().eq('id', s.id);
+                      }
+                      for (const r of returnsToDelete) {
+                        await (supabase.from('returns') as any).delete().eq('id', r.id);
+                      }
+                      for (const l of logToDelete) {
+                        await (supabase.from('returns_log') as any).delete().eq('id', l.id);
+                      }
+                      for (const e of expToDelete) {
+                        await (supabase.from('worker_expenses') as any).delete().eq('id', e.id);
+                      }
+                      // Delete attendance from cloud
+                      const attToDelete = updatedAttendance.filter(r => (isAdminUser || r.workerId === user.id) && r.date === today);
+                      for (const a of attToDelete) {
+                        await supabase.from('attendance').delete().eq('id', a.id);
+                      }
+                    } catch (err) {
+                      console.error('Error deleting from cloud:', err);
+                    }
+                  };
+                  deleteFromCloud();
 
                   const now = new Date();
                   addShiftReset({
