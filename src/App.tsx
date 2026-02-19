@@ -24,7 +24,7 @@ import SettingsPage from "./pages/SettingsPage";
 import WorkerDashboard from "./pages/WorkerDashboard";
 import WorkerExpensesPage from "./pages/WorkerExpensesPage";
 import NotFound from "./pages/NotFound";
-import { useRegisterSW } from "virtual:pwa-register/react";
+
 
 
 const queryClient = new QueryClient();
@@ -41,11 +41,7 @@ const App = () => {
   const [dbReady, setDbReady] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<any>(null);
 
-  // PWA update registration
-  const { needRefresh, updateServiceWorker } = useRegisterSW({
-    onRegistered(r) { console.log('SW registered:', r); },
-    onRegisterError(error) { console.log('SW registration error:', error); },
-  });
+  // PWA auto-updates silently via registerType: "autoUpdate" in vite.config.ts
 
   // Listen for install prompt
   useEffect(() => {
@@ -56,13 +52,6 @@ const App = () => {
     window.addEventListener('beforeinstallprompt', handler);
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
-
-  // Auto-update silently without notification
-  useEffect(() => {
-    if (needRefresh) {
-      updateServiceWorker(true);
-    }
-  }, [needRefresh]);
 
   useEffect(() => {
     // Skip DB init if there's a pending cloud reset OR pending restore sync
