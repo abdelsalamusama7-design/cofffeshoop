@@ -404,7 +404,7 @@ const SettingsPage = () => {
             href="https://www.mediafire.com/file/3rqhyrvlg6g6pvq/ALameed.apk/file"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full bg-accent text-accent-foreground font-bold py-3 rounded-xl hover:opacity-90 transition-opacity text-sm"
+            className="flex items-center justify-center gap-2 w-full bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 transition-colors text-sm border border-green-500"
           >
             <Download size={18} />
             تحميل التطبيق (APK) للأندرويد
