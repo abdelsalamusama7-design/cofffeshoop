@@ -9,8 +9,8 @@ import { toast } from 'sonner';
 import logo from '@/assets/logo.jpg';
 
 const Login = () => {
-  const [name, setName] = useState('admin');
-  const [password, setPassword] = useState('admin1234');
+  const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
@@ -86,13 +86,14 @@ const Login = () => {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4" autoComplete="off">
             <div className="relative">
               <User size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="اسم المستخدم"
                 value={name}
                 onChange={e => setName(e.target.value)}
+                autoComplete="off"
                 className="pr-10 text-right"
               />
             </div>
@@ -103,6 +104,7 @@ const Login = () => {
                 placeholder="كلمة المرور"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
+                autoComplete="new-password"
                 className="pr-10 pl-10 text-right"
               />
               <button
