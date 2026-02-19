@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { compareDateTime } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { RotateCcw, ArrowLeftRight, Search, Calendar, Plus, Minus, Check, ClipboardList, Trash2, History } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -521,16 +522,7 @@ const FullReturnsLog = () => {
   const log = getReturnsLog();
 
   const sortedLog = useMemo(() => {
-    const parseArabicTime = (t: string) => {
-      const eastern = '٠١٢٣٤٥٦٧٨٩';
-      const western = t.replace(/[٠-٩]/g, d => String(eastern.indexOf(d)));
-      return western.replace('ص', 'AM').replace('م', 'PM');
-    };
-    return [...log].sort((a, b) => {
-      const da = new Date(a.actionDate + ' ' + parseArabicTime(a.actionTime)).getTime() || 0;
-      const db = new Date(b.actionDate + ' ' + parseArabicTime(b.actionTime)).getTime() || 0;
-      return db - da;
-    });
+    return [...log].sort((a, b) => compareDateTime(a.actionDate, a.actionTime, b.actionDate, b.actionTime));
   }, [log]);
 
   if (sortedLog.length === 0) {
@@ -660,16 +652,7 @@ const ReturnsLogView = ({ searchTerm, filterDate }: { searchTerm: string; filter
         if (filterDate && r.date !== filterDate) return false;
         return true;
       })
-      .sort((a, b) => {
-        const parseArabicTime = (t: string) => {
-          const eastern = '٠١٢٣٤٥٦٧٨٩';
-          const western = t.replace(/[٠-٩]/g, d => String(eastern.indexOf(d)));
-          return western.replace('ص', 'AM').replace('م', 'PM');
-        };
-        const da = new Date(a.date + ' ' + parseArabicTime(a.time)).getTime() || 0;
-        const db = new Date(b.date + ' ' + parseArabicTime(b.time)).getTime() || 0;
-        return db - da;
-      });
+      .sort((a, b) => compareDateTime(a.date, a.time, b.date, b.time));
   }, [returns, searchTerm, filterDate]);
 
 

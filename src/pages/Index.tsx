@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { compareDateTime } from '@/lib/utils';
 import InstallPWA from '@/components/InstallPWA';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -163,7 +164,7 @@ const Dashboard = () => {
             مرتجعات اليوم ({displayReturns.length})
           </h2>
           <div className="space-y-2">
-            {displayReturns.map((ret) => (
+            {[...displayReturns].sort((a, b) => compareDateTime(a.date, a.time, b.date, b.time)).map((ret) => (
               <motion.div
                 key={ret.id}
                 initial={{ opacity: 0, x: -10 }}
@@ -272,7 +273,7 @@ const Dashboard = () => {
                   <div>
                     <h3 className="font-bold text-foreground text-sm mb-2">الطلبات</h3>
                     <ScrollableList className="space-y-2">
-                      {displaySales.slice().reverse().map((sale) => (
+                      {[...displaySales].sort((a, b) => compareDateTime(a.date, a.time, b.date, b.time)).map((sale) => (
                         <div key={sale.id} className="bg-muted/30 rounded-lg p-3 text-sm">
                           <div className="flex justify-between items-center">
                             <span className="text-xs text-muted-foreground">{sale.time}</span>
@@ -301,7 +302,7 @@ const Dashboard = () => {
                 </div>
                 {displaySales.length > 0 ? (
                   <ScrollableList className="space-y-2">
-                    {displaySales.slice().reverse().map((sale, i) => (
+                    {[...displaySales].sort((a, b) => compareDateTime(a.date, a.time, b.date, b.time)).map((sale, i) => (
                       <div key={sale.id} className="bg-muted/30 rounded-lg p-3 text-sm">
                         <div className="flex justify-between items-center">
                           <div className="flex items-center gap-2">
@@ -378,7 +379,7 @@ const Dashboard = () => {
                 )}
                 {displayReturns.length > 0 ? (
                   <ScrollableList className="space-y-2">
-                    {displayReturns.slice().reverse().map((ret) => (
+                    {[...displayReturns].sort((a, b) => compareDateTime(a.date, a.time, b.date, b.time)).map((ret) => (
                       <div key={ret.id} className="bg-muted/30 rounded-lg p-3 text-sm">
                         <div className="flex justify-between items-center">
                           <div className="flex items-center gap-2">

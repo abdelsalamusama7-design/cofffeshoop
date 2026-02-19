@@ -337,7 +337,7 @@ const Expenses = () => {
         <div className="glass-card rounded-xl p-4">
           <h3 className="font-bold text-foreground mb-3">بنود المصروفات</h3>
           <ScrollableList className="space-y-2">
-            {filteredExpenses.slice().reverse().map(e => (
+            {[...filteredExpenses].sort((a, b) => b.date.localeCompare(a.date)).map(e => (
               <motion.div key={e.id} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
                 className="flex items-center justify-between p-3 rounded-lg bg-secondary">
                 <div className="flex-1">

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { compareDateTime } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { Wallet, Plus, Trash2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -116,7 +117,7 @@ const WorkerExpensesTab = () => {
         <div>
           <p className="text-sm font-bold text-muted-foreground mb-2">مصروفات اليوم</p>
           <ScrollableList className="space-y-2">
-            {todayExpenses.sort((a, b) => b.time.localeCompare(a.time)).map(exp => (
+            {todayExpenses.sort((a, b) => compareDateTime(a.date, a.time, b.date, b.time)).map(exp => (
               <motion.div
                 key={exp.id}
                 initial={{ opacity: 0, x: -10 }}
@@ -156,7 +157,7 @@ const WorkerExpensesTab = () => {
           <ScrollableList className="space-y-2">
             {monthExpenses
               .filter(e => e.date !== today)
-              .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time))
+              .sort((a, b) => compareDateTime(a.date, a.time, b.date, b.time))
               .map(exp => (
                 <div key={exp.id} className="bg-muted/20 rounded-lg p-3 flex items-center justify-between">
                   <div>
