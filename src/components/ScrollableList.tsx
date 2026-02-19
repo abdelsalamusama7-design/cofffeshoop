@@ -51,7 +51,7 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60' }: Scrolla
 
       {/* Scroll track with arrows */}
       {canScroll && (
-        <div className="flex flex-col items-center gap-0.5 shrink-0 self-stretch py-0.5">
+        <div className="flex flex-col items-center gap-1 shrink-0 self-stretch py-0.5 justify-between">
           {/* Up arrow */}
           <button
             onClick={() => scrollBy(-100)}
@@ -68,26 +68,6 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60' }: Scrolla
               <path d="M7 3L12 10H2L7 3Z" fill="currentColor" />
             </svg>
           </button>
-
-          {/* Track */}
-          <div className="relative w-3 flex-1 rounded-full bg-primary/15 overflow-hidden cursor-pointer"
-            onClick={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              const clickRatio = (e.clientY - rect.top) / rect.height;
-              const el = scrollRef.current;
-              if (el) {
-                el.scrollTo({ top: clickRatio * (el.scrollHeight - el.clientHeight), behavior: 'smooth' });
-              }
-            }}
-          >
-            <div
-              className="absolute left-0 right-0 w-full rounded-full bg-primary transition-all duration-200"
-              style={{
-                height: '25%',
-                top: `${scrollProgress * 75}%`,
-              }}
-            />
-          </div>
 
           {/* Down arrow */}
           <button
