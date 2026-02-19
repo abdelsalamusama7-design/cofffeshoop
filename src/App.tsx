@@ -57,16 +57,10 @@ const App = () => {
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
-  // Show update notification
+  // Auto-update silently without notification
   useEffect(() => {
     if (needRefresh) {
-      toast.info('🔄 يوجد تحديث جديد للتطبيق', {
-        duration: 0,
-        action: {
-          label: 'تحديث الآن',
-          onClick: () => updateServiceWorker(true),
-        },
-      });
+      updateServiceWorker(true);
     }
   }, [needRefresh]);
 
