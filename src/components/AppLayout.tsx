@@ -114,32 +114,32 @@ const AppLayout = ({ children }: LayoutProps) => {
     <div className="flex flex-col md:flex-row min-h-screen min-h-[100dvh]">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex fixed inset-y-0 right-0 z-40 w-64 bg-sidebar text-sidebar-foreground flex-col">
-        <div className="flex items-center justify-between p-6 border-b border-sidebar-border">
+        <div className="p-5 border-b border-sidebar-border space-y-3">
+          {/* Logo + name row */}
           <div className="flex items-center gap-3">
             <img src={logo} alt="بن العميد" className="w-10 h-10 rounded-full object-cover" />
-            <div>
+            <div className="flex-1">
               <h1 className="font-bold text-lg text-sidebar-foreground">بن العميد</h1>
               <p className="text-xs text-sidebar-foreground/60">{user.name} - {user.role === 'admin' ? 'مدير' : 'عامل'}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {/* Action buttons */}
-            <div className="flex items-center gap-0.5">
-              <button onClick={() => window.location.reload()} className="p-2 rounded-lg text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors" aria-label="تحديث الصفحة">
-                <RefreshCw size={17} />
-              </button>
+          {/* Actions + status row */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1">
               {user.role === 'admin' && (
-                <button onClick={() => setShowNotifications(!showNotifications)} className="p-2 rounded-lg text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground relative transition-colors">
+                <button onClick={() => setShowNotifications(!showNotifications)} className="p-1.5 rounded-lg text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground relative transition-colors">
                   <Bell size={17} />
                   {lowStockItems.length > 0 && (
-                    <span className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                    <span className="absolute top-0 left-0 w-3.5 h-3.5 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center">
                       {lowStockItems.length}
                     </span>
                   )}
                 </button>
               )}
+              <button onClick={() => window.location.reload()} className="p-1.5 rounded-lg text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors" aria-label="تحديث الصفحة">
+                <RefreshCw size={16} />
+              </button>
             </div>
-            {/* Status pill */}
             <div className="flex items-center gap-1.5">
               {queueCount > 0 && (
                 <button
