@@ -61,6 +61,11 @@ const AppLayout = ({ children }: LayoutProps) => {
   const user = getCurrentUser();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [dismissedNotifications, setDismissedNotifications] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('dismissedNotifications') || '[]');
+    } catch { return []; }
+  });
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showShiftEnd, setShowShiftEnd] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -101,6 +106,17 @@ const AppLayout = ({ children }: LayoutProps) => {
     const inventory = getInventory();
     return inventory.filter(item => item.quantity <= LOW_STOCK_THRESHOLD);
   }, [location.pathname]);
+
+  const activeNotifications = useMemo(() => 
+    lowStockItems.filter(item => !dismissedNotifications.includes(item.id)),
+    [lowStockItems, dismissedNotifications]
+  );
+
+  const handleDismissNotification = (itemId: string) => {
+    const updated = [...dismissedNotifications, itemId];
+    setDismissedNotifications(updated);
+    localStorage.setItem('dismissedNotifications', JSON.stringify(updated));
+  };
   if (!user) return <>{children}</>;
 
   const filteredNav = user.role === 'worker' ? workerNavItems : navItems;
@@ -129,9 +145,9 @@ const AppLayout = ({ children }: LayoutProps) => {
               {user.role === 'admin' && (
                 <button onClick={() => setShowNotifications(!showNotifications)} className="p-1.5 rounded-lg text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground relative transition-colors">
                   <Bell size={17} />
-                  {lowStockItems.length > 0 && (
+                  {activeNotifications.length > 0 && (
                     <span className="absolute top-0 left-0 w-3.5 h-3.5 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center">
-                      {lowStockItems.length}
+                      {activeNotifications.length}
                     </span>
                   )}
                 </button>
@@ -232,9 +248,9 @@ const AppLayout = ({ children }: LayoutProps) => {
           {user.role === 'admin' && (
             <button onClick={() => setShowNotifications(!showNotifications)} className="p-1.5 rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground relative touch-manipulation" aria-label="الإشعارات">
               <Bell size={17} />
-              {lowStockItems.length > 0 && (
+              {activeNotifications.length > 0 && (
                 <span className="absolute top-0 left-0 w-3.5 h-3.5 rounded-full bg-destructive text-destructive-foreground text-[8px] font-bold flex items-center justify-center">
-                  {lowStockItems.length}
+                  {activeNotifications.length}
                 </span>
               )}
             </button>
@@ -268,15 +284,18 @@ const AppLayout = ({ children }: LayoutProps) => {
                 <X size={16} className="text-muted-foreground" />
               </button>
             </div>
-            {lowStockItems.length === 0 ? (
+            {activeNotifications.length === 0 ? (
               <div className="p-4 text-center text-sm text-muted-foreground">لا توجد تنبيهات</div>
             ) : (
               <div className="p-2 space-y-1">
-                {lowStockItems.map(item => (
+                {activeNotifications.map(item => (
                   <Link
                     key={item.id}
                     to="/inventory"
-                    onClick={() => setShowNotifications(false)}
+                    onClick={() => {
+                      handleDismissNotification(item.id);
+                      setShowNotifications(false);
+                    }}
                     className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors"
                   >
                     <div className="w-8 h-8 rounded-lg bg-destructive/15 flex items-center justify-center shrink-0">
