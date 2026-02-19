@@ -799,7 +799,10 @@ const SettingsPage = () => {
                   } else {
                     toast({ title: '❌ خطأ', description: 'حصل مشكلة أثناء التصفير', variant: 'destructive' });
                   }
-                  setTimeout(() => window.location.reload(), 1000);
+                  // Force hard reload — use replace to avoid back-button issues
+                  setTimeout(() => {
+                    window.location.href = window.location.origin + '/?reset=' + Date.now();
+                  }, 1000);
                 } catch {
                   toast({ title: '❌ خطأ', description: 'حصل مشكلة أثناء التصفير', variant: 'destructive' });
                 }
