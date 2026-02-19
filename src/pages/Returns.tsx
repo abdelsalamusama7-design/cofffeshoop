@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { RotateCcw, ArrowLeftRight, Search, Calendar, Plus, Minus, Check, ClipboardList, Trash2 } from 'lucide-react';
 import ScrollableList from '@/components/ScrollableList';
@@ -35,8 +35,21 @@ const Returns = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDate, setFilterDate] = useState('');
   const [productSearch, setProductSearch] = useState('');
-  const returns = getReturns();
+  const [returns, setReturnsState] = useState(getReturns());
   const sales = getSales();
+
+  // Listen for localStorage changes and shift reset events
+  useEffect(() => {
+    const refresh = () => setReturnsState(getReturns());
+    window.addEventListener('storage', refresh);
+    window.addEventListener('focus', refresh);
+    window.addEventListener('shift-reset', refresh);
+    return () => {
+      window.removeEventListener('storage', refresh);
+      window.removeEventListener('focus', refresh);
+      window.removeEventListener('shift-reset', refresh);
+    };
+  }, []);
   const user = getCurrentUser();
   const inventory = getInventory();
   const products = getProducts();

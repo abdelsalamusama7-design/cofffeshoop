@@ -398,6 +398,7 @@ const WorkerDashboard = () => {
             setShowResetDialog(false);
             setResetPassword('');
             setResetError('');
+            window.dispatchEvent(new Event('shift-reset'));
             toast.success('تم تصفير الشيفت بنجاح ✅ يمكنك تسجيل حضور جديد');
           }} className="space-y-4 mt-2">
             <div className="relative">

@@ -702,6 +702,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                   setResetPassword('');
                   setResetError('');
                   handleClose();
+                  window.dispatchEvent(new Event('shift-reset'));
                   toast.success('تم تصفير الشيفت بنجاح ✅ تم مسح جميع المعاملات');
                 }} className="space-y-2">
                   <div className="relative">
