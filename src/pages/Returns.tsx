@@ -122,7 +122,7 @@ const Returns = () => {
       p.remaining = p.totalSold - p.totalReturned;
     });
 
-    return Object.values(productMap).filter(p => p.remaining > 0);
+    return Object.values(productMap).filter(p => p.remaining > 0).reverse();
   }, [sales, returns]);
 
   // Filter available products by search
