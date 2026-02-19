@@ -611,6 +611,14 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
               </Button>
             ) : (
               <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-3 space-y-3">
+                {/* Summary of what will be deleted */}
+                <div className="space-y-1 text-xs">
+                  <p className="font-bold text-destructive text-center mb-1">⚠️ سيتم حذف:</p>
+                  <div className="flex justify-between"><span className="text-muted-foreground">🧾 المبيعات</span><span className="font-medium text-foreground">{shiftSales.length} فاتورة ({totalAmount.toFixed(0)} ج.م)</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">🔄 المرتجعات</span><span className="font-medium text-foreground">{activeReturns.filter(e => !deletedReturnIds.has(e.returnRecord.id)).length} مرتجع ({totalReturnsAmount.toFixed(0)} ج.م)</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">💸 مصروفي</span><span className="font-medium text-foreground">{shiftWorkerExpenses.length} عملية ({totalWorkerExpenses.toFixed(0)} ج.م)</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">📋 سجل الحضور</span><span className="font-medium text-foreground">سيتم الحذف</span></div>
+                </div>
                 <p className="text-xs text-center text-muted-foreground">أدخل كلمة المرور لتأكيد تصفير الشيفت</p>
                 <form onSubmit={async (e) => {
                   e.preventDefault();

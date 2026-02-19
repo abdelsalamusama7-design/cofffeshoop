@@ -321,9 +321,40 @@ const WorkerDashboard = () => {
               تصفير الشيفت
             </DialogTitle>
             <DialogDescription className="text-center">
-              سيتم مسح سجل الحضور والانصراف اليوم حتى تتمكن من تسجيل شيفت جديد غداً. أدخل كلمة المرور للتأكيد.
+              ⚠️ سيتم مسح جميع بيانات الشيفت الحالي نهائياً
             </DialogDescription>
           </DialogHeader>
+
+          {/* Summary of what will be deleted */}
+          {(() => {
+            const todaySalesCount = getSales().filter(s => s.workerId === user.id && s.date === today).length;
+            const todayReturnsCount = getReturns().filter(r => r.workerId === user.id && r.date === today).length;
+            const todayExpensesCount = getWorkerExpenses().filter(e => e.workerId === user.id && e.date === today).length;
+            const todayExpensesTotal = getWorkerExpenses().filter(e => e.workerId === user.id && e.date === today).reduce((s, e) => s + e.amount, 0);
+            const todaySalesTotal = getSales().filter(s => s.workerId === user.id && s.date === today).reduce((s, sale) => s + sale.total, 0);
+            const todayReturnsTotal = getReturns().filter(r => r.workerId === user.id && r.date === today).reduce((s, r) => s + r.refundAmount, 0);
+            return (
+              <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-3 space-y-1.5 text-sm">
+                <p className="font-bold text-destructive text-center text-xs mb-2">سيتم حذف:</p>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">📋 سجل الحضور</span>
+                  <span className="font-medium text-foreground">{todayRecord ? '✓ موجود' : '—'}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">🧾 المبيعات</span>
+                  <span className="font-medium text-foreground">{todaySalesCount} فاتورة ({todaySalesTotal} ج.م)</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">🔄 المرتجعات</span>
+                  <span className="font-medium text-foreground">{todayReturnsCount} مرتجع ({todayReturnsTotal} ج.م)</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">💸 مصروفي</span>
+                  <span className="font-medium text-foreground">{todayExpensesCount} عملية ({todayExpensesTotal} ج.م)</span>
+                </div>
+              </div>
+            );
+          })()}
           <form onSubmit={(e) => {
             e.preventDefault();
             if (!user) return;
