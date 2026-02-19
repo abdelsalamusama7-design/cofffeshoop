@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Clock, LogIn, LogOut, HandCoins, Gift, ShoppingCart, CalendarCheck, TrendingUp, RotateCcw, Lock, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getCurrentUser, getAttendance, setAttendance, getTransactions, getSales, getWorkers, addShiftReset, getReturns, setReturns } from '@/lib/store';
+import { getCurrentUser, getAttendance, setAttendance, getTransactions, getSales, getWorkers, addShiftReset, getReturns, setReturns, getWorkerExpenses, setWorkerExpenses, getReturnsLog, setReturnsLog } from '@/lib/store';
 import { AttendanceRecord } from '@/lib/types';
 import ScrollableList from '@/components/ScrollableList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -342,6 +342,16 @@ const WorkerDashboard = () => {
             const allReturns = getReturns();
             const updatedReturns = allReturns.filter(r => !(r.workerId === user.id && r.date === today));
             setReturns(updatedReturns);
+
+            // Remove today's returns log for this worker
+            const allReturnsLog = getReturnsLog();
+            const updatedReturnsLog = allReturnsLog.filter(e => !(e.returnRecord.workerId === user.id && e.actionDate === today));
+            setReturnsLog(updatedReturnsLog);
+
+            // Remove today's worker expenses (مصروفي)
+            const allWorkerExp = getWorkerExpenses();
+            const updatedWorkerExp = allWorkerExp.filter(e => !(e.workerId === user.id && e.date === today));
+            setWorkerExpenses(updatedWorkerExp);
 
             // Log the shift reset
             const now = new Date();
