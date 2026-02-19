@@ -592,11 +592,24 @@ const FullReturnsLog = () => {
 
 // Returns Log View Component
 const ReturnsLogView = ({ searchTerm, filterDate }: { searchTerm: string; filterDate: string }) => {
-  const allReturns = getReturns();
+  const [allReturns, setAllReturns] = useState(getReturns());
   const user = getCurrentUser();
   const today = new Date().toISOString().split('T')[0];
   const [deleteReturnId, setDeleteReturnId] = useState<string | null>(null);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+
+  // Refresh on shift reset or delete
+  useEffect(() => {
+    const refresh = () => setAllReturns(getReturns());
+    window.addEventListener('shift-reset', refresh);
+    window.addEventListener('storage', refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.removeEventListener('shift-reset', refresh);
+      window.removeEventListener('storage', refresh);
+      window.removeEventListener('focus', refresh);
+    };
+  }, []);
 
   // Both workers and admins see only today's returns
   const returns = useMemo(() => {
@@ -618,6 +631,7 @@ const ReturnsLogView = ({ searchTerm, filterDate }: { searchTerm: string; filter
   const handleDeleteConfirm = () => {
     if (!deleteReturnId) return;
     deleteReturn(deleteReturnId);
+    setAllReturns(getReturns());
     toast.success('تم حذف المرتجع بنجاح');
     setDeleteReturnId(null);
   };
