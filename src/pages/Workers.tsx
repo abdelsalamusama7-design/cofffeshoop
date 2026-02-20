@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import ScrollableList from '@/components/ScrollableList';
 import { motion } from 'framer-motion';
-import { Users, Plus, Trash2, Key, Save, Mail, MessageCircle, TrendingUp, HandCoins, Gift, CircleDollarSign, Pencil, Calendar } from 'lucide-react';
+import { Users, Plus, Trash2, Key, Save, Mail, MessageCircle, TrendingUp, HandCoins, Gift, CircleDollarSign, Pencil, Calendar, ClipboardCheck, Clock, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getWorkers, setWorkers, getCurrentUser, getAttendance, getSales, getTransactions, addTransaction, setTransactions } from '@/lib/store';
@@ -157,6 +157,9 @@ const Workers = () => {
           </motion.div>
         ))}
       </ScrollableList>
+
+      {/* Attendance Report Section */}
+      <AttendanceReportSection workers={workersList.filter(w => w.role !== 'admin')} />
 
       {/* Salary Reports Section */}
       <SalaryReportsSection workers={workersList} transactions={transactions} />
@@ -603,6 +606,188 @@ const AdvancesSection = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+};
+
+/* ===================== Attendance Report ===================== */
+const AttendanceReportSection = ({ workers }: { workers: Worker[] }) => {
+  const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const monthStr = todayStr.substring(0, 7);
+
+  const report = useMemo(() => {
+    const attendance = getAttendance();
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const daysPassedInMonth = Math.floor((todayDate.getTime() - monthStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+    return workers.map(worker => {
+      let filtered = attendance.filter(a => a.workerId === worker.id);
+
+      if (period === 'daily') {
+        filtered = filtered.filter(a => a.date === todayStr);
+      } else if (period === 'weekly') {
+        const weekAgo = new Date(today);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        const weekAgoStr = weekAgo.toISOString().split('T')[0];
+        filtered = filtered.filter(a => a.date >= weekAgoStr && a.date <= todayStr);
+      } else {
+        filtered = filtered.filter(a => a.date.startsWith(monthStr));
+      }
+
+      const completedShifts = filtered.filter(r => r.type === 'present' && r.checkOut && (r.hoursWorked || 0) >= 12);
+      const partialShifts = filtered.filter(r => r.type === 'present' && r.checkOut && (r.hoursWorked || 0) < 12);
+      const leaveDays = filtered.filter(r => r.type === 'leave').length;
+      const totalHours = Math.round(filtered.reduce((sum, r) => sum + (r.hoursWorked || 0), 0) * 10) / 10;
+      const partialHours = Math.round(partialShifts.reduce((s, r) => s + (r.hoursWorked || 0), 0) * 10) / 10;
+
+      // Auto-calculate absent days
+      const daysWithRecords = new Set(filtered.map(r => r.date)).size;
+      let periodDays = 1;
+      if (period === 'monthly') periodDays = daysPassedInMonth;
+      else if (period === 'weekly') periodDays = 7;
+      const absentDays = Math.max(0, periodDays - daysWithRecords);
+
+      // Latest check-in/out for today
+      const todayRecord = filtered.find(r => r.date === todayStr && r.type === 'present');
+
+      return {
+        worker,
+        presentDays: completedShifts.length,
+        partialShifts: partialShifts.length,
+        partialHours,
+        leaveDays,
+        absentDays,
+        totalHours,
+        todayCheckIn: todayRecord?.checkIn || null,
+        todayCheckOut: todayRecord?.checkOut || null,
+        todayShift: todayRecord?.shift || null,
+      };
+    });
+  }, [workers, period]);
+
+  const periodLabel = period === 'daily' ? 'اليوم' : period === 'weekly' ? 'هذا الأسبوع' : 'هذا الشهر';
+
+  const generateReportText = () => {
+    let text = `📋 تقرير الحضور والانصراف - ${periodLabel}\n`;
+    text += `📅 ${today.toLocaleDateString('ar-EG')}\n`;
+    text += `━━━━━━━━━━━━━━━━━━\n\n`;
+
+    report.forEach(r => {
+      text += `👤 ${r.worker.name}\n`;
+      text += `  ✅ حضور كامل: ${r.presentDays} يوم\n`;
+      if (r.partialShifts > 0) text += `  ⚠️ شيفتات ناقصة: ${r.partialShifts} (${r.partialHours} ساعة)\n`;
+      text += `  🏖️ إجازة: ${r.leaveDays} يوم\n`;
+      text += `  ❌ غياب: ${r.absentDays} يوم\n`;
+      text += `  ⏱️ إجمالي الساعات: ${r.totalHours} ساعة\n`;
+      if (r.todayCheckIn) text += `  📍 اليوم: ${r.todayCheckIn}${r.todayCheckOut ? ` - ${r.todayCheckOut}` : ' (لم ينصرف)'} ${r.todayShift === 'morning' ? '☀️' : '🌙'}\n`;
+      text += `\n`;
+    });
+
+    text += `━━━━━━━━━━━━━━━━━━\nتنفيذ شركة InstaTech للبرمجيات 📱 01227080430`;
+    return text;
+  };
+
+  const shareViaWhatsApp = () => {
+    window.open(`https://wa.me/?text=${encodeURIComponent(generateReportText())}`, '_blank');
+  };
+
+  const shareViaEmail = () => {
+    window.open(`mailto:alameedbon1@gmail.com?subject=${encodeURIComponent(`تقرير الحضور - ${periodLabel}`)}&body=${encodeURIComponent(generateReportText())}`, '_blank');
+  };
+
+  return (
+    <div className="space-y-4 mt-8">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+          <ClipboardCheck size={22} />
+          تقرير الحضور والانصراف
+        </h2>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={shareViaWhatsApp}>
+            <MessageCircle size={14} className="ml-1" />
+            واتساب
+          </Button>
+          <Button variant="outline" size="sm" onClick={shareViaEmail}>
+            <Mail size={14} className="ml-1" />
+            إيميل
+          </Button>
+        </div>
+      </div>
+
+      <Tabs value={period} onValueChange={v => setPeriod(v as any)} dir="rtl">
+        <TabsList className="w-full">
+          <TabsTrigger value="daily" className="flex-1">يومي</TabsTrigger>
+          <TabsTrigger value="weekly" className="flex-1">أسبوعي</TabsTrigger>
+          <TabsTrigger value="monthly" className="flex-1">شهري</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      <ScrollableList maxHeight="max-h-[60vh]" className="grid gap-3">
+        {report.map((r, i) => (
+          <motion.div
+            key={r.worker.id}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.05 }}
+            className="glass-card rounded-xl p-4"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-10 h-10 rounded-lg cafe-gradient flex items-center justify-center">
+                <Users size={18} className="text-primary-foreground" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-foreground">{r.worker.name}</p>
+                {r.todayCheckIn && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Clock size={12} />
+                    اليوم: {r.todayCheckIn}{r.todayCheckOut ? ` - ${r.todayCheckOut}` : ' (لم ينصرف)'}
+                    {r.todayShift && (
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${r.todayShift === 'morning' ? 'bg-warning/20 text-warning' : 'bg-info/20 text-info'}`}>
+                        {r.todayShift === 'morning' ? '☀️ صباحي' : '🌙 مسائي'}
+                      </span>
+                    )}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-sm">
+              <div className="bg-success/10 rounded-lg p-2">
+                <p className="font-bold text-success text-lg">{r.presentDays}</p>
+                <p className="text-xs text-muted-foreground">حضور كامل</p>
+              </div>
+              <div className="bg-destructive/10 rounded-lg p-2">
+                <p className="font-bold text-destructive text-lg">{r.absentDays}</p>
+                <p className="text-xs text-muted-foreground">غياب</p>
+              </div>
+              <div className="bg-warning/10 rounded-lg p-2">
+                <p className="font-bold text-warning text-lg">{r.leaveDays}</p>
+                <p className="text-xs text-muted-foreground">إجازة</p>
+              </div>
+              <div className="bg-info/10 rounded-lg p-2">
+                <p className="font-bold text-info text-lg">{r.totalHours}</p>
+                <p className="text-xs text-muted-foreground">ساعة</p>
+              </div>
+            </div>
+
+            {r.partialShifts > 0 && (
+              <div className="bg-warning/10 rounded-lg p-2 text-center mt-2">
+                <p className="font-bold text-warning text-sm">
+                  {Math.floor(r.partialHours)} س {Math.round((r.partialHours - Math.floor(r.partialHours)) * 60)} د
+                </p>
+                <p className="text-xs text-muted-foreground">ساعات غير مكتملة ({r.partialShifts} شيفت أقل من 12 ساعة)</p>
+              </div>
+            )}
+          </motion.div>
+        ))}
+        {report.length === 0 && (
+          <p className="text-center text-muted-foreground py-8">لا يوجد عمال</p>
+        )}
+      </ScrollableList>
     </div>
   );
 };
