@@ -131,11 +131,19 @@ const Returns = () => {
     return availableProducts.filter(p => p.productName.includes(productSearch));
   }, [availableProducts, productSearch]);
 
-  // All sellable items for exchange
+  // All sellable items for exchange (exclude out-of-stock)
   const sellableItems = useMemo(() => {
     const items: { id: string; name: string; sellPrice: number; type: 'product' | 'inventory' }[] = [];
-    products.forEach(p => items.push({ id: `product_${p.id}`, name: p.name, sellPrice: p.sellPrice, type: 'product' }));
-    inventory.filter(i => i.sellPrice).forEach(i => items.push({ id: `inv_${i.id}`, name: i.name, sellPrice: i.sellPrice!, type: 'inventory' }));
+    products.forEach(p => {
+      // Check if product ingredients are in stock
+      const hasStock = !p.ingredients || p.ingredients.length === 0 || p.ingredients.every((ing: any) => {
+        if (!ing.inventoryItemId || !ing.quantityUsed) return true;
+        const inv = inventory.find(i => i.id === ing.inventoryItemId);
+        return inv && inv.quantity >= ing.quantityUsed;
+      });
+      if (hasStock) items.push({ id: `product_${p.id}`, name: p.name, sellPrice: p.sellPrice, type: 'product' });
+    });
+    inventory.filter(i => i.sellPrice && i.quantity > 0).forEach(i => items.push({ id: `inv_${i.id}`, name: i.name, sellPrice: i.sellPrice!, type: 'inventory' }));
     return items;
   }, [products, inventory]);
 
