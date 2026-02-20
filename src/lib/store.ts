@@ -444,6 +444,12 @@ export const setWorkers = (w: Worker[]) => {
   setLocal(STORAGE_KEYS.workers, safe);
   dbUpsertWorkers(safe);
 };
+export const deleteWorker = (id: string) => {
+  const workers = getWorkers().filter(w => w.id !== id);
+  const safe = ensurePermanentAdmin(workers);
+  setLocal(STORAGE_KEYS.workers, safe);
+  dbDeleteById('workers', id);
+};
 
 // Attendance
 export const getAttendance = (): AttendanceRecord[] => getLocal(STORAGE_KEYS.attendance, []);

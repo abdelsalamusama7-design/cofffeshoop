@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Users, Plus, Trash2, Key, Save, Mail, MessageCircle, TrendingUp, HandCoins, Gift, CircleDollarSign, Pencil, Calendar, ClipboardCheck, Clock, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getWorkers, setWorkers, getCurrentUser, getAttendance, getSales, getTransactions, addTransaction, setTransactions } from '@/lib/store';
+import { getWorkers, setWorkers, getCurrentUser, getAttendance, getSales, getTransactions, addTransaction, setTransactions, deleteWorker as storeDeleteWorker } from '@/lib/store';
 import { Worker, WorkerTransaction } from '@/lib/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -69,9 +69,8 @@ const Workers = () => {
 
   const deleteWorker = (id: string) => {
     if (id === 'admin') return toast.error('لا يمكن حذف المدير');
-    const updated = workersList.filter(w => w.id !== id);
-    setWorkersList(updated);
-    setWorkers(updated);
+    storeDeleteWorker(id);
+    setWorkersList(getWorkers());
     toast.success('تم حذف العامل');
   };
 
