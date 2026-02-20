@@ -310,7 +310,9 @@ const Attendance = () => {
 
       {/* Monthly Summary */}
       <div>
-        <h2 className="font-bold text-foreground mb-3">ملخص الشهر</h2>
+        <h2 className="font-bold text-foreground mb-3">
+          ملخص الشهر ({monthStart.toLocaleDateString('ar-EG', { day: 'numeric', month: 'long' })} - {todayDate.toLocaleDateString('ar-EG', { day: 'numeric', month: 'long' })}) • {daysPassedInMonth} يوم
+        </h2>
         <ScrollableList maxHeight="max-h-[50vh]" className="grid gap-3">
           {workerSummaries.map((summary, i) => (
             <motion.div
