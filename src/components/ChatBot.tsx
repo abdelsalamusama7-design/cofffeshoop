@@ -113,7 +113,7 @@ const ChatBot = () => {
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => setOpen(true)}
-            className="fixed bottom-24 left-4 md:bottom-6 md:left-6 z-50 w-14 h-14 rounded-full cafe-gradient shadow-2xl flex items-center justify-center"
+            className="fixed bottom-32 left-4 md:bottom-6 md:left-6 z-50 w-14 h-14 rounded-full cafe-gradient shadow-2xl flex items-center justify-center"
           >
             <motion.div
               animate={{ y: [0, -3, 0] }}
