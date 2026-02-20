@@ -326,8 +326,8 @@ const AppLayout = ({ children }: LayoutProps) => {
           {/* Footer */}
           <div className="mt-8 pt-4 border-t border-border text-center space-y-0.5">
             <p className="text-xs font-semibold text-muted-foreground">بن العميد</p>
-            <a href="https://www.facebook.com/share/1CXMGPTe98/" target="_blank" rel="noopener noreferrer" className="text-[10px] text-muted-foreground/70 hover:underline cursor-pointer block">تنفيذ شركة InstaTech للبرمجيات</a>
-            <a href="https://www.facebook.com/share/1CXMGPTe98/" target="_blank" rel="noopener noreferrer" className="text-[10px] text-muted-foreground/70 hover:underline cursor-pointer block" dir="ltr">📱 01227080430</a>
+            <a href="https://www.facebook.com/share/1CXMGPTe98/" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground/70 hover:underline cursor-pointer block">تنفيذ شركة InstaTech للبرمجيات</a>
+            <a href="https://www.facebook.com/share/1CXMGPTe98/" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground/70 hover:underline cursor-pointer block" dir="ltr">📱 01227080430</a>
           </div>
         </motion.div>
       </main>
