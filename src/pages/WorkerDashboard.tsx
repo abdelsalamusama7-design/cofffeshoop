@@ -105,10 +105,11 @@ const WorkerDashboard = () => {
   const partialHoursDecimal = partialShifts.reduce((s, r) => s + (r.hoursWorked || 0), 0);
   const leaveDays = myMonthRecords.filter(r => r.type === 'leave').length;
   
-  // Auto-calculate absent days: days passed this month without any attendance record
+  // Auto-calculate absent days: days passed this month (including today) without any attendance record
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const daysPassedInMonth = Math.floor((todayDate.getTime() - monthStart.getTime()) / (1000 * 60 * 60 * 24));
+  // +1 to include today in the count (so Feb 20 = 20 days)
+  const daysPassedInMonth = Math.floor((todayDate.getTime() - monthStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
   const daysWithRecords = new Set(myMonthRecords.map(r => r.date)).size;
   const absentDays = Math.max(0, daysPassedInMonth - daysWithRecords);
   
