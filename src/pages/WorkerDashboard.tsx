@@ -19,6 +19,7 @@ const WorkerDashboard = () => {
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [resetPassword, setResetPassword] = useState('');
   const [resetError, setResetError] = useState('');
+  const [detailType, setDetailType] = useState<'present' | 'absent' | null>(null);
   const today = new Date().toISOString().split('T')[0];
   const now = new Date();
 
@@ -211,13 +212,15 @@ const WorkerDashboard = () => {
           ملخص الحضور - الشهر الحالي
         </h2>
         <div className="grid grid-cols-2 gap-3 text-center">
-          <div className="bg-success/10 rounded-xl p-3">
+          <div className="bg-success/10 rounded-xl p-3 cursor-pointer hover:ring-2 ring-success/40 transition-all" onClick={() => setDetailType('present')}>
             <p className="text-2xl font-bold text-success">{presentDays}</p>
             <p className="text-xs text-muted-foreground">يوم حضور (12+ ساعة)</p>
+            <p className="text-[10px] text-success/60 mt-1">اضغط للتفاصيل</p>
           </div>
-          <div className="bg-destructive/10 rounded-xl p-3">
+          <div className="bg-destructive/10 rounded-xl p-3 cursor-pointer hover:ring-2 ring-destructive/40 transition-all" onClick={() => setDetailType('absent')}>
             <p className="text-2xl font-bold text-destructive">{absentDays}</p>
             <p className="text-xs text-muted-foreground">يوم غياب</p>
+            <p className="text-[10px] text-destructive/60 mt-1">اضغط للتفاصيل</p>
           </div>
         </div>
         {partialShifts.length > 0 && (
@@ -241,6 +244,72 @@ const WorkerDashboard = () => {
           <p className="text-xs text-muted-foreground">إجمالي ساعات العمل</p>
         </div>
       </motion.div>
+
+      {/* Attendance Detail Dialog */}
+      <Dialog open={detailType !== null} onOpenChange={(open) => { if (!open) setDetailType(null); }}>
+        <DialogContent className="max-w-sm max-h-[80vh] overflow-y-auto" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-lg text-center">
+              {detailType === 'present' ? '✅ أيام الحضور' : '❌ أيام الغياب'}
+            </DialogTitle>
+          </DialogHeader>
+          {detailType === 'present' ? (
+            <div className="space-y-2">
+              {completedShifts.length === 0 ? (
+                <p className="text-center text-muted-foreground text-sm py-4">لا توجد أيام حضور مكتملة</p>
+              ) : (
+                completedShifts.sort((a, b) => a.date.localeCompare(b.date)).map(r => {
+                  const hrs = Math.floor(r.hoursWorked || 0);
+                  const mins = Math.floor(((r.hoursWorked || 0) - hrs) * 60);
+                  const secs = Math.round((((r.hoursWorked || 0) - hrs) * 60 - mins) * 60);
+                  return (
+                    <div key={r.id} className="bg-success/5 border border-success/20 rounded-xl p-3 space-y-1">
+                      <p className="font-bold text-foreground text-sm">
+                        📅 {new Date(r.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}
+                      </p>
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>🕐 حضور: {r.checkIn}</span>
+                        <span>🕐 انصراف: {r.checkOut}</span>
+                      </div>
+                      <p className="text-xs text-success font-medium">
+                        ⏱ مدة العمل: {hrs} ساعة {mins > 0 ? `${mins} دقيقة` : ''} {secs > 0 ? `${secs} ثانية` : ''}
+                      </p>
+                      {r.shift && (
+                        <p className="text-xs text-muted-foreground">
+                          {r.shift === 'morning' ? '☀️ شيفت صباحي' : '🌙 شيفت مسائي'}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {(() => {
+                const absentDatesList: string[] = [];
+                for (let d = 1; d <= daysPassedInMonth; d++) {
+                  const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                  const hasRecord = myMonthRecords.some(r => r.date === dateStr);
+                  if (!hasRecord) absentDatesList.push(dateStr);
+                }
+                return absentDatesList.length === 0 ? (
+                  <p className="text-center text-muted-foreground text-sm py-4">لا توجد أيام غياب 🎉</p>
+                ) : (
+                  absentDatesList.map(dateStr => (
+                    <div key={dateStr} className="bg-destructive/5 border border-destructive/20 rounded-xl p-3">
+                      <p className="font-bold text-foreground text-sm">
+                        📅 {new Date(dateStr).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}
+                      </p>
+                      <p className="text-xs text-destructive font-medium mt-1">❌ لم يتم تسجيل أي حضور</p>
+                    </div>
+                  ))
+                );
+              })()}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Daily Sales Report */}
       <motion.div
