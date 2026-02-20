@@ -316,7 +316,7 @@ const Reports = () => {
           {Object.values(productBreakdown).length === 0 ? (
             <p className="text-muted-foreground text-sm text-center py-4">لا توجد مبيعات</p>
           ) : (
-            <div className="space-y-2">
+            <ScrollableList maxHeight="max-h-96" className="space-y-2">
               {Object.values(productBreakdown).sort((a, b) => b.total - a.total).map((p, i) => (
                 <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-secondary">
                   <span className="text-sm font-medium text-foreground">{p.name}</span>
@@ -326,7 +326,7 @@ const Reports = () => {
                   </div>
                 </div>
               ))}
-            </div>
+            </ScrollableList>
           )}
         </div>
 
