@@ -177,7 +177,7 @@ const AppLayout = ({ children }: LayoutProps) => {
         </div>
 
         <nav className="flex-1 p-4 space-y-1 overflow-hidden flex flex-col">
-          <ScrollableList maxHeight="max-h-full" className="flex-1">
+          <ScrollableList maxHeight="max-h-full" className="flex-1" alwaysShowArrows>
             <div className="space-y-1">
               {filteredNav.map((item) => {
                 const isActive = location.pathname === item.path;
