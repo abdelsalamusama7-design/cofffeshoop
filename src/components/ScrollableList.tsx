@@ -49,7 +49,7 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60', alwaysSho
             onClick={() => scrollBy(-100)}
             onTouchEnd={(e) => { e.preventDefault(); scrollBy(-100); }}
             className={cn(
-              "w-full h-10 flex items-center justify-center rounded-md transition-colors touch-manipulation shrink-0",
+              "w-full h-12 flex items-center justify-center rounded-md transition-colors touch-manipulation shrink-0",
               scrollProgress < 0.05
                 ? "text-muted-foreground/30 cursor-default"
                 : "text-foreground hover:bg-accent active:bg-accent/80",
@@ -57,7 +57,7 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60', alwaysSho
             )}
             disabled={scrollProgress < 0.05}
           >
-            <svg width="32" height="32" viewBox="0 0 14 14" fill="none"><path d="M7 2L13 11H1L7 2Z" fill="currentColor" /></svg>
+            <svg width="40" height="40" viewBox="0 0 14 14" fill="none"><path d="M7 2L13 11H1L7 2Z" fill="currentColor" /></svg>
           </button>
         )}
         <div
@@ -72,7 +72,7 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60', alwaysSho
             onClick={() => scrollBy(100)}
             onTouchEnd={(e) => { e.preventDefault(); scrollBy(100); }}
             className={cn(
-              "w-full h-10 flex items-center justify-center rounded-md transition-colors touch-manipulation shrink-0",
+              "w-full h-12 flex items-center justify-center rounded-md transition-colors touch-manipulation shrink-0",
               atBottom
                 ? "text-muted-foreground/30 cursor-default"
                 : "text-foreground hover:bg-accent active:bg-accent/80",
@@ -80,7 +80,7 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60', alwaysSho
             )}
             disabled={atBottom}
           >
-            <svg width="32" height="32" viewBox="0 0 14 14" fill="none"><path d="M7 12L1 3H13L7 12Z" fill="currentColor" /></svg>
+            <svg width="40" height="40" viewBox="0 0 14 14" fill="none"><path d="M7 12L1 3H13L7 12Z" fill="currentColor" /></svg>
           </button>
         )}
       </div>
