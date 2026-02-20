@@ -277,7 +277,7 @@ const AppLayout = ({ children }: LayoutProps) => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="fixed top-14 left-2 right-2 md:left-auto md:right-auto md:top-4 md:mr-72 z-50 bg-card border border-border rounded-2xl shadow-2xl max-h-80 overflow-auto"
+            className="fixed top-14 left-2 right-2 md:left-auto md:right-auto md:top-4 md:mr-72 z-50 bg-card border border-border rounded-2xl shadow-2xl max-h-80"
             style={{ marginTop: 'env(safe-area-inset-top)' }}
           >
             <div className="flex items-center justify-between p-3 border-b border-border">
@@ -292,27 +292,29 @@ const AppLayout = ({ children }: LayoutProps) => {
             {activeNotifications.length === 0 ? (
               <div className="p-4 text-center text-sm text-muted-foreground">لا توجد تنبيهات</div>
             ) : (
-              <div className="p-2 space-y-1">
-                {activeNotifications.map(item => (
-                  <Link
-                    key={item.id}
-                    to="/inventory"
-                    onClick={() => {
-                      handleDismissNotification(item.id);
-                      setShowNotifications(false);
-                    }}
-                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-destructive/15 flex items-center justify-center shrink-0">
-                      <AlertTriangle size={16} className="text-destructive" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">⚠️ {item.name}</p>
-                      <p className="text-xs text-muted-foreground">المتبقي: {item.quantity} {item.unit} فقط</p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+              <ScrollableList maxHeight="max-h-60" alwaysShowArrows>
+                <div className="p-2 space-y-1">
+                  {activeNotifications.map(item => (
+                    <Link
+                      key={item.id}
+                      to="/inventory"
+                      onClick={() => {
+                        handleDismissNotification(item.id);
+                        setShowNotifications(false);
+                      }}
+                      className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-destructive/15 flex items-center justify-center shrink-0">
+                        <AlertTriangle size={16} className="text-destructive" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">⚠️ {item.name}</p>
+                        <p className="text-xs text-muted-foreground">المتبقي: {item.quantity} {item.unit} فقط</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </ScrollableList>
             )}
           </motion.div>
         )}
