@@ -85,15 +85,18 @@ const Sales = () => {
   const finalTotal = cartTotal - clampedDiscount;
 
   const addToCart = (item: SellableItem) => {
+    const maxQty = getMaxSellable(item);
     setCart(prev => {
       const existing = prev.find(i => i.productId === item.id);
       if (existing) {
+        if (existing.quantity >= maxQty) return prev;
         return prev.map(i =>
           i.productId === item.id
             ? { ...i, quantity: i.quantity + 1, total: (i.quantity + 1) * i.unitPrice }
             : i
         );
       }
+      if (maxQty <= 0) return prev;
       return [...prev, {
         productId: item.id,
         productName: item.name,
@@ -110,6 +113,14 @@ const Sales = () => {
         if (i.productId !== productId) return i;
         const newQty = i.quantity + delta;
         if (newQty <= 0) return null as any;
+        // Enforce max stock on increase
+        if (delta > 0) {
+          const sellable = sellableItems.find(s => s.id === productId);
+          if (sellable) {
+            const maxQty = getMaxSellable(sellable);
+            if (newQty > maxQty) return i;
+          }
+        }
         return { ...i, quantity: newQty, total: newQty * i.unitPrice };
       }).filter(Boolean);
     });
@@ -304,9 +315,20 @@ const Sales = () => {
                           <Minus size={14} />
                         </button>
                         <span className="w-6 text-center font-bold text-sm text-foreground">{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.productId, 1)} className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center text-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
-                          <Plus size={14} />
-                        </button>
+                        {(() => {
+                          const sellable = sellableItems.find(s => s.id === item.productId);
+                          const maxQty = sellable ? getMaxSellable(sellable) : 999;
+                          const atMax = item.quantity >= maxQty;
+                          return (
+                            <button
+                              onClick={() => updateQuantity(item.productId, 1)}
+                              disabled={atMax}
+                              className={`w-7 h-7 rounded-lg bg-muted flex items-center justify-center transition-colors ${atMax ? 'opacity-40 cursor-not-allowed' : 'text-foreground hover:bg-accent hover:text-accent-foreground'}`}
+                            >
+                              <Plus size={14} />
+                            </button>
+                          );
+                        })()}
                       </div>
                       <p className="font-bold text-sm mr-3 text-foreground">{item.total} ج.م</p>
                     </motion.div>
