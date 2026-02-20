@@ -57,15 +57,15 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60' }: Scrolla
             onClick={() => scrollBy(-100)}
             onTouchEnd={(e) => { e.preventDefault(); scrollBy(-100); }}
             className={cn(
-              "w-12 h-12 flex items-center justify-center rounded-md transition-colors touch-manipulation",
+              "w-14 h-14 flex items-center justify-center rounded-md transition-colors touch-manipulation",
               scrollProgress < 0.05
                 ? "text-muted-foreground/30 cursor-default"
                 : "text-foreground hover:bg-accent active:bg-accent/80"
             )}
             disabled={scrollProgress < 0.05}
           >
-            <svg width="40" height="40" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M7 3L12 10H2L7 3Z" fill="currentColor" />
+            <svg width="48" height="48" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 2L13 11H1L7 2Z" fill="currentColor" />
             </svg>
           </button>
 
@@ -74,15 +74,15 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60' }: Scrolla
             onClick={() => scrollBy(100)}
             onTouchEnd={(e) => { e.preventDefault(); scrollBy(100); }}
             className={cn(
-              "w-12 h-12 flex items-center justify-center rounded-md transition-colors touch-manipulation",
+              "w-14 h-14 flex items-center justify-center rounded-md transition-colors touch-manipulation",
               atBottom
                 ? "text-muted-foreground/30 cursor-default"
                 : "text-foreground hover:bg-accent active:bg-accent/80"
             )}
             disabled={atBottom}
           >
-            <svg width="40" height="40" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M7 11L2 4H12L7 11Z" fill="currentColor" />
+            <svg width="48" height="48" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 12L1 3H13L7 12Z" fill="currentColor" />
             </svg>
           </button>
         </div>
