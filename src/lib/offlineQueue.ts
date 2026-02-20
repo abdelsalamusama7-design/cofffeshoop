@@ -86,7 +86,7 @@ export const flushQueue = async (): Promise<boolean> => {
     } catch (err) {
       console.error(`Queue flush error for ${op.table}:`, err);
       success = false;
-      break; // Stop on first error to preserve order
+      // Continue processing remaining items instead of stopping
     }
   }
 
