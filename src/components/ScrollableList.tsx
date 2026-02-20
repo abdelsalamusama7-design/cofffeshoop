@@ -6,9 +6,10 @@ interface ScrollableListProps {
   className?: string;
   maxHeight?: string;
   alwaysShowArrows?: boolean;
+  arrowClassName?: string;
 }
 
-const ScrollableList = ({ children, className, maxHeight = 'max-h-60', alwaysShowArrows = false }: ScrollableListProps) => {
+const ScrollableList = ({ children, className, maxHeight = 'max-h-60', alwaysShowArrows = false, arrowClassName }: ScrollableListProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScroll, setCanScroll] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -61,7 +62,8 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60', alwaysSho
               "w-14 h-14 flex items-center justify-center rounded-md transition-colors touch-manipulation",
               scrollProgress < 0.05
                 ? "text-muted-foreground/30 cursor-default"
-                : "text-foreground hover:bg-accent active:bg-accent/80"
+                : "text-foreground hover:bg-accent active:bg-accent/80",
+              arrowClassName
             )}
             disabled={scrollProgress < 0.05}
           >
@@ -78,7 +80,8 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60', alwaysSho
               "w-14 h-14 flex items-center justify-center rounded-md transition-colors touch-manipulation",
               atBottom
                 ? "text-muted-foreground/30 cursor-default"
-                : "text-foreground hover:bg-accent active:bg-accent/80"
+                : "text-foreground hover:bg-accent active:bg-accent/80",
+              arrowClassName
             )}
             disabled={atBottom}
           >
