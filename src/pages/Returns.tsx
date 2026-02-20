@@ -61,8 +61,8 @@ const Returns = () => {
   // Build available products list (only from today's sales)
   const availableProducts = useMemo(() => {
     const productMap: Record<string, AvailableProduct> = {};
-    // Workers can only return products they sold; admins can return any
-    const todaySales = sales.filter(s => s.date === today && (user?.role === 'admin' || s.workerId === user?.id));
+    // Each user can only return products they personally sold in the current shift
+    const todaySales = sales.filter(s => s.date === today && s.workerId === user?.id);
     const todayReturns = returns.filter(r => r.date === today);
 
     // Aggregate sold quantities per product (today only)
