@@ -19,7 +19,7 @@ const WorkerDashboard = () => {
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [resetPassword, setResetPassword] = useState('');
   const [resetError, setResetError] = useState('');
-  const [detailType, setDetailType] = useState<'present' | 'absent' | null>(null);
+  const [detailType, setDetailType] = useState<'present' | 'absent' | 'partial' | 'leave' | 'hours' | 'sales' | 'items' | 'advances' | 'bonuses' | null>(null);
   const today = new Date().toISOString().split('T')[0];
   const now = new Date();
 
@@ -224,36 +224,49 @@ const WorkerDashboard = () => {
           </div>
         </div>
         {partialShifts.length > 0 && (
-          <div className="bg-warning/10 rounded-xl p-3 text-center mt-3">
+          <div className="bg-warning/10 rounded-xl p-3 text-center mt-3 cursor-pointer hover:ring-2 ring-warning/40 transition-all" onClick={() => setDetailType('partial')}>
             <p className="text-2xl font-bold text-warning">
               {Math.floor(partialHoursDecimal)} س {Math.round((partialHoursDecimal - Math.floor(partialHoursDecimal)) * 60)} د
             </p>
             <p className="text-xs text-muted-foreground">ساعات غير مكتملة ({partialShifts.length} شيفت أقل من 12 ساعة)</p>
+            <p className="text-[10px] text-warning/60 mt-1">اضغط للتفاصيل</p>
           </div>
         )}
         {leaveDays > 0 && (
-          <div className="bg-warning/10 rounded-xl p-3 text-center mt-3">
+          <div className="bg-warning/10 rounded-xl p-3 text-center mt-3 cursor-pointer hover:ring-2 ring-warning/40 transition-all" onClick={() => setDetailType('leave')}>
             <p className="text-2xl font-bold text-warning">{leaveDays}</p>
             <p className="text-xs text-muted-foreground">يوم إذن / عذر</p>
+            <p className="text-[10px] text-warning/60 mt-1">اضغط للتفاصيل</p>
           </div>
         )}
-        <div className="bg-info/10 rounded-xl p-3 text-center mt-3">
+        <div className="bg-info/10 rounded-xl p-3 text-center mt-3 cursor-pointer hover:ring-2 ring-info/40 transition-all" onClick={() => setDetailType('hours')}>
           <p className="text-2xl font-bold text-info">
             {totalHoursInt > 0 ? `${totalHoursInt} س` : ''}{totalMinutes > 0 ? ` ${totalMinutes} د` : ''}{totalHoursInt === 0 && totalMinutes === 0 ? '0' : ''}
           </p>
           <p className="text-xs text-muted-foreground">إجمالي ساعات العمل</p>
+          <p className="text-[10px] text-info/60 mt-1">اضغط للتفاصيل</p>
         </div>
       </motion.div>
 
-      {/* Attendance Detail Dialog */}
+      {/* Unified Detail Dialog */}
       <Dialog open={detailType !== null} onOpenChange={(open) => { if (!open) setDetailType(null); }}>
         <DialogContent className="max-w-sm max-h-[80vh] overflow-y-auto" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-lg text-center">
-              {detailType === 'present' ? '✅ أيام الحضور' : '❌ أيام الغياب'}
+              {detailType === 'present' && '✅ أيام الحضور'}
+              {detailType === 'absent' && '❌ أيام الغياب'}
+              {detailType === 'partial' && '⚠️ شيفتات غير مكتملة'}
+              {detailType === 'leave' && '📋 أيام الإجازة'}
+              {detailType === 'hours' && '⏱ تفاصيل ساعات العمل'}
+              {detailType === 'sales' && '🧾 تفاصيل المبيعات'}
+              {detailType === 'items' && '📦 المنتجات المباعة'}
+              {detailType === 'advances' && '💰 تفاصيل السلف'}
+              {detailType === 'bonuses' && '🎁 تفاصيل المكافآت'}
             </DialogTitle>
           </DialogHeader>
-          {detailType === 'present' ? (
+
+          {/* Present days */}
+          {detailType === 'present' && (
             <div className="space-y-2">
               {completedShifts.length === 0 ? (
                 <p className="text-center text-muted-foreground text-sm py-4">لا توجد أيام حضور مكتملة</p>
@@ -264,48 +277,179 @@ const WorkerDashboard = () => {
                   const secs = Math.round((((r.hoursWorked || 0) - hrs) * 60 - mins) * 60);
                   return (
                     <div key={r.id} className="bg-success/5 border border-success/20 rounded-xl p-3 space-y-1">
-                      <p className="font-bold text-foreground text-sm">
-                        📅 {new Date(r.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}
-                      </p>
+                      <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                       <div className="flex justify-between text-xs text-muted-foreground">
                         <span>🕐 حضور: {r.checkIn}</span>
                         <span>🕐 انصراف: {r.checkOut}</span>
                       </div>
-                      <p className="text-xs text-success font-medium">
-                        ⏱ مدة العمل: {hrs} ساعة {mins > 0 ? `${mins} دقيقة` : ''} {secs > 0 ? `${secs} ثانية` : ''}
-                      </p>
-                      {r.shift && (
-                        <p className="text-xs text-muted-foreground">
-                          {r.shift === 'morning' ? '☀️ شيفت صباحي' : '🌙 شيفت مسائي'}
-                        </p>
-                      )}
+                      <p className="text-xs text-success font-medium">⏱ {hrs} ساعة {mins > 0 ? `${mins} دقيقة` : ''} {secs > 0 ? `${secs} ثانية` : ''}</p>
+                      {r.shift && <p className="text-xs text-muted-foreground">{r.shift === 'morning' ? '☀️ صباحي' : '🌙 مسائي'}</p>}
                     </div>
                   );
                 })
               )}
             </div>
-          ) : (
+          )}
+
+          {/* Absent days */}
+          {detailType === 'absent' && (
             <div className="space-y-2">
               {(() => {
                 const absentDatesList: string[] = [];
                 for (let d = 1; d <= daysPassedInMonth; d++) {
                   const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                  const hasRecord = myMonthRecords.some(r => r.date === dateStr);
-                  if (!hasRecord) absentDatesList.push(dateStr);
+                  if (!myMonthRecords.some(r => r.date === dateStr)) absentDatesList.push(dateStr);
                 }
                 return absentDatesList.length === 0 ? (
                   <p className="text-center text-muted-foreground text-sm py-4">لا توجد أيام غياب 🎉</p>
-                ) : (
-                  absentDatesList.map(dateStr => (
-                    <div key={dateStr} className="bg-destructive/5 border border-destructive/20 rounded-xl p-3">
-                      <p className="font-bold text-foreground text-sm">
-                        📅 {new Date(dateStr).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}
-                      </p>
-                      <p className="text-xs text-destructive font-medium mt-1">❌ لم يتم تسجيل أي حضور</p>
-                    </div>
-                  ))
-                );
+                ) : absentDatesList.map(dateStr => (
+                  <div key={dateStr} className="bg-destructive/5 border border-destructive/20 rounded-xl p-3">
+                    <p className="font-bold text-foreground text-sm">📅 {new Date(dateStr).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                    <p className="text-xs text-destructive font-medium mt-1">❌ لم يتم تسجيل أي حضور</p>
+                  </div>
+                ));
               })()}
+            </div>
+          )}
+
+          {/* Partial shifts */}
+          {detailType === 'partial' && (
+            <div className="space-y-2">
+              {partialShifts.sort((a, b) => a.date.localeCompare(b.date)).map(r => {
+                const hrs = Math.floor(r.hoursWorked || 0);
+                const mins = Math.floor(((r.hoursWorked || 0) - hrs) * 60);
+                const secs = Math.round((((r.hoursWorked || 0) - hrs) * 60 - mins) * 60);
+                return (
+                  <div key={r.id} className="bg-warning/5 border border-warning/20 rounded-xl p-3 space-y-1">
+                    <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>🕐 حضور: {r.checkIn}</span>
+                      <span>🕐 انصراف: {r.checkOut}</span>
+                    </div>
+                    <p className="text-xs text-warning font-medium">⏱ {hrs} ساعة {mins > 0 ? `${mins} دقيقة` : ''} {secs > 0 ? `${secs} ثانية` : ''}</p>
+                    {r.shift && <p className="text-xs text-muted-foreground">{r.shift === 'morning' ? '☀️ صباحي' : '🌙 مسائي'}</p>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Leave days */}
+          {detailType === 'leave' && (
+            <div className="space-y-2">
+              {myMonthRecords.filter(r => r.type === 'leave').sort((a, b) => a.date.localeCompare(b.date)).map(r => (
+                <div key={r.id} className="bg-warning/5 border border-warning/20 rounded-xl p-3">
+                  <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                  <p className="text-xs text-warning font-medium mt-1">📋 إجازة / إذن</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Total hours breakdown */}
+          {detailType === 'hours' && (
+            <div className="space-y-2">
+              {myMonthRecords.filter(r => r.type === 'present' && r.checkOut).sort((a, b) => a.date.localeCompare(b.date)).map(r => {
+                const hrs = Math.floor(r.hoursWorked || 0);
+                const mins = Math.floor(((r.hoursWorked || 0) - hrs) * 60);
+                const secs = Math.round((((r.hoursWorked || 0) - hrs) * 60 - mins) * 60);
+                const isComplete = (r.hoursWorked || 0) >= 12;
+                return (
+                  <div key={r.id} className={`${isComplete ? 'bg-success/5 border-success/20' : 'bg-warning/5 border-warning/20'} border rounded-xl p-3 space-y-1`}>
+                    <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>🕐 {r.checkIn}</span>
+                      <span>🕐 {r.checkOut}</span>
+                    </div>
+                    <p className={`text-xs font-medium ${isComplete ? 'text-success' : 'text-warning'}`}>
+                      ⏱ {hrs} ساعة {mins > 0 ? `${mins} دقيقة` : ''} {secs > 0 ? `${secs} ثانية` : ''} {isComplete ? '✅' : '⚠️'}
+                    </p>
+                  </div>
+                );
+              })}
+              {myMonthRecords.filter(r => r.type === 'present' && r.checkOut).length === 0 && (
+                <p className="text-center text-muted-foreground text-sm py-4">لا توجد ساعات عمل مسجلة</p>
+              )}
+            </div>
+          )}
+
+          {/* Sales details */}
+          {detailType === 'sales' && (
+            <div className="space-y-2">
+              {todaySales.length === 0 ? (
+                <p className="text-center text-muted-foreground text-sm py-4">لا توجد مبيعات اليوم</p>
+              ) : [...todaySales].sort((a, b) => compareDateTime(a.date, a.time, b.date, b.time)).map(sale => (
+                <div key={sale.id} className="bg-primary/5 border border-primary/20 rounded-xl p-3 space-y-1">
+                  <div className="flex justify-between items-center">
+                    <p className="font-bold text-foreground text-sm">🧾 فاتورة</p>
+                    <p className="font-bold text-primary text-sm">{sale.total} ج.م</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">🕐 {sale.time}</p>
+                  {sale.items.map((item: any, idx: number) => (
+                    <p key={idx} className="text-xs text-muted-foreground">• {item.productName} × {item.quantity} = {item.price * item.quantity} ج.م</p>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Items sold details */}
+          {detailType === 'items' && (
+            <div className="space-y-2">
+              {(() => {
+                const itemsMap: Record<string, { name: string; qty: number; total: number }> = {};
+                todaySales.forEach(s => s.items.forEach((i: any) => {
+                  if (!itemsMap[i.productName]) itemsMap[i.productName] = { name: i.productName, qty: 0, total: 0 };
+                  itemsMap[i.productName].qty += i.quantity;
+                  itemsMap[i.productName].total += i.price * i.quantity;
+                }));
+                const items = Object.values(itemsMap).sort((a, b) => b.qty - a.qty);
+                return items.length === 0 ? (
+                  <p className="text-center text-muted-foreground text-sm py-4">لا توجد منتجات مباعة اليوم</p>
+                ) : items.map(item => (
+                  <div key={item.name} className="bg-accent/5 border border-accent/20 rounded-xl p-3 flex justify-between items-center">
+                    <div>
+                      <p className="font-bold text-foreground text-sm">📦 {item.name}</p>
+                      <p className="text-xs text-muted-foreground">{item.qty} قطعة</p>
+                    </div>
+                    <p className="font-bold text-primary text-sm">{item.total} ج.م</p>
+                  </div>
+                ));
+              })()}
+            </div>
+          )}
+
+          {/* Advances details */}
+          {detailType === 'advances' && (
+            <div className="space-y-2">
+              {monthTxns.filter(t => t.type === 'advance').length === 0 ? (
+                <p className="text-center text-muted-foreground text-sm py-4">لا توجد سلف هذا الشهر</p>
+              ) : monthTxns.filter(t => t.type === 'advance').sort((a, b) => b.date.localeCompare(a.date)).map(txn => (
+                <div key={txn.id} className="bg-destructive/5 border border-destructive/20 rounded-xl p-3 flex justify-between items-center">
+                  <div>
+                    <p className="font-bold text-foreground text-sm">💰 سلفة</p>
+                    <p className="text-xs text-muted-foreground">📅 {new Date(txn.date).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long' })} {txn.note && `• ${txn.note}`}</p>
+                  </div>
+                  <p className="font-bold text-destructive text-sm">-{txn.amount} ج.م</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Bonuses details */}
+          {detailType === 'bonuses' && (
+            <div className="space-y-2">
+              {monthTxns.filter(t => t.type === 'bonus').length === 0 ? (
+                <p className="text-center text-muted-foreground text-sm py-4">لا توجد مكافآت هذا الشهر</p>
+              ) : monthTxns.filter(t => t.type === 'bonus').sort((a, b) => b.date.localeCompare(a.date)).map(txn => (
+                <div key={txn.id} className="bg-success/5 border border-success/20 rounded-xl p-3 flex justify-between items-center">
+                  <div>
+                    <p className="font-bold text-foreground text-sm">🎁 مكافأة</p>
+                    <p className="text-xs text-muted-foreground">📅 {new Date(txn.date).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long' })} {txn.note && `• ${txn.note}`}</p>
+                  </div>
+                  <p className="font-bold text-success text-sm">+{txn.amount} ج.م</p>
+                </div>
+              ))}
             </div>
           )}
         </DialogContent>
@@ -324,13 +468,15 @@ const WorkerDashboard = () => {
         </h2>
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-primary/10 rounded-xl p-3 text-center">
+          <div className="bg-primary/10 rounded-xl p-3 text-center cursor-pointer hover:ring-2 ring-primary/40 transition-all" onClick={() => setDetailType('sales')}>
             <p className="text-2xl font-bold text-primary">{todaySalesTotal}</p>
             <p className="text-xs text-muted-foreground">ج.م إجمالي</p>
+            <p className="text-[10px] text-primary/60 mt-1">اضغط للتفاصيل</p>
           </div>
-          <div className="bg-accent/10 rounded-xl p-3 text-center">
+          <div className="bg-accent/10 rounded-xl p-3 text-center cursor-pointer hover:ring-2 ring-accent/40 transition-all" onClick={() => setDetailType('items')}>
             <p className="text-2xl font-bold text-accent-foreground">{todayItemsSold}</p>
             <p className="text-xs text-muted-foreground">منتج مباع</p>
+            <p className="text-[10px] text-accent-foreground/60 mt-1">اضغط للتفاصيل</p>
           </div>
         </div>
 
@@ -366,13 +512,15 @@ const WorkerDashboard = () => {
         </h2>
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-destructive/10 rounded-xl p-3 text-center">
+          <div className="bg-destructive/10 rounded-xl p-3 text-center cursor-pointer hover:ring-2 ring-destructive/40 transition-all" onClick={() => setDetailType('advances')}>
             <p className="text-2xl font-bold text-destructive">{totalAdvances}</p>
             <p className="text-xs text-muted-foreground">ج.م سلف</p>
+            <p className="text-[10px] text-destructive/60 mt-1">اضغط للتفاصيل</p>
           </div>
-          <div className="bg-success/10 rounded-xl p-3 text-center">
+          <div className="bg-success/10 rounded-xl p-3 text-center cursor-pointer hover:ring-2 ring-success/40 transition-all" onClick={() => setDetailType('bonuses')}>
             <p className="text-2xl font-bold text-success">{totalBonuses}</p>
             <p className="text-xs text-muted-foreground">ج.م مكافآت</p>
+            <p className="text-[10px] text-success/60 mt-1">اضغط للتفاصيل</p>
           </div>
         </div>
 
