@@ -713,15 +713,26 @@ export const syncLocalStorageToCloud = async (): Promise<boolean> => {
 
 // Shift Resets Log
 export const addShiftReset = (record: ShiftResetRecord) => {
-  supabase.from('shift_resets').upsert([{
+  const dbRow = {
     id: record.id,
     worker_id: record.workerId,
     worker_name: record.workerName,
     reset_date: record.resetDate,
     reset_time: record.resetTime,
     report_summary: record.reportSummary || null,
-  }] as any, { onConflict: 'id' }).then(({ error }) => {
-    if (error) console.error('DB sync shift_resets error:', error);
+  };
+
+  if (!navigator.onLine) {
+    enqueue({ type: 'upsert', table: 'shift_resets', data: dbRow });
+    console.log('📦 Shift reset queued for offline sync');
+    return;
+  }
+
+  supabase.from('shift_resets').upsert([dbRow] as any, { onConflict: 'id' }).then(({ error }) => {
+    if (error) {
+      console.error('DB sync shift_resets error:', error);
+      enqueue({ type: 'upsert', table: 'shift_resets', data: dbRow });
+    }
   });
 };
 
