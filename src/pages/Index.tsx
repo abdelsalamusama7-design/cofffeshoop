@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { compareDateTime } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
-import InstallPWA from '@/components/InstallPWA';
+
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, BarChart3, Package, TrendingUp, DollarSign, Coffee, ChevronLeft, Trash2, Edit3, X, Check, RotateCcw, ArrowLeftRight, Calendar } from 'lucide-react';
@@ -102,8 +102,6 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8">
-      {/* PWA Install Banner */}
-      <InstallPWA />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
