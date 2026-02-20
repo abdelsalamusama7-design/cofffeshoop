@@ -97,9 +97,21 @@ const WorkerDashboard = () => {
 
   // Monthly attendance summary
   const myMonthRecords = records.filter(r => r.workerId === user.id && r.date.startsWith(currentMonth));
-  const presentDays = myMonthRecords.filter(r => r.type === 'present').length;
-  const absentDays = myMonthRecords.filter(r => r.type === 'absent').length;
-  const totalHours = Math.round(myMonthRecords.reduce((s, r) => s + (r.hoursWorked || 0), 0) * 10) / 10;
+  // Only count days where shift was completed (has checkOut) as present
+  const presentDays = myMonthRecords.filter(r => r.type === 'present' && r.checkOut).length;
+  const leaveDays = myMonthRecords.filter(r => r.type === 'leave').length;
+  
+  // Auto-calculate absent days: days passed this month without any attendance record
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const daysPassedInMonth = Math.floor((todayDate.getTime() - monthStart.getTime()) / (1000 * 60 * 60 * 24)); // exclude today
+  const daysWithRecords = new Set(myMonthRecords.map(r => r.date)).size;
+  const absentDays = Math.max(0, daysPassedInMonth - daysWithRecords);
+  
+  // Total hours as hours and minutes
+  const totalHoursDecimal = myMonthRecords.reduce((s, r) => s + (r.hoursWorked || 0), 0);
+  const totalHoursInt = Math.floor(totalHoursDecimal);
+  const totalMinutes = Math.round((totalHoursDecimal - totalHoursInt) * 60);
 
   return (
     <Tabs defaultValue="dashboard" dir="rtl" className="space-y-4">
@@ -193,7 +205,7 @@ const WorkerDashboard = () => {
           <CalendarCheck size={20} />
           ملخص الحضور - الشهر الحالي
         </h2>
-        <div className="grid grid-cols-3 gap-3 text-center">
+        <div className="grid grid-cols-2 gap-3 text-center">
           <div className="bg-success/10 rounded-xl p-3">
             <p className="text-2xl font-bold text-success">{presentDays}</p>
             <p className="text-xs text-muted-foreground">يوم حضور</p>
@@ -202,10 +214,18 @@ const WorkerDashboard = () => {
             <p className="text-2xl font-bold text-destructive">{absentDays}</p>
             <p className="text-xs text-muted-foreground">يوم غياب</p>
           </div>
-          <div className="bg-info/10 rounded-xl p-3">
-            <p className="text-2xl font-bold text-info">{totalHours}</p>
-            <p className="text-xs text-muted-foreground">ساعة عمل</p>
+        </div>
+        {leaveDays > 0 && (
+          <div className="bg-warning/10 rounded-xl p-3 text-center mt-3">
+            <p className="text-2xl font-bold text-warning">{leaveDays}</p>
+            <p className="text-xs text-muted-foreground">يوم إذن / عذر</p>
           </div>
+        )}
+        <div className="bg-info/10 rounded-xl p-3 text-center mt-3">
+          <p className="text-2xl font-bold text-info">
+            {totalHoursInt > 0 ? `${totalHoursInt} س` : ''}{totalMinutes > 0 ? ` ${totalMinutes} د` : ''}{totalHoursInt === 0 && totalMinutes === 0 ? '0' : ''}
+          </p>
+          <p className="text-xs text-muted-foreground">إجمالي ساعات العمل</p>
         </div>
       </motion.div>
 
