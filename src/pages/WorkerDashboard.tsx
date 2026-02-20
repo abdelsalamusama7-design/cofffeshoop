@@ -330,7 +330,7 @@ const WorkerDashboard = () => {
                 <p className="font-bold text-destructive text-center text-xs mb-2">سيتم حذف:</p>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">📋 سجل الحضور</span>
-                  <span className="font-medium text-foreground">{todayRecord ? '✓ موجود' : '—'}</span>
+                  <span className="font-medium text-success">✅ سيتم الاحتفاظ به</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">🧾 المبيعات</span>
@@ -356,8 +356,17 @@ const WorkerDashboard = () => {
               setResetError('كلمة المرور غير صحيحة');
               return;
             }
-            // Remove today's attendance record for this worker
-            const updated = records.filter(r => !(r.workerId === user.id && r.date === today));
+            // Auto check-out and KEEP attendance record (count as a worked day)
+            const nowTime = new Date();
+            const checkOutTime = `${String(nowTime.getHours()).padStart(2, '0')}:${String(nowTime.getMinutes()).padStart(2, '0')}`;
+            const updated = records.map(r => {
+              if (r.workerId === user.id && r.date === today && r.type === 'present' && r.checkIn && !r.checkOut) {
+                const [h1, m1] = r.checkIn.split(':').map(Number);
+                const hoursWorked = Math.max(0, Math.round(((nowTime.getHours() + nowTime.getMinutes() / 60) - (h1 + m1 / 60)) * 10) / 10);
+                return { ...r, checkOut: checkOutTime, hoursWorked };
+              }
+              return r;
+            });
             setRecords(updated);
             setAttendance(updated);
 
@@ -391,7 +400,7 @@ const WorkerDashboard = () => {
             setResetPassword('');
             setResetError('');
             window.dispatchEvent(new Event('shift-reset'));
-            toast.success('تم تصفير الشيفت بنجاح ✅ يمكنك تسجيل حضور جديد');
+            toast.success('تم تصفير الشيفت بنجاح ✅ تم حفظ سجل الحضور والساعات');
           }} className="space-y-4 mt-2">
             <div className="relative">
               <Lock size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
