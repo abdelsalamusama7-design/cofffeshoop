@@ -149,6 +149,7 @@ const Attendance = () => {
   const [showAdd, setShowAdd] = useState(false);
   const [viewDate, setViewDate] = useState(new Date().toISOString().split('T')[0]);
   const todayStr = new Date().toISOString().split('T')[0];
+  const [adminDetail, setAdminDetail] = useState<{ workerId: string; workerName: string; type: 'present' | 'absent' | 'leave' | 'hours' | 'partial' } | null>(null);
   const [newRecord, setNewRecord] = useState({
     workerId: '',
     date: new Date().toISOString().split('T')[0],
@@ -327,25 +328,25 @@ const Attendance = () => {
                 <p className="text-sm font-medium text-accent">المرتب: {summary.netSalary} ج.م</p>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-sm">
-                <div className="bg-success/10 rounded-lg p-2">
+                <div className="bg-success/10 rounded-lg p-2 cursor-pointer hover:ring-2 ring-success/40 transition-all" onClick={() => setAdminDetail({ workerId: summary.worker.id, workerName: summary.worker.name, type: 'present' })}>
                   <p className="font-bold text-success">{summary.presentDays}</p>
                   <p className="text-xs text-muted-foreground">حضور (12+ ساعة)</p>
                 </div>
-                <div className="bg-warning/10 rounded-lg p-2">
+                <div className="bg-warning/10 rounded-lg p-2 cursor-pointer hover:ring-2 ring-warning/40 transition-all" onClick={() => setAdminDetail({ workerId: summary.worker.id, workerName: summary.worker.name, type: 'leave' })}>
                   <p className="font-bold text-warning">{summary.leaveDays}</p>
                   <p className="text-xs text-muted-foreground">إجازة</p>
                 </div>
-                <div className="bg-destructive/10 rounded-lg p-2">
+                <div className="bg-destructive/10 rounded-lg p-2 cursor-pointer hover:ring-2 ring-destructive/40 transition-all" onClick={() => setAdminDetail({ workerId: summary.worker.id, workerName: summary.worker.name, type: 'absent' })}>
                   <p className="font-bold text-destructive">{summary.absentDays}</p>
                   <p className="text-xs text-muted-foreground">غياب</p>
                 </div>
-                <div className="bg-info/10 rounded-lg p-2">
+                <div className="bg-info/10 rounded-lg p-2 cursor-pointer hover:ring-2 ring-info/40 transition-all" onClick={() => setAdminDetail({ workerId: summary.worker.id, workerName: summary.worker.name, type: 'hours' })}>
                   <p className="font-bold text-info">{summary.totalHours}</p>
                   <p className="text-xs text-muted-foreground">ساعة</p>
                 </div>
               </div>
               {summary.partialShifts > 0 && (
-                <div className="bg-warning/10 rounded-lg p-2 text-center mt-2">
+                <div className="bg-warning/10 rounded-lg p-2 text-center mt-2 cursor-pointer hover:ring-2 ring-warning/40 transition-all" onClick={() => setAdminDetail({ workerId: summary.worker.id, workerName: summary.worker.name, type: 'partial' })}>
                   <p className="font-bold text-warning text-sm">
                     {Math.floor(summary.partialHours)} س {Math.round((summary.partialHours - Math.floor(summary.partialHours)) * 60)} د
                   </p>
@@ -356,6 +357,105 @@ const Attendance = () => {
           ))}
         </ScrollableList>
       </div>
+
+      {/* Admin Attendance Detail Dialog */}
+      <Dialog open={adminDetail !== null} onOpenChange={(open) => { if (!open) setAdminDetail(null); }}>
+        <DialogContent className="max-w-sm max-h-[80vh] overflow-y-auto" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-lg text-center">
+              {adminDetail?.workerName} - {adminDetail?.type === 'present' && '✅ أيام الحضور'}
+              {adminDetail?.type === 'absent' && '❌ أيام الغياب'}
+              {adminDetail?.type === 'leave' && '📋 أيام الإجازة'}
+              {adminDetail?.type === 'hours' && '⏱ ساعات العمل'}
+              {adminDetail?.type === 'partial' && '⚠️ شيفتات غير مكتملة'}
+            </DialogTitle>
+          </DialogHeader>
+          {(() => {
+            if (!adminDetail) return null;
+            const wRecords = monthlyRecords.filter(r => r.workerId === adminDetail.workerId);
+
+            const formatTime = (hw: number) => {
+              const hrs = Math.floor(hw);
+              const mins = Math.floor((hw - hrs) * 60);
+              const secs = Math.round(((hw - hrs) * 60 - mins) * 60);
+              return `${hrs} ساعة${mins > 0 ? ` ${mins} دقيقة` : ''}${secs > 0 ? ` ${secs} ثانية` : ''}`;
+            };
+
+            if (adminDetail.type === 'present') {
+              const completed = wRecords.filter(r => r.type === 'present' && r.checkOut && (r.hoursWorked || 0) >= 12);
+              return completed.length === 0 ? <p className="text-center text-muted-foreground text-sm py-4">لا توجد أيام حضور مكتملة</p> : (
+                <div className="space-y-2">{completed.sort((a, b) => a.date.localeCompare(b.date)).map(r => (
+                  <div key={r.id} className="bg-success/5 border border-success/20 rounded-xl p-3 space-y-1">
+                    <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                    <div className="flex justify-between text-xs text-muted-foreground"><span>🕐 حضور: {r.checkIn}</span><span>🕐 انصراف: {r.checkOut}</span></div>
+                    <p className="text-xs text-success font-medium">⏱ {formatTime(r.hoursWorked || 0)}</p>
+                    {r.shift && <p className="text-xs text-muted-foreground">{r.shift === 'morning' ? '☀️ صباحي' : '🌙 مسائي'}</p>}
+                  </div>
+                ))}</div>
+              );
+            }
+
+            if (adminDetail.type === 'absent') {
+              const absentDates: string[] = [];
+              for (let d = 1; d <= daysPassedInMonth; d++) {
+                const ds = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                if (!wRecords.some(r => r.date === ds)) absentDates.push(ds);
+              }
+              return absentDates.length === 0 ? <p className="text-center text-muted-foreground text-sm py-4">لا توجد أيام غياب 🎉</p> : (
+                <div className="space-y-2">{absentDates.map(ds => (
+                  <div key={ds} className="bg-destructive/5 border border-destructive/20 rounded-xl p-3">
+                    <p className="font-bold text-foreground text-sm">📅 {new Date(ds).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                    <p className="text-xs text-destructive font-medium mt-1">❌ لم يتم تسجيل أي حضور</p>
+                  </div>
+                ))}</div>
+              );
+            }
+
+            if (adminDetail.type === 'leave') {
+              const leaves = wRecords.filter(r => r.type === 'leave');
+              return leaves.length === 0 ? <p className="text-center text-muted-foreground text-sm py-4">لا توجد إجازات</p> : (
+                <div className="space-y-2">{leaves.sort((a, b) => a.date.localeCompare(b.date)).map(r => (
+                  <div key={r.id} className="bg-warning/5 border border-warning/20 rounded-xl p-3">
+                    <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                    <p className="text-xs text-warning font-medium mt-1">📋 إجازة / إذن</p>
+                  </div>
+                ))}</div>
+              );
+            }
+
+            if (adminDetail.type === 'hours') {
+              const withHours = wRecords.filter(r => r.type === 'present' && r.checkOut);
+              return withHours.length === 0 ? <p className="text-center text-muted-foreground text-sm py-4">لا توجد ساعات عمل</p> : (
+                <div className="space-y-2">{withHours.sort((a, b) => a.date.localeCompare(b.date)).map(r => {
+                  const isComplete = (r.hoursWorked || 0) >= 12;
+                  return (
+                    <div key={r.id} className={`${isComplete ? 'bg-success/5 border-success/20' : 'bg-warning/5 border-warning/20'} border rounded-xl p-3 space-y-1`}>
+                      <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                      <div className="flex justify-between text-xs text-muted-foreground"><span>🕐 {r.checkIn}</span><span>🕐 {r.checkOut}</span></div>
+                      <p className={`text-xs font-medium ${isComplete ? 'text-success' : 'text-warning'}`}>⏱ {formatTime(r.hoursWorked || 0)} {isComplete ? '✅' : '⚠️'}</p>
+                    </div>
+                  );
+                })}</div>
+              );
+            }
+
+            if (adminDetail.type === 'partial') {
+              const partials = wRecords.filter(r => r.type === 'present' && r.checkOut && (r.hoursWorked || 0) < 12);
+              return partials.length === 0 ? <p className="text-center text-muted-foreground text-sm py-4">لا توجد شيفتات غير مكتملة</p> : (
+                <div className="space-y-2">{partials.sort((a, b) => a.date.localeCompare(b.date)).map(r => (
+                  <div key={r.id} className="bg-warning/5 border border-warning/20 rounded-xl p-3 space-y-1">
+                    <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                    <div className="flex justify-between text-xs text-muted-foreground"><span>🕐 حضور: {r.checkIn}</span><span>🕐 انصراف: {r.checkOut}</span></div>
+                    <p className="text-xs text-warning font-medium">⏱ {formatTime(r.hoursWorked || 0)}</p>
+                  </div>
+                ))}</div>
+              );
+            }
+
+            return null;
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {/* Worker Reports Section */}
       <WorkerReportsSection workers={workers} records={records} />
