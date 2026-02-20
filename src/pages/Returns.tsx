@@ -385,15 +385,38 @@ const Returns = () => {
                 ) : (
                   filteredProducts.map(product => {
                     const qty = selectedItems[product.productId] || 0;
+                    // Check if product is out of stock in inventory
+                    const isOutOfStock = (() => {
+                      if (product.productId.startsWith('inv_')) {
+                        const invId = product.productId.replace('inv_', '');
+                        const inv = inventory.find(i => i.id === invId);
+                        return !inv || inv.quantity <= 0;
+                      }
+                      if (product.productId.startsWith('product_')) {
+                        const prodId = product.productId.replace('product_', '');
+                        const prod = products.find(p => p.id === prodId);
+                        if (prod?.ingredients && prod.ingredients.length > 0) {
+                          return prod.ingredients.some((ing: any) => {
+                            if (!ing.inventoryItemId || !ing.quantityUsed) return false;
+                            const inv = inventory.find(i => i.id === ing.inventoryItemId);
+                            return !inv || inv.quantity < ing.quantityUsed;
+                          });
+                        }
+                      }
+                      return false;
+                    })();
                     return (
                       <div
                         key={product.productId}
                         className={`flex items-center justify-between rounded-xl p-3 transition-all ${
+                          isOutOfStock ? 'opacity-50 grayscale cursor-not-allowed' :
                           qty > 0 ? 'bg-destructive/10 ring-1 ring-destructive/30' : 'bg-secondary'
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          {qty > 0 ? (
+                          {isOutOfStock ? (
+                            <span className="text-xs text-muted-foreground font-medium">نفذ</span>
+                          ) : qty > 0 ? (
                             <>
                               <button onClick={() => decrementItem(product.productId)} className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center">
                                 <Minus size={14} />
@@ -416,7 +439,7 @@ const Returns = () => {
                         <div className="text-right flex-1 mr-3">
                           <p className="text-sm font-medium text-foreground">{product.productName}</p>
                           <p className="text-xs text-muted-foreground">
-                            متبقي: {product.remaining} - {product.unitPrice} ج.م/وحدة
+                            {isOutOfStock ? 'نفذ المخزون' : `متبقي: ${product.remaining} - ${product.unitPrice} ج.م/وحدة`}
                           </p>
                         </div>
                       </div>
