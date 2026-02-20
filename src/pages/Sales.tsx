@@ -52,23 +52,28 @@ const Sales = () => {
     return items;
   }, [products, inventory]);
 
-  // Check if a sellable item is out of stock
-  const isOutOfStock = (item: SellableItem): boolean => {
+  // Get max sellable quantity for an item based on current inventory
+  const getMaxSellable = (item: SellableItem): number => {
     if (item.type === 'inventory') {
       const invId = item.id.replace('inv_', '');
       const inv = inventory.find(i => i.id === invId);
-      return !inv || inv.quantity <= 0;
+      return inv ? Math.floor(inv.quantity) : 0;
     }
-    // Product: check if all ingredients have enough stock
     if (item.ingredients && item.ingredients.length > 0) {
-      return item.ingredients.some(ing => {
-        if (!ing.inventoryItemId || !ing.quantityUsed) return false;
+      let maxQty = Infinity;
+      item.ingredients.forEach(ing => {
+        if (!ing.inventoryItemId || !ing.quantityUsed) return;
         const inv = inventory.find(i => i.id === ing.inventoryItemId);
-        return !inv || inv.quantity < ing.quantityUsed;
+        const available = inv ? Math.floor(inv.quantity / ing.quantityUsed) : 0;
+        maxQty = Math.min(maxQty, available);
       });
+      return maxQty === Infinity ? 999 : maxQty;
     }
-    return false;
+    return 999;
   };
+
+  // Check if a sellable item is out of stock
+  const isOutOfStock = (item: SellableItem): boolean => getMaxSellable(item) <= 0;
 
   const filteredItems = useMemo(() => {
     if (activeTab === 'all') return sellableItems;
@@ -226,16 +231,20 @@ const Sales = () => {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
             {filteredItems.map(item => {
               const inCart = cart.find(i => i.productId === item.id);
-              const outOfStock = isOutOfStock(item);
+              const maxSellable = getMaxSellable(item);
+              const cartQty = inCart?.quantity || 0;
+              const reachedMax = cartQty >= maxSellable;
+              const outOfStock = maxSellable <= 0;
+              const disabled = outOfStock || reachedMax;
               return (
                 <motion.button
                   key={item.id}
-                  whileTap={outOfStock ? undefined : { scale: 0.95 }}
-                  onClick={() => !outOfStock && addToCart(item)}
-                  disabled={outOfStock}
+                  whileTap={disabled ? undefined : { scale: 0.95 }}
+                  onClick={() => !disabled && addToCart(item)}
+                  disabled={disabled}
                   className={`glass-card rounded-2xl p-4 text-right transition-all relative ${
-                    outOfStock ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:shadow-xl'
-                  } ${inCart && !outOfStock ? 'ring-2 ring-accent' : ''}`}
+                    disabled ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:shadow-xl'
+                  } ${inCart && !disabled ? 'ring-2 ring-accent' : ''}`}
                 >
                   {inCart && (
                     <span className="absolute top-2 left-2 w-6 h-6 rounded-full bg-accent text-accent-foreground text-xs font-bold flex items-center justify-center">
@@ -253,8 +262,8 @@ const Sales = () => {
                     </span>
                   </div>
                   <h3 className="font-semibold text-foreground">{item.name}</h3>
-                  <p className={`text-lg font-bold mt-2 ${outOfStock ? 'text-muted-foreground' : 'text-accent'}`}>
-                    {outOfStock ? 'نفذ المخزون' : `${item.sellPrice} ج.م`}
+                  <p className={`text-lg font-bold mt-2 ${disabled ? 'text-muted-foreground' : 'text-accent'}`}>
+                    {outOfStock ? 'نفذ المخزون' : reachedMax ? `الحد الأقصى ${maxSellable}` : `${item.sellPrice} ج.م`}
                   </p>
                   {user?.role === 'admin' && (
                     <p className="text-xs text-muted-foreground">تكلفة: {item.costPrice} ج.م</p>
