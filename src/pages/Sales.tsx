@@ -343,14 +343,16 @@ const Sales = () => {
                 <p className="text-sm text-muted-foreground">{lastSale.date} - {lastSale.time}</p>
                 <p className="text-sm text-muted-foreground">العامل: {lastSale.workerName}</p>
               </div>
-              <div className="space-y-2">
-                {lastSale.items.map((item, i) => (
-                  <div key={i} className="flex justify-between text-sm">
-                    <span className="text-foreground">{item.productName} x{item.quantity}</span>
-                    <span className="font-medium text-foreground">{item.total} ج.م</span>
-                  </div>
-                ))}
-              </div>
+              <ScrollableList maxHeight="max-h-48">
+                <div className={lastSale.items.length > 4 ? "grid grid-cols-2 gap-x-4 gap-y-1" : "space-y-1"}>
+                  {lastSale.items.map((item, i) => (
+                    <div key={i} className="flex justify-between text-sm gap-2">
+                      <span className="text-foreground truncate">{item.productName} x{item.quantity}</span>
+                      <span className="font-medium text-foreground whitespace-nowrap">{item.total} ج.م</span>
+                    </div>
+                  ))}
+                </div>
+              </ScrollableList>
               {lastSale.discount && lastSale.discount.amount > 0 && (
                 <div className="border-t border-border pt-2 space-y-1 text-sm">
                   <div className="flex justify-between text-muted-foreground">
