@@ -5,9 +5,10 @@ interface ScrollableListProps {
   children: ReactNode;
   className?: string;
   maxHeight?: string;
+  alwaysShowArrows?: boolean;
 }
 
-const ScrollableList = ({ children, className, maxHeight = 'max-h-60' }: ScrollableListProps) => {
+const ScrollableList = ({ children, className, maxHeight = 'max-h-60', alwaysShowArrows = false }: ScrollableListProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScroll, setCanScroll] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -50,7 +51,7 @@ const ScrollableList = ({ children, className, maxHeight = 'max-h-60' }: Scrolla
       </div>
 
       {/* Scroll track with arrows */}
-      {canScroll && (
+      {(canScroll || alwaysShowArrows) && (
         <div className="flex flex-col items-center gap-1 shrink-0 self-stretch py-0.5 justify-between">
           {/* Up arrow */}
           <button
