@@ -1074,7 +1074,7 @@ const Reports = () => {
                 <p className="text-sm">لا توجد عمليات تصفير مسجلة</p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <ScrollableList maxHeight="max-h-[60vh]" className="space-y-2">
                 {shiftResets.map(reset => (
                   <div key={reset.id} className="bg-muted/50 rounded-xl p-4 space-y-1 border border-border">
                     <div className="flex items-center justify-between">
@@ -1087,14 +1087,16 @@ const Reports = () => {
                     {reset.reportSummary && (
                       <details className="mt-2">
                         <summary className="text-xs text-primary cursor-pointer hover:underline">عرض تقرير الشيفت</summary>
-                        <pre className="text-xs text-muted-foreground whitespace-pre-wrap mt-2 bg-background rounded-lg p-3 max-h-40 overflow-auto border border-border">
-                          {reset.reportSummary}
-                        </pre>
+                        <ScrollableList maxHeight="max-h-60">
+                          <pre className="text-xs text-muted-foreground whitespace-pre-wrap mt-2 bg-background rounded-lg p-3 border border-border">
+                            {reset.reportSummary}
+                          </pre>
+                        </ScrollableList>
                       </details>
                     )}
                   </div>
                 ))}
-              </div>
+              </ScrollableList>
             )}
           </div>
         </TabsContent>
