@@ -97,14 +97,18 @@ const WorkerDashboard = () => {
 
   // Monthly attendance summary
   const myMonthRecords = records.filter(r => r.workerId === user.id && r.date.startsWith(currentMonth));
-  // Only count days where shift was completed (has checkOut) as present
-  const presentDays = myMonthRecords.filter(r => r.type === 'present' && r.checkOut).length;
+  // Only count completed shifts (12+ hours) as full present days
+  const completedShifts = myMonthRecords.filter(r => r.type === 'present' && r.checkOut && (r.hoursWorked || 0) >= 12);
+  const presentDays = completedShifts.length;
+  // Partial shifts: checked out but less than 12 hours
+  const partialShifts = myMonthRecords.filter(r => r.type === 'present' && r.checkOut && (r.hoursWorked || 0) < 12);
+  const partialHoursDecimal = partialShifts.reduce((s, r) => s + (r.hoursWorked || 0), 0);
   const leaveDays = myMonthRecords.filter(r => r.type === 'leave').length;
   
   // Auto-calculate absent days: days passed this month without any attendance record
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const daysPassedInMonth = Math.floor((todayDate.getTime() - monthStart.getTime()) / (1000 * 60 * 60 * 24)); // exclude today
+  const daysPassedInMonth = Math.floor((todayDate.getTime() - monthStart.getTime()) / (1000 * 60 * 60 * 24));
   const daysWithRecords = new Set(myMonthRecords.map(r => r.date)).size;
   const absentDays = Math.max(0, daysPassedInMonth - daysWithRecords);
   
@@ -208,13 +212,21 @@ const WorkerDashboard = () => {
         <div className="grid grid-cols-2 gap-3 text-center">
           <div className="bg-success/10 rounded-xl p-3">
             <p className="text-2xl font-bold text-success">{presentDays}</p>
-            <p className="text-xs text-muted-foreground">يوم حضور</p>
+            <p className="text-xs text-muted-foreground">يوم حضور (12+ ساعة)</p>
           </div>
           <div className="bg-destructive/10 rounded-xl p-3">
             <p className="text-2xl font-bold text-destructive">{absentDays}</p>
             <p className="text-xs text-muted-foreground">يوم غياب</p>
           </div>
         </div>
+        {partialShifts.length > 0 && (
+          <div className="bg-warning/10 rounded-xl p-3 text-center mt-3">
+            <p className="text-2xl font-bold text-warning">
+              {Math.floor(partialHoursDecimal)} س {Math.round((partialHoursDecimal - Math.floor(partialHoursDecimal)) * 60)} د
+            </p>
+            <p className="text-xs text-muted-foreground">ساعات غير مكتملة ({partialShifts.length} شيفت أقل من 12 ساعة)</p>
+          </div>
+        )}
         {leaveDays > 0 && (
           <div className="bg-warning/10 rounded-xl p-3 text-center mt-3">
             <p className="text-2xl font-bold text-warning">{leaveDays}</p>
