@@ -187,14 +187,6 @@ const App = () => {
               <Route path="/my-expenses" element={<ProtectedRoute><WorkerExpensesPage /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
-            {/* Install App Banner */}
-            {installPrompt && (
-              <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-72 z-50 bg-primary text-primary-foreground rounded-2xl shadow-2xl p-3 flex items-center gap-3">
-                <span className="text-sm font-medium flex-1">📱 ثبّت التطبيق على جهازك للعمل بدون إنترنت</span>
-                <button onClick={handleInstall} className="bg-primary-foreground text-primary text-xs font-bold px-3 py-1.5 rounded-lg">تثبيت</button>
-                <button onClick={() => setInstallPrompt(null)} className="text-primary-foreground/70 text-lg leading-none">×</button>
-              </div>
-            )}
           </BrowserRouter>
         )}
       </TooltipProvider>
