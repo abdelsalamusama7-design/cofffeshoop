@@ -631,26 +631,41 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                   }
 
                   const reportText = generateReportText();
-                  try {
-                    const { data, error } = await supabase.functions.invoke('send-shift-report', {
-                      body: {
-                        reportText,
-                        workerName: user.name,
-                        date: new Date().toLocaleDateString('ar-EG'),
-                      },
-                    });
-                    if (error) {
-                      console.error('Email send error:', error);
-                      toast.error('تم التصفير لكن فشل إرسال الإيميل');
-                    } else {
-                      toast.success('تم إرسال التقرير بالإيميل بنجاح 📧');
+                  const today = new Date().toISOString().slice(0, 10);
+
+                  // Log shift reset FIRST (before email or any other operations)
+                  const now = new Date();
+                  addShiftReset({
+                    id: Date.now().toString(),
+                    workerId: user.id,
+                    workerName: user.name,
+                    resetDate: today,
+                    resetTime: now.toLocaleTimeString('ar-EG'),
+                    reportSummary: reportText,
+                  });
+
+                  // Try to send email (non-blocking, don't let it prevent reset)
+                  if (navigator.onLine) {
+                    try {
+                      const { data, error } = await supabase.functions.invoke('send-shift-report', {
+                        body: {
+                          reportText,
+                          workerName: user.name,
+                          date: new Date().toLocaleDateString('ar-EG'),
+                        },
+                      });
+                      if (error) {
+                        console.error('Email send error:', error);
+                        toast.error('تم التصفير لكن فشل إرسال الإيميل');
+                      } else {
+                        toast.success('تم إرسال التقرير بالإيميل بنجاح 📧');
+                      }
+                    } catch (err) {
+                      console.error('Email send error:', err);
                     }
-                  } catch (err) {
-                    console.error('Email send error:', err);
                   }
 
                   // Auto check-out before clearing attendance
-                  const today = new Date().toISOString().slice(0, 10);
                   const now2 = new Date();
                   const checkOutTime = now2.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
                   const attendance = getAttendance();
@@ -697,15 +712,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                   // Save last shift reset timestamp so initializeFromDatabase filters out pre-reset records
                   localStorage.setItem('cafe_last_shift_reset', JSON.stringify({ date: today, timestamp: Date.now().toString() }));
 
-                  const now = new Date();
-                  addShiftReset({
-                    id: Date.now().toString(),
-                    workerId: user.id,
-                    workerName: user.name,
-                    resetDate: today,
-                    resetTime: now.toLocaleTimeString('ar-EG'),
-                    reportSummary: reportText,
-                  });
+                  // shift reset already logged above
 
                   setShowResetConfirm(false);
                   setResetPassword('');
