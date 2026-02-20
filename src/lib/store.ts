@@ -190,7 +190,7 @@ export const initializeFromDatabase = async (): Promise<boolean> => {
     };
 
     if (sales) setLocal(STORAGE_KEYS.sales, filterReset(sales.map(dbSaleToLocal), 'date'));
-    if (attendance) setLocal(STORAGE_KEYS.attendance, hasResetToday ? attendance.map(dbAttendanceToLocal).filter(a => a.date !== todayStr || Number(a.id) > Number(resetTimestamp)) : attendance.map(dbAttendanceToLocal));
+    if (attendance) setLocal(STORAGE_KEYS.attendance, attendance.map(dbAttendanceToLocal));
     if (transactions) setLocal(STORAGE_KEYS.transactions, transactions.map(dbTransactionToLocal));
     if (expenses) setLocal(STORAGE_KEYS.expenses, expenses.map(dbExpenseToLocal));
     if (returns) setLocal(STORAGE_KEYS.returns, filterReset(returns.map(dbReturnToLocal), 'date'));

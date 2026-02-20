@@ -196,11 +196,19 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
 
   const generateReportText = () => {
     if (!user) return '';
-    const today = new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const todayDate = new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const attendance = getAttendance();
+    const todayAttendance = attendance.find(a => a.workerId === user.id && a.date === todayStr && a.type === 'present');
     let text = `📋 تقرير إنهاء الشيفت\n`;
     text += `━━━━━━━━━━━━━━━\n`;
     text += `👤 العامل: ${user.name}\n`;
-    text += `📅 التاريخ: ${today}\n`;
+    text += `📅 التاريخ: ${todayDate}\n`;
+    if (todayAttendance) {
+      text += `⏰ الحضور: ${todayAttendance.checkIn || '—'} → ${todayAttendance.checkOut || 'لم يسجل'}\n`;
+      text += `🕐 ساعات العمل: ${todayAttendance.hoursWorked?.toFixed(1) || '0'} ساعة\n`;
+      text += `📆 الشيفت: ${todayAttendance.shift === 'morning' ? 'صباحي ☀️' : 'مسائي 🌙'}\n`;
+    }
     text += `━━━━━━━━━━━━━━━\n\n`;
     text += `📊 ملخص الشيفت:\n`;
     text += `• عدد الفواتير: ${shiftSales.length}\n`;
@@ -389,6 +397,23 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                 {/* Right Column - Summary & Sales by Product */}
                 <div className="flex flex-col gap-2 pl-1 md:pl-2">
+                  {/* Attendance Info */}
+                  {(() => {
+                    const todayStr = new Date().toISOString().slice(0, 10);
+                    const att = getAttendance().find(a => a.workerId === user?.id && a.date === todayStr && a.type === 'present');
+                    if (!att) return null;
+                    return (
+                      <div className="bg-info/10 rounded-xl p-3 flex items-center justify-between text-xs border border-info/20">
+                        <div className="flex items-center gap-2">
+                          <Clock size={14} className="text-info" />
+                          <span className="text-foreground font-medium">
+                            {att.shift === 'morning' ? '☀️ صباحي' : '🌙 مسائي'} • {att.checkIn} → {att.checkOut || '—'}
+                          </span>
+                        </div>
+                        <span className="font-bold text-info">{att.hoursWorked?.toFixed(1) || '0'} ساعة</span>
+                      </div>
+                    );
+                  })()}
                   {/* Summary Cards */}
                   <div className="grid grid-cols-3 gap-2">
                     <div className="bg-primary/10 rounded-xl p-3 text-center">
@@ -617,7 +642,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                   <div className="flex justify-between"><span className="text-muted-foreground">🧾 المبيعات</span><span className="font-medium text-foreground">{shiftSales.length} فاتورة ({totalAmount.toFixed(0)} ج.م)</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">🔄 المرتجعات</span><span className="font-medium text-foreground">{activeReturns.filter(e => !deletedReturnIds.has(e.returnRecord.id)).length} مرتجع ({totalReturnsAmount.toFixed(0)} ج.م)</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">💸 مصروفي</span><span className="font-medium text-foreground">{shiftWorkerExpenses.length} عملية ({totalWorkerExpenses.toFixed(0)} ج.م)</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">📋 سجل الحضور</span><span className="font-medium text-foreground">سيتم الحذف</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">📋 سجل الحضور</span><span className="font-medium text-success">✅ سيتم الاحتفاظ به</span></div>
                 </div>
                 <p className="text-xs text-center text-muted-foreground">أدخل كلمة المرور لتأكيد تصفير الشيفت</p>
                 <form onSubmit={async (e) => {
@@ -665,11 +690,11 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                     }
                   }
 
-                  // Auto check-out before clearing attendance
+                  // Auto check-out and KEEP attendance record (count as a worked day)
                   const now2 = new Date();
                   const checkOutTime = now2.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
                   const attendance = getAttendance();
-                  const updatedAttendance = attendance.map(r => {
+                  const finalAttendance = attendance.map(r => {
                     if (r.workerId === user.id && r.date === today && r.type === 'present' && r.checkIn && !r.checkOut) {
                       // Calculate hours worked
                       const checkInParts = r.checkIn.match(/(\d+):(\d+)/);
@@ -682,11 +707,21 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                       }
                       return { ...r, checkOut: checkOutTime, hoursWorked };
                     }
+                    // For admin reset: also auto-checkout other workers
+                    if (user.role === 'admin' && r.date === today && r.type === 'present' && r.checkIn && !r.checkOut) {
+                      const checkInParts = r.checkIn.match(/(\d+):(\d+)/);
+                      let hoursWorked = 0;
+                      if (checkInParts) {
+                        const startMinutes = parseInt(checkInParts[1]) * 60 + parseInt(checkInParts[2]);
+                        const endMinutes = now2.getHours() * 60 + now2.getMinutes();
+                        hoursWorked = Math.round(((endMinutes - startMinutes) / 60) * 10) / 10;
+                        if (hoursWorked < 0) hoursWorked += 24;
+                      }
+                      return { ...r, checkOut: checkOutTime, hoursWorked };
+                    }
                     return r;
                   });
-                  // Remove today's attendance (fresh start) - admin clears all, worker clears own
-                  const isAdminUser = user.role === 'admin';
-                  const finalAttendance = updatedAttendance.filter(r => !((isAdminUser || r.workerId === user.id) && r.date === today));
+                  // Keep attendance records - don't delete them
                   setAttendance(finalAttendance);
                   toast.success(`✅ تم تسجيل انصرافك تلقائياً — ${checkOutTime}`, { duration: 4000 });
                   const isAdmin = user.role === 'admin';
