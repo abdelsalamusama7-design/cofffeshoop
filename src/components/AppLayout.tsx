@@ -27,6 +27,7 @@ import logo from '@/assets/logo.jpg';
 import { getCurrentUser, setCurrentUser, getInventory } from '@/lib/store';
 import { getQueueCount, onQueueChange, flushQueue } from '@/lib/offlineQueue';
 import ChatBot from './ChatBot';
+import ScrollableList from './ScrollableList';
 import ShiftEndDialog from './ShiftEndDialog';
 import { toast } from 'sonner';
 
@@ -175,26 +176,30 @@ const AppLayout = ({ children }: LayoutProps) => {
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1">
-          {filteredNav.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`
-                  flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all
-                  ${isActive
-                    ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-md'
-                    : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                  }
-                `}
-              >
-                <item.icon size={20} />
-                {item.label}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 p-4 space-y-1 overflow-hidden flex flex-col">
+          <ScrollableList maxHeight="max-h-full" className="flex-1">
+            <div className="space-y-1">
+              {filteredNav.map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`
+                      flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all
+                      ${isActive
+                        ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-md'
+                        : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                      }
+                    `}
+                  >
+                    <item.icon size={20} />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </ScrollableList>
         </nav>
 
         <div className="p-4 border-t border-sidebar-border space-y-1">
