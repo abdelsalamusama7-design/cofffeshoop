@@ -178,15 +178,6 @@ const WorkerDashboard = () => {
             <p className="text-xs text-muted-foreground">
               {todayRecord?.checkIn} → {todayRecord?.checkOut} • {todayRecord?.hoursWorked?.toFixed(1)} ساعة
             </p>
-            <Button
-              onClick={() => setShowResetDialog(true)}
-              variant="outline"
-              size="sm"
-              className="mt-2 border-destructive/30 text-destructive hover:bg-destructive/10"
-            >
-              <RotateCcw size={14} className="ml-1" />
-              تصفير الشيفت
-            </Button>
           </div>
         )}
       </motion.div>
