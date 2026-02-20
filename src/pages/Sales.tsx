@@ -52,6 +52,24 @@ const Sales = () => {
     return items;
   }, [products, inventory]);
 
+  // Check if a sellable item is out of stock
+  const isOutOfStock = (item: SellableItem): boolean => {
+    if (item.type === 'inventory') {
+      const invId = item.id.replace('inv_', '');
+      const inv = inventory.find(i => i.id === invId);
+      return !inv || inv.quantity <= 0;
+    }
+    // Product: check if all ingredients have enough stock
+    if (item.ingredients && item.ingredients.length > 0) {
+      return item.ingredients.some(ing => {
+        if (!ing.inventoryItemId || !ing.quantityUsed) return false;
+        const inv = inventory.find(i => i.id === ing.inventoryItemId);
+        return !inv || inv.quantity < ing.quantityUsed;
+      });
+    }
+    return false;
+  };
+
   const filteredItems = useMemo(() => {
     if (activeTab === 'all') return sellableItems;
     return sellableItems.filter(i => i.category === activeTab);
@@ -208,14 +226,16 @@ const Sales = () => {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
             {filteredItems.map(item => {
               const inCart = cart.find(i => i.productId === item.id);
+              const outOfStock = isOutOfStock(item);
               return (
                 <motion.button
                   key={item.id}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => addToCart(item)}
-                  className={`glass-card rounded-2xl p-4 text-right hover:shadow-xl transition-all relative ${
-                    inCart ? 'ring-2 ring-accent' : ''
-                  }`}
+                  whileTap={outOfStock ? undefined : { scale: 0.95 }}
+                  onClick={() => !outOfStock && addToCart(item)}
+                  disabled={outOfStock}
+                  className={`glass-card rounded-2xl p-4 text-right transition-all relative ${
+                    outOfStock ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:shadow-xl'
+                  } ${inCart && !outOfStock ? 'ring-2 ring-accent' : ''}`}
                 >
                   {inCart && (
                     <span className="absolute top-2 left-2 w-6 h-6 rounded-full bg-accent text-accent-foreground text-xs font-bold flex items-center justify-center">
@@ -233,7 +253,9 @@ const Sales = () => {
                     </span>
                   </div>
                   <h3 className="font-semibold text-foreground">{item.name}</h3>
-                  <p className="text-lg font-bold text-accent mt-2">{item.sellPrice} ج.م</p>
+                  <p className={`text-lg font-bold mt-2 ${outOfStock ? 'text-muted-foreground' : 'text-accent'}`}>
+                    {outOfStock ? 'نفذ المخزون' : `${item.sellPrice} ج.م`}
+                  </p>
                   {user?.role === 'admin' && (
                     <p className="text-xs text-muted-foreground">تكلفة: {item.costPrice} ج.م</p>
                   )}
