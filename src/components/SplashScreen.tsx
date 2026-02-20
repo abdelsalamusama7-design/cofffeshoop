@@ -56,8 +56,8 @@ const SplashScreen = ({ onFinish }: { onFinish: () => void }) => {
           transition={{ delay: 1.2, duration: 0.5 }}
         >
           <p className="text-sidebar-foreground/50 text-xs">تنفيذ وتصميم</p>
-          <p className="text-sidebar-foreground/70 text-sm font-semibold">شركة InstaTech للبرمجيات</p>
-          <p className="text-sidebar-foreground/50 text-xs direction-ltr" dir="ltr">📱 01227080430</p>
+          <a href="https://www.facebook.com/share/1CXMGPTe98/" target="_blank" rel="noopener noreferrer" className="text-sidebar-foreground/70 text-sm font-semibold hover:underline cursor-pointer block">شركة InstaTech للبرمجيات</a>
+          <a href="https://www.facebook.com/share/1CXMGPTe98/" target="_blank" rel="noopener noreferrer" className="text-sidebar-foreground/50 text-xs direction-ltr hover:underline cursor-pointer block" dir="ltr">📱 01227080430</a>
         </motion.div>
       </motion.div>
     </motion.div>
