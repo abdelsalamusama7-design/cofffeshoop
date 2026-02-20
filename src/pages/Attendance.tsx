@@ -24,9 +24,17 @@ const WorkerReportsSection = ({ workers, records }: { workers: { id: string; nam
       ? sales.filter(s => s.workerId === workerId && s.date.startsWith(startDate))
       : sales.filter(s => s.workerId === workerId && s.date === startDate);
 
-    const presentDays = filteredRecords.filter(r => r.type === 'present').length;
-    const absentDays = filteredRecords.filter(r => r.type === 'absent').length;
+    const completedShifts = filteredRecords.filter(r => r.type === 'present' && r.checkOut && (r.hoursWorked || 0) >= 12);
+    const presentDays = completedShifts.length;
+    const partialShifts = filteredRecords.filter(r => r.type === 'present' && r.checkOut && (r.hoursWorked || 0) < 12);
     const leaveDays = filteredRecords.filter(r => r.type === 'leave').length;
+    // Auto-calculate absent days for monthly
+    const now = new Date();
+    const monthStartDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    const todayDateObj = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const daysInMonth = Math.floor((todayDateObj.getTime() - monthStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const daysWithRecs = new Set(filteredRecords.map(r => r.date)).size;
+    const absentDays = isMonthly ? Math.max(0, daysInMonth - daysWithRecs) : filteredRecords.filter(r => r.type === 'absent').length;
     const totalHours = Math.round(filteredRecords.reduce((sum, r) => sum + (r.hoursWorked || 0), 0) * 10) / 10;
     const totalSales = filteredSales.reduce((sum, s) => sum + s.total, 0);
     const salesCount = filteredSales.length;
@@ -197,18 +205,30 @@ const Attendance = () => {
   const currentMonth = new Date().toISOString().slice(0, 7);
   const monthlyRecords = records.filter(r => r.date.startsWith(currentMonth));
 
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const daysPassedInMonth = Math.floor((todayDate.getTime() - monthStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
   const workerSummaries = workers.map(w => {
     const workerRecords = monthlyRecords.filter(r => r.workerId === w.id);
     const totalHours = workerRecords.reduce((sum, r) => sum + (r.hoursWorked || 0), 0);
-    const presentDays = workerRecords.filter(r => r.type === 'present').length;
+    // Only count completed shifts (12+ hours) as full present days
+    const completedShifts = workerRecords.filter(r => r.type === 'present' && r.checkOut && (r.hoursWorked || 0) >= 12);
+    const presentDays = completedShifts.length;
+    // Partial shifts: checked out but less than 12 hours
+    const partialShifts = workerRecords.filter(r => r.type === 'present' && r.checkOut && (r.hoursWorked || 0) < 12);
+    const partialHours = partialShifts.reduce((s, r) => s + (r.hoursWorked || 0), 0);
     const leaveDays = workerRecords.filter(r => r.type === 'leave').length;
-    const absentDays = workerRecords.filter(r => r.type === 'absent').length;
+    // Auto-calculate absent days
+    const daysWithRecords = new Set(workerRecords.map(r => r.date)).size;
+    const absentDays = Math.max(0, daysPassedInMonth - daysWithRecords);
     // Simple salary calculation (assuming 30 working days)
     const dailyRate = w.salary / 30;
     const deductions = absentDays * dailyRate;
     const netSalary = Math.round(w.salary - deductions);
 
-    return { worker: w, totalHours: Math.round(totalHours * 10) / 10, presentDays, leaveDays, absentDays, netSalary };
+    return { worker: w, totalHours: Math.round(totalHours * 10) / 10, presentDays, leaveDays, absentDays, netSalary, partialShifts: partialShifts.length, partialHours };
   });
 
   return (
@@ -307,7 +327,7 @@ const Attendance = () => {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-sm">
                 <div className="bg-success/10 rounded-lg p-2">
                   <p className="font-bold text-success">{summary.presentDays}</p>
-                  <p className="text-xs text-muted-foreground">حضور</p>
+                  <p className="text-xs text-muted-foreground">حضور (12+ ساعة)</p>
                 </div>
                 <div className="bg-warning/10 rounded-lg p-2">
                   <p className="font-bold text-warning">{summary.leaveDays}</p>
@@ -322,6 +342,14 @@ const Attendance = () => {
                   <p className="text-xs text-muted-foreground">ساعة</p>
                 </div>
               </div>
+              {summary.partialShifts > 0 && (
+                <div className="bg-warning/10 rounded-lg p-2 text-center mt-2">
+                  <p className="font-bold text-warning text-sm">
+                    {Math.floor(summary.partialHours)} س {Math.round((summary.partialHours - Math.floor(summary.partialHours)) * 60)} د
+                  </p>
+                  <p className="text-xs text-muted-foreground">ساعات غير مكتملة ({summary.partialShifts} شيفت أقل من 12 ساعة)</p>
+                </div>
+              )}
             </motion.div>
           ))}
         </ScrollableList>
