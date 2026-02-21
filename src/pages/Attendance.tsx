@@ -1,14 +1,15 @@
 import { useState, useMemo } from 'react';
 import ScrollableList from '@/components/ScrollableList';
 import { motion } from 'framer-motion';
-import { ClipboardCheck, Plus, Calendar, Clock, Save, Share2, BarChart3 } from 'lucide-react';
+import { ClipboardCheck, Plus, Calendar, Clock, Save, Share2, BarChart3, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getAttendance, setAttendance, getWorkers, getCurrentUser, getSales } from '@/lib/store';
 import { AttendanceRecord } from '@/lib/types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import PasswordConfirmDialog from '@/components/PasswordConfirmDialog';
 
 
 const WorkerReportsSection = ({ workers, records }: { workers: { id: string; name: string; role: string; salary: number; password: string }[]; records: AttendanceRecord[] }) => {
@@ -150,6 +151,10 @@ const Attendance = () => {
   const [viewDate, setViewDate] = useState(new Date().toISOString().split('T')[0]);
   const todayStr = new Date().toISOString().split('T')[0];
   const [adminDetail, setAdminDetail] = useState<{ workerId: string; workerName: string; type: 'present' | 'absent' | 'leave' | 'hours' | 'partial' } | null>(null);
+  const [editRecord, setEditRecord] = useState<AttendanceRecord | null>(null);
+  const [deleteRecordId, setDeleteRecordId] = useState<string | null>(null);
+  const [showDeletePassword, setShowDeletePassword] = useState(false);
+  const [editForm, setEditForm] = useState({ checkIn: '', checkOut: '', type: 'present' as 'present' | 'absent' | 'leave', shift: 'morning' as 'morning' | 'evening' });
   const [newRecord, setNewRecord] = useState({
     workerId: '',
     date: new Date().toISOString().split('T')[0],
@@ -200,9 +205,43 @@ const Attendance = () => {
     toast.success('تم تسجيل الحضور');
   };
 
-  const todayRecords = records.filter(r => r.date === viewDate);
+  const handleEditRecord = (record: AttendanceRecord) => {
+    setEditRecord(record);
+    setEditForm({
+      checkIn: record.checkIn || '',
+      checkOut: record.checkOut || '',
+      type: record.type,
+      shift: (record.shift || 'morning') as 'morning' | 'evening',
+    });
+  };
 
-  // Calculate monthly summary per worker
+  const saveEditRecord = () => {
+    if (!editRecord) return;
+    const hoursWorked = calcHours(editForm.checkIn, editForm.checkOut);
+    const updated = records.map(r => r.id === editRecord.id ? {
+      ...r,
+      checkIn: editForm.type === 'present' ? editForm.checkIn : undefined,
+      checkOut: editForm.type === 'present' ? editForm.checkOut : undefined,
+      type: editForm.type,
+      shift: editForm.type === 'present' ? editForm.shift : undefined,
+      hoursWorked: editForm.type === 'present' ? Math.round(hoursWorked * 100) / 100 : 0,
+    } : r);
+    setRecords(updated);
+    setAttendance(updated);
+    setEditRecord(null);
+    toast.success('تم تعديل السجل');
+  };
+
+  const confirmDeleteRecord = () => {
+    if (!deleteRecordId) return;
+    const updated = records.filter(r => r.id !== deleteRecordId);
+    setRecords(updated);
+    setAttendance(updated);
+    setDeleteRecordId(null);
+    toast.success('تم حذف السجل');
+  };
+
+  const todayRecords = records.filter(r => r.date === viewDate);
   const currentMonth = new Date().toISOString().slice(0, 7);
   const monthlyRecords = records.filter(r => r.date.startsWith(currentMonth));
 
@@ -381,6 +420,17 @@ const Attendance = () => {
               return `${hrs} ساعة${mins > 0 ? ` ${mins} دقيقة` : ''}${secs > 0 ? ` ${secs} ثانية` : ''}`;
             };
 
+            const RecordActions = ({ record }: { record: AttendanceRecord }) => (
+              <div className="flex gap-1 mt-1">
+                <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => handleEditRecord(record)}>
+                  <Pencil size={12} className="ml-1" /> تعديل
+                </Button>
+                <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-destructive hover:text-destructive" onClick={() => { setDeleteRecordId(record.id); setShowDeletePassword(true); }}>
+                  <Trash2 size={12} className="ml-1" /> حذف
+                </Button>
+              </div>
+            );
+
             if (adminDetail.type === 'present') {
               const completed = wRecords.filter(r => r.type === 'present' && r.checkOut && (r.hoursWorked || 0) >= 12);
               return completed.length === 0 ? <p className="text-center text-muted-foreground text-sm py-4">لا توجد أيام حضور مكتملة</p> : (
@@ -390,6 +440,7 @@ const Attendance = () => {
                     <div className="flex justify-between text-xs text-muted-foreground"><span>🕐 حضور: {r.checkIn}</span><span>🕐 انصراف: {r.checkOut}</span></div>
                     <p className="text-xs text-success font-medium">⏱ {formatTime(r.hoursWorked || 0)}</p>
                     {r.shift && <p className="text-xs text-muted-foreground">{r.shift === 'morning' ? '☀️ صباحي' : '🌙 مسائي'}</p>}
+                    <RecordActions record={r} />
                   </div>
                 ))}</div>
               );
@@ -418,6 +469,7 @@ const Attendance = () => {
                   <div key={r.id} className="bg-warning/5 border border-warning/20 rounded-xl p-3">
                     <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                     <p className="text-xs text-warning font-medium mt-1">📋 إجازة / إذن</p>
+                    <RecordActions record={r} />
                   </div>
                 ))}</div>
               );
@@ -433,6 +485,7 @@ const Attendance = () => {
                       <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                       <div className="flex justify-between text-xs text-muted-foreground"><span>🕐 {r.checkIn}</span><span>🕐 {r.checkOut}</span></div>
                       <p className={`text-xs font-medium ${isComplete ? 'text-success' : 'text-warning'}`}>⏱ {formatTime(r.hoursWorked || 0)} {isComplete ? '✅' : '⚠️'}</p>
+                      <RecordActions record={r} />
                     </div>
                   );
                 })}</div>
@@ -447,6 +500,7 @@ const Attendance = () => {
                     <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                     <div className="flex justify-between text-xs text-muted-foreground"><span>🕐 حضور: {r.checkIn}</span><span>🕐 انصراف: {r.checkOut}</span></div>
                     <p className="text-xs text-warning font-medium">⏱ {formatTime(r.hoursWorked || 0)}</p>
+                    <RecordActions record={r} />
                   </div>
                 ))}</div>
               );
@@ -456,6 +510,68 @@ const Attendance = () => {
           })()}
         </DialogContent>
       </Dialog>
+
+      {/* Edit Record Dialog */}
+      <Dialog open={editRecord !== null} onOpenChange={(open) => { if (!open) setEditRecord(null); }}>
+        <DialogContent className="max-w-sm" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-center">تعديل سجل الحضور</DialogTitle>
+          </DialogHeader>
+          {editRecord && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground text-center">
+                {editRecord.workerName} - {new Date(editRecord.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </p>
+              <select
+                value={editForm.type}
+                onChange={e => setEditForm({ ...editForm, type: e.target.value as any })}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
+              >
+                <option value="present">حاضر</option>
+                <option value="absent">غائب</option>
+                <option value="leave">إجازة</option>
+              </select>
+              {editForm.type === 'present' && (
+                <>
+                  <select
+                    value={editForm.shift}
+                    onChange={e => setEditForm({ ...editForm, shift: e.target.value as 'morning' | 'evening' })}
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
+                  >
+                    <option value="morning">☀️ صباحي</option>
+                    <option value="evening">🌙 مسائي</option>
+                  </select>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="text-sm text-muted-foreground mb-1 block">وقت الحضور</label>
+                      <Input type="time" value={editForm.checkIn} onChange={e => setEditForm({ ...editForm, checkIn: e.target.value })} />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-sm text-muted-foreground mb-1 block">وقت الانصراف</label>
+                      <Input type="time" value={editForm.checkOut} onChange={e => setEditForm({ ...editForm, checkOut: e.target.value })} />
+                    </div>
+                  </div>
+                </>
+              )}
+              <DialogFooter className="flex gap-2 sm:justify-center">
+                <Button onClick={saveEditRecord} className="flex-1 cafe-gradient text-primary-foreground">
+                  <Save size={16} className="ml-1" /> حفظ
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={() => setEditRecord(null)}>إلغاء</Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Password Confirm */}
+      <PasswordConfirmDialog
+        open={showDeletePassword}
+        onOpenChange={(open) => { if (!open) { setShowDeletePassword(false); setDeleteRecordId(null); } }}
+        onConfirm={confirmDeleteRecord}
+        title="حذف سجل حضور"
+        description="أدخل كلمة المرور لتأكيد الحذف"
+      />
 
       {/* Worker Reports Section */}
       <WorkerReportsSection workers={workers} records={records} />

@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -24,7 +25,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import logo from '@/assets/logo.jpg';
-import { getCurrentUser, setCurrentUser, getInventory } from '@/lib/store';
+import { getCurrentUser, setCurrentUser, getInventory, getWorkers } from '@/lib/store';
 import { getQueueCount, onQueueChange, flushQueue } from '@/lib/offlineQueue';
 import ChatBot from './ChatBot';
 import ScrollableList from './ScrollableList';
@@ -68,6 +69,8 @@ const AppLayout = ({ children }: LayoutProps) => {
     } catch { return []; }
   });
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [logoutPassword, setLogoutPassword] = useState('');
+  const [logoutError, setLogoutError] = useState('');
   const [showShiftEnd, setShowShiftEnd] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [queueCount, setQueueCount] = useState(getQueueCount());
@@ -123,8 +126,18 @@ const AppLayout = ({ children }: LayoutProps) => {
   const filteredNav = user.role === 'worker' ? workerNavItems : navItems;
 
   const handleLogout = () => {
-    setCurrentUser(null);
-    window.location.href = '/login';
+    const user = getCurrentUser();
+    if (!user) return;
+    const worker = getWorkers().find(w => w.id === user.id);
+    if (worker && worker.password === logoutPassword) {
+      setLogoutPassword('');
+      setLogoutError('');
+      setShowLogoutConfirm(false);
+      setCurrentUser(null);
+      window.location.href = '/login';
+    } else {
+      setLogoutError('كلمة المرور غير صحيحة');
+    }
   };
 
   return (
@@ -366,16 +379,27 @@ const AppLayout = ({ children }: LayoutProps) => {
       <ChatBot />
 
       {/* Logout Confirmation Dialog */}
-      <Dialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+      <Dialog open={showLogoutConfirm} onOpenChange={(v) => { if (!v) { setLogoutPassword(''); setLogoutError(''); } setShowLogoutConfirm(v); }}>
         <DialogContent className="max-w-sm text-center" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-lg">تسجيل الخروج</DialogTitle>
-            <DialogDescription>هل أنت متأكد من تسجيل الخروج؟</DialogDescription>
+            <DialogDescription>أدخل كلمة المرور لتأكيد تسجيل الخروج</DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex gap-2 justify-center sm:justify-center">
-            <Button variant="destructive" onClick={handleLogout}>نعم، تسجيل الخروج</Button>
-            <Button variant="outline" onClick={() => setShowLogoutConfirm(false)}>لا، إلغاء</Button>
-          </DialogFooter>
+          <form onSubmit={(e) => { e.preventDefault(); handleLogout(); }} className="space-y-3">
+            <Input
+              type="password"
+              placeholder="كلمة المرور"
+              value={logoutPassword}
+              onChange={(e) => { setLogoutPassword(e.target.value); setLogoutError(''); }}
+              autoFocus
+              className="text-center"
+            />
+            {logoutError && <p className="text-destructive text-sm">{logoutError}</p>}
+            <DialogFooter className="flex gap-2 justify-center sm:justify-center">
+              <Button type="submit" variant="destructive">تسجيل الخروج</Button>
+              <Button type="button" variant="outline" onClick={() => setShowLogoutConfirm(false)}>إلغاء</Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
