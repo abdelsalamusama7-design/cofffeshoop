@@ -82,7 +82,7 @@ const App = () => {
       if (user?.role === 'admin') {
         if (success) {
           toast.success('✅ تم حفظ نسخة احتياطية تلقائية', {
-            description: `${new Date().toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}`,
+            description: `${new Date().toLocaleString('ar-EG-u-nu-latn', { dateStyle: 'medium', timeStyle: 'short' })}`,
             duration: 5000,
           });
         }

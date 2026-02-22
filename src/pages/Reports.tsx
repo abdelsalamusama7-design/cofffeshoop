@@ -224,7 +224,7 @@ const Reports = () => {
       <body>
         <div class="header">
           <h1>${title}</h1>
-          <div class="date">${new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+          <div class="date">${new Date().toLocaleDateString('ar-EG-u-nu-latn', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
         </div>
         ${lines.map(line => {
           if (line.includes('────')) return '';
@@ -233,7 +233,7 @@ const Reports = () => {
           if (line.trim() === '') return '<br/>';
           return `<div class="line">${line}</div>`;
         }).join('')}
-        <div class="footer">تم إنشاء هذا التقرير تلقائياً • ${new Date().toLocaleTimeString('ar-EG')}</div>
+        <div class="footer">تم إنشاء هذا التقرير تلقائياً • ${new Date().toLocaleTimeString('ar-EG-u-nu-latn')}</div>
       </body>
       </html>
     `;

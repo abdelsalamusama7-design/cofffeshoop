@@ -148,7 +148,7 @@ const WorkerDashboard = () => {
       <div className="text-center">
         <h1 className="text-2xl font-bold text-foreground">مرحباً {user.name} 👋</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          {new Date().toLocaleDateString('ar-EG-u-nu-latn', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
         </p>
       </div>
 
@@ -308,7 +308,7 @@ const WorkerDashboard = () => {
                   const secs = Math.round((((r.hoursWorked || 0) - hrs) * 60 - mins) * 60);
                   return (
                     <div key={r.id} className="bg-success/5 border border-success/20 rounded-xl p-3 space-y-1">
-                      <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                      <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                       <div className="flex justify-between text-xs text-muted-foreground">
                         <span>🕐 حضور: {r.checkIn}</span>
                         <span>🕐 انصراف: {r.checkOut}</span>
@@ -335,7 +335,7 @@ const WorkerDashboard = () => {
                   <p className="text-center text-muted-foreground text-sm py-4">لا توجد أيام غياب 🎉</p>
                 ) : absentDatesList.map(dateStr => (
                   <div key={dateStr} className="bg-destructive/5 border border-destructive/20 rounded-xl p-3">
-                    <p className="font-bold text-foreground text-sm">📅 {new Date(dateStr).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                    <p className="font-bold text-foreground text-sm">📅 {new Date(dateStr).toLocaleDateString('ar-EG-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                     <p className="text-xs text-destructive font-medium mt-1">❌ لم يتم تسجيل أي حضور</p>
                   </div>
                 ));
@@ -352,7 +352,7 @@ const WorkerDashboard = () => {
                 const secs = Math.round((((r.hoursWorked || 0) - hrs) * 60 - mins) * 60);
                 return (
                   <div key={r.id} className="bg-warning/5 border border-warning/20 rounded-xl p-3 space-y-1">
-                    <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                    <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>🕐 حضور: {r.checkIn}</span>
                       <span>🕐 انصراف: {r.checkOut}</span>
@@ -370,7 +370,7 @@ const WorkerDashboard = () => {
             <div className="space-y-2">
               {myMonthRecords.filter(r => r.type === 'leave').sort((a, b) => a.date.localeCompare(b.date)).map(r => (
                 <div key={r.id} className="bg-warning/5 border border-warning/20 rounded-xl p-3">
-                  <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                  <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                   <p className="text-xs text-warning font-medium mt-1">📋 إجازة / إذن</p>
                 </div>
               ))}
@@ -387,7 +387,7 @@ const WorkerDashboard = () => {
                 const isComplete = (r.hoursWorked || 0) >= 12;
                 return (
                   <div key={r.id} className={`${isComplete ? 'bg-success/5 border-success/20' : 'bg-warning/5 border-warning/20'} border rounded-xl p-3 space-y-1`}>
-                    <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                    <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>🕐 {r.checkIn}</span>
                       <span>🕐 {r.checkOut}</span>
@@ -459,7 +459,7 @@ const WorkerDashboard = () => {
                 <div key={txn.id} className="bg-destructive/5 border border-destructive/20 rounded-xl p-3 flex justify-between items-center">
                   <div>
                     <p className="font-bold text-foreground text-sm">💰 سلفة</p>
-                    <p className="text-xs text-muted-foreground">📅 {new Date(txn.date).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long' })} {txn.note && `• ${txn.note}`}</p>
+                    <p className="text-xs text-muted-foreground">📅 {new Date(txn.date).toLocaleDateString('ar-EG-u-nu-latn', { day: 'numeric', month: 'long' })} {txn.note && `• ${txn.note}`}</p>
                   </div>
                   <p className="font-bold text-destructive text-sm">-{txn.amount} ج.م</p>
                 </div>
@@ -476,7 +476,7 @@ const WorkerDashboard = () => {
                 <div key={txn.id} className="bg-success/5 border border-success/20 rounded-xl p-3 flex justify-between items-center">
                   <div>
                     <p className="font-bold text-foreground text-sm">🎁 مكافأة</p>
-                    <p className="text-xs text-muted-foreground">📅 {new Date(txn.date).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long' })} {txn.note && `• ${txn.note}`}</p>
+                    <p className="text-xs text-muted-foreground">📅 {new Date(txn.date).toLocaleDateString('ar-EG-u-nu-latn', { day: 'numeric', month: 'long' })} {txn.note && `• ${txn.note}`}</p>
                   </div>
                   <p className="font-bold text-success text-sm">+{txn.amount} ج.م</p>
                 </div>
@@ -673,7 +673,7 @@ const WorkerDashboard = () => {
               workerId: user.id,
               workerName: user.name,
               resetDate: today,
-              resetTime: now.toLocaleTimeString('ar-EG'),
+              resetTime: now.toLocaleTimeString('ar-EG-u-nu-latn'),
               reportSummary: `تصفير حضور العامل ${user.name}`,
             });
 

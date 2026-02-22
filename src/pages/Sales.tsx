@@ -138,7 +138,7 @@ const Sales = () => {
       workerId: user.id,
       workerName: user.name,
       date: now.toISOString().split('T')[0],
-      time: now.toLocaleTimeString('ar-EG'),
+      time: now.toLocaleTimeString('ar-EG-u-nu-latn'),
     };
 
     // Deduct from inventory

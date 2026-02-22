@@ -351,7 +351,7 @@ const Attendance = () => {
       {/* Monthly Summary */}
       <div>
         <h2 className="font-bold text-foreground mb-3">
-          ملخص الشهر ({monthStart.toLocaleDateString('ar-EG', { day: 'numeric', month: 'long' })} - {todayDate.toLocaleDateString('ar-EG', { day: 'numeric', month: 'long' })}) • {daysPassedInMonth} يوم
+          ملخص الشهر ({monthStart.toLocaleDateString('ar-EG-u-nu-latn', { day: 'numeric', month: 'long' })} - {todayDate.toLocaleDateString('ar-EG-u-nu-latn', { day: 'numeric', month: 'long' })}) • {daysPassedInMonth} يوم
         </h2>
         <ScrollableList maxHeight="max-h-[50vh]" className="grid gap-3">
           {workerSummaries.map((summary, i) => (
@@ -436,7 +436,7 @@ const Attendance = () => {
               return completed.length === 0 ? <p className="text-center text-muted-foreground text-sm py-4">لا توجد أيام حضور مكتملة</p> : (
                 <div className="space-y-2">{completed.sort((a, b) => a.date.localeCompare(b.date)).map(r => (
                   <div key={r.id} className="bg-success/5 border border-success/20 rounded-xl p-3 space-y-1">
-                    <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                    <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                     <div className="flex justify-between text-xs text-muted-foreground"><span>🕐 حضور: {r.checkIn}</span><span>🕐 انصراف: {r.checkOut}</span></div>
                     <p className="text-xs text-success font-medium">⏱ {formatTime(r.hoursWorked || 0)}</p>
                     {r.shift && <p className="text-xs text-muted-foreground">{r.shift === 'morning' ? '☀️ صباحي' : '🌙 مسائي'}</p>}
@@ -455,7 +455,7 @@ const Attendance = () => {
               return absentDates.length === 0 ? <p className="text-center text-muted-foreground text-sm py-4">لا توجد أيام غياب 🎉</p> : (
                 <div className="space-y-2">{absentDates.map(ds => (
                   <div key={ds} className="bg-destructive/5 border border-destructive/20 rounded-xl p-3">
-                    <p className="font-bold text-foreground text-sm">📅 {new Date(ds).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                    <p className="font-bold text-foreground text-sm">📅 {new Date(ds).toLocaleDateString('ar-EG-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                     <p className="text-xs text-destructive font-medium mt-1">❌ لم يتم تسجيل أي حضور</p>
                   </div>
                 ))}</div>
@@ -467,7 +467,7 @@ const Attendance = () => {
               return leaves.length === 0 ? <p className="text-center text-muted-foreground text-sm py-4">لا توجد إجازات</p> : (
                 <div className="space-y-2">{leaves.sort((a, b) => a.date.localeCompare(b.date)).map(r => (
                   <div key={r.id} className="bg-warning/5 border border-warning/20 rounded-xl p-3">
-                    <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                    <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                     <p className="text-xs text-warning font-medium mt-1">📋 إجازة / إذن</p>
                     <RecordActions record={r} />
                   </div>
@@ -482,7 +482,7 @@ const Attendance = () => {
                   const isComplete = (r.hoursWorked || 0) >= 12;
                   return (
                     <div key={r.id} className={`${isComplete ? 'bg-success/5 border-success/20' : 'bg-warning/5 border-warning/20'} border rounded-xl p-3 space-y-1`}>
-                      <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                      <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                       <div className="flex justify-between text-xs text-muted-foreground"><span>🕐 {r.checkIn}</span><span>🕐 {r.checkOut}</span></div>
                       <p className={`text-xs font-medium ${isComplete ? 'text-success' : 'text-warning'}`}>⏱ {formatTime(r.hoursWorked || 0)} {isComplete ? '✅' : '⚠️'}</p>
                       <RecordActions record={r} />
@@ -497,7 +497,7 @@ const Attendance = () => {
               return partials.length === 0 ? <p className="text-center text-muted-foreground text-sm py-4">لا توجد شيفتات غير مكتملة</p> : (
                 <div className="space-y-2">{partials.sort((a, b) => a.date.localeCompare(b.date)).map(r => (
                   <div key={r.id} className="bg-warning/5 border border-warning/20 rounded-xl p-3 space-y-1">
-                    <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                    <p className="font-bold text-foreground text-sm">📅 {new Date(r.date).toLocaleDateString('ar-EG-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                     <div className="flex justify-between text-xs text-muted-foreground"><span>🕐 حضور: {r.checkIn}</span><span>🕐 انصراف: {r.checkOut}</span></div>
                     <p className="text-xs text-warning font-medium">⏱ {formatTime(r.hoursWorked || 0)}</p>
                     <RecordActions record={r} />
@@ -520,7 +520,7 @@ const Attendance = () => {
           {editRecord && (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground text-center">
-                {editRecord.workerName} - {new Date(editRecord.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}
+                {editRecord.workerName} - {new Date(editRecord.date).toLocaleDateString('ar-EG-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' })}
               </p>
               <select
                 value={editForm.type}
