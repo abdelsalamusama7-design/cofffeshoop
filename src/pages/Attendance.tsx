@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { calcHoursWorked, formatHoursDetailed } from '@/lib/utils';
 import ScrollableList from '@/components/ScrollableList';
 import { motion } from 'framer-motion';
 import { ClipboardCheck, Plus, Calendar, Clock, Save, Share2, BarChart3, Pencil, Trash2 } from 'lucide-react';
@@ -173,10 +174,7 @@ const Attendance = () => {
   }
 
   const calcHours = (checkIn: string, checkOut: string): number => {
-    if (!checkIn || !checkOut) return 0;
-    const [h1, m1] = checkIn.split(':').map(Number);
-    const [h2, m2] = checkOut.split(':').map(Number);
-    return Math.max(0, (h2 + m2 / 60) - (h1 + m1 / 60));
+    return calcHoursWorked(checkIn, checkOut);
   };
 
   const addRecord = () => {
@@ -339,7 +337,7 @@ const Attendance = () => {
                 {record.hoursWorked !== undefined && record.hoursWorked > 0 && (
                   <div className="flex items-center gap-1 text-sm text-muted-foreground">
                     <Clock size={14} />
-                    {record.hoursWorked} ساعة
+                    {formatHoursDetailed(record.hoursWorked)}
                   </div>
                 )}
               </motion.div>
@@ -380,8 +378,8 @@ const Attendance = () => {
                   <p className="text-xs text-muted-foreground">غياب</p>
                 </div>
                 <div className="bg-info/10 rounded-lg p-2 cursor-pointer hover:ring-2 ring-info/40 transition-all" onClick={() => setAdminDetail({ workerId: summary.worker.id, workerName: summary.worker.name, type: 'hours' })}>
-                  <p className="font-bold text-info">{summary.totalHours}</p>
-                  <p className="text-xs text-muted-foreground">ساعة</p>
+                  <p className="font-bold text-info">{formatHoursDetailed(summary.totalHours)}</p>
+                  <p className="text-xs text-muted-foreground">ساعات العمل</p>
                 </div>
               </div>
               {summary.partialShifts > 0 && (

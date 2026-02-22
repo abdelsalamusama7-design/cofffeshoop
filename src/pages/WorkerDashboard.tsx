@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { compareDateTime, parseArabicTime } from '@/lib/utils';
+import { compareDateTime, parseArabicTime, calcHoursWorked, formatHoursDetailed } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { Clock, LogIn, LogOut, HandCoins, Gift, ShoppingCart, CalendarCheck, TrendingUp, RotateCcw, Lock, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -75,25 +75,14 @@ const WorkerDashboard = () => {
 
     const currentTime = new Date();
     const timeNow = `${String(currentTime.getHours()).padStart(2, '0')}:${String(currentTime.getMinutes()).padStart(2, '0')}:${String(currentTime.getSeconds()).padStart(2, '0')}`;
-    const cleanCheckIn = parseArabicTime(todayRecord.checkIn!).replace(/[APap][Mm]/g, '').trim();
-    const [h1, m1, s1 = 0] = cleanCheckIn.split(':').map(Number);
-    const [h2, m2, s2 = 0] = timeNow.split(':').map(Number);
-    // Handle AM/PM: if checkIn had ص (AM) or م (PM), convert to 24h
-    let checkInH = isNaN(h1) ? 0 : h1;
-    const checkInRaw = todayRecord.checkIn!;
-    if (checkInRaw.includes('م') || checkInRaw.includes('PM')) {
-      if (checkInH < 12) checkInH += 12;
-    } else if (checkInRaw.includes('ص') || checkInRaw.includes('AM')) {
-      if (checkInH === 12) checkInH = 0;
-    }
-    const hoursWorked = Math.max(0, Math.round(((h2 + m2 / 60 + s2 / 3600) - (checkInH + (isNaN(m1) ? 0 : m1) / 60 + (isNaN(s1) ? 0 : s1) / 3600)) * 100) / 100);
+    const hoursWorked = calcHoursWorked(todayRecord.checkIn!, timeNow);
 
     const updated = records.map(r =>
       r.id === todayRecord.id ? { ...r, checkOut: timeNow, hoursWorked } : r
     );
     setRecords(updated);
     setAttendance(updated);
-    toast.success(`تم تسجيل الانصراف - عملت ${hoursWorked.toFixed(1)} ساعة 👋`);
+    toast.success(`تم تسجيل الانصراف - عملت ${formatHoursDetailed(hoursWorked)} 👋`);
   };
 
   // Transactions (advances & bonuses)
@@ -195,7 +184,7 @@ const WorkerDashboard = () => {
               <>
                 <p className="text-sm font-medium text-foreground">✅ تم تسجيل حضورك وانصرافك اليوم</p>
                 <p className="text-xs text-muted-foreground">
-                  {todayRecord?.checkIn} → {todayRecord?.checkOut} • {todayRecord?.hoursWorked?.toFixed(1)} ساعة
+                  {todayRecord?.checkIn} → {todayRecord?.checkOut} • {formatHoursDetailed(todayRecord?.hoursWorked || 0)}
                 </p>
               </>
             ) : (
