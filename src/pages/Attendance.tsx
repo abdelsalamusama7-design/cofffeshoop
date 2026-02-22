@@ -591,8 +591,8 @@ const Attendance = () => {
 
       {/* Add Attendance Dialog */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>تسجيل الحضور</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-sm" dir="rtl">
+          <DialogHeader><DialogTitle className="text-center">تسجيل حضور (يدوي / بأثر رجعي)</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <select
               value={newRecord.workerId}
@@ -602,7 +602,13 @@ const Attendance = () => {
               <option value="">اختر العامل</option>
               {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
             </select>
-            <Input type="date" value={newRecord.date} onChange={e => setNewRecord({ ...newRecord, date: e.target.value })} />
+            <div>
+              <label className="text-sm text-muted-foreground mb-1 block">التاريخ (يمكنك اختيار يوم سابق)</label>
+              <Input type="date" value={newRecord.date} max={todayStr} onChange={e => setNewRecord({ ...newRecord, date: e.target.value })} />
+              {newRecord.date && newRecord.date !== todayStr && (
+                <p className="text-xs text-warning mt-1">⚠️ تسجيل بأثر رجعي ليوم {new Date(newRecord.date).toLocaleDateString('ar-EG-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+              )}
+            </div>
             <select
               value={newRecord.type}
               onChange={e => setNewRecord({ ...newRecord, type: e.target.value as any })}
@@ -628,13 +634,18 @@ const Attendance = () => {
                 <div className="flex gap-2">
                   <div className="flex-1">
                     <label className="text-sm text-muted-foreground mb-1 block">وقت الحضور</label>
-                    <Input type="time" value={newRecord.checkIn} onChange={e => setNewRecord({ ...newRecord, checkIn: e.target.value })} />
+                    <Input type="time" step="1" value={newRecord.checkIn} onChange={e => setNewRecord({ ...newRecord, checkIn: e.target.value })} />
                   </div>
                   <div className="flex-1">
                     <label className="text-sm text-muted-foreground mb-1 block">وقت الانصراف</label>
-                    <Input type="time" value={newRecord.checkOut} onChange={e => setNewRecord({ ...newRecord, checkOut: e.target.value })} />
+                    <Input type="time" step="1" value={newRecord.checkOut} onChange={e => setNewRecord({ ...newRecord, checkOut: e.target.value })} />
                   </div>
                 </div>
+                {newRecord.checkIn && newRecord.checkOut && (
+                  <div className="bg-info/10 rounded-lg p-2 text-center">
+                    <p className="text-sm font-medium text-info">⏱ {formatHoursDetailed(calcHours(newRecord.checkIn, newRecord.checkOut))}</p>
+                  </div>
+                )}
               </>
             )}
             <Button onClick={addRecord} className="w-full cafe-gradient text-primary-foreground">
