@@ -193,7 +193,7 @@ const AppLayout = ({ children }: LayoutProps) => {
               </div>
               <div className="flex flex-col items-end text-[9px] text-sidebar-foreground/50 font-mono leading-tight">
                 <span>{liveTime.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span>
-                <span>{liveTime.toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })}</span>
+                <span>{liveTime.toLocaleDateString('ar-EG', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
               </div>
             </div>
           </div>
@@ -255,7 +255,7 @@ const AppLayout = ({ children }: LayoutProps) => {
             <div className="flex items-center gap-1 text-[9px] text-sidebar-foreground/50 font-mono">
               <span>{liveTime.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span>
               <span>•</span>
-              <span>{liveTime.toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })}</span>
+              <span>{liveTime.toLocaleDateString('ar-EG', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
             </div>
             {queueCount > 0 && (
               <button
