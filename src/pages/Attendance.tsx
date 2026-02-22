@@ -306,40 +306,50 @@ const Attendance = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="glass-card rounded-xl p-4 flex items-center justify-between"
+                className="glass-card rounded-xl p-4 space-y-2"
               >
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                    record.type === 'present' ? 'bg-success/20' :
-                    record.type === 'leave' ? 'bg-warning/20' : 'bg-destructive/20'
-                  }`}>
-                    <ClipboardCheck size={20} className={
-                      record.type === 'present' ? 'text-success' :
-                      record.type === 'leave' ? 'text-warning' : 'text-destructive'
-                    } />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                      record.type === 'present' ? 'bg-success/20' :
+                      record.type === 'leave' ? 'bg-warning/20' : 'bg-destructive/20'
+                    }`}>
+                      <ClipboardCheck size={20} className={
+                        record.type === 'present' ? 'text-success' :
+                        record.type === 'leave' ? 'text-warning' : 'text-destructive'
+                      } />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground">{record.workerName}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {record.type === 'present' ? 'حاضر' : record.type === 'leave' ? 'إجازة' : 'غائب'}
+                        {record.shift && (
+                          <span className={`mr-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                            record.shift === 'morning' ? 'bg-warning/20 text-warning' : 'bg-info/20 text-info'
+                          }`}>
+                            {record.shift === 'morning' ? 'صباحي' : 'مسائي'}
+                          </span>
+                        )}
+                        {record.checkIn && ` • ${record.checkIn}`}
+                        {record.checkOut && ` - ${record.checkOut}`}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-foreground">{record.workerName}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {record.type === 'present' ? 'حاضر' : record.type === 'leave' ? 'إجازة' : 'غائب'}
-                      {record.shift && (
-                        <span className={`mr-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                          record.shift === 'morning' ? 'bg-warning/20 text-warning' : 'bg-info/20 text-info'
-                        }`}>
-                          {record.shift === 'morning' ? 'صباحي' : 'مسائي'}
-                        </span>
-                      )}
-                      {record.checkIn && ` • ${record.checkIn}`}
-                      {record.checkOut && ` - ${record.checkOut}`}
-                    </p>
-                  </div>
+                  {record.hoursWorked !== undefined && record.hoursWorked > 0 && (
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Clock size={14} />
+                      {formatHoursDetailed(record.hoursWorked)}
+                    </div>
+                  )}
                 </div>
-                {record.hoursWorked !== undefined && record.hoursWorked > 0 && (
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Clock size={14} />
-                    {formatHoursDetailed(record.hoursWorked)}
-                  </div>
-                )}
+                <div className="flex gap-1 justify-end">
+                  <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => handleEditRecord(record)}>
+                    <Pencil size={12} className="ml-1" /> تعديل
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-destructive hover:text-destructive" onClick={() => { setDeleteRecordId(record.id); setShowDeletePassword(true); }}>
+                    <Trash2 size={12} className="ml-1" /> حذف
+                  </Button>
+                </div>
               </motion.div>
             ))}
           </ScrollableList>
@@ -542,13 +552,18 @@ const Attendance = () => {
                   <div className="flex gap-2">
                     <div className="flex-1">
                       <label className="text-sm text-muted-foreground mb-1 block">وقت الحضور</label>
-                      <Input type="time" value={editForm.checkIn} onChange={e => setEditForm({ ...editForm, checkIn: e.target.value })} />
+                      <Input type="time" step="1" value={editForm.checkIn} onChange={e => setEditForm({ ...editForm, checkIn: e.target.value })} />
                     </div>
                     <div className="flex-1">
                       <label className="text-sm text-muted-foreground mb-1 block">وقت الانصراف</label>
-                      <Input type="time" value={editForm.checkOut} onChange={e => setEditForm({ ...editForm, checkOut: e.target.value })} />
+                      <Input type="time" step="1" value={editForm.checkOut} onChange={e => setEditForm({ ...editForm, checkOut: e.target.value })} />
                     </div>
                   </div>
+                  {editForm.checkIn && editForm.checkOut && (
+                    <div className="bg-info/10 rounded-lg p-2 text-center">
+                      <p className="text-sm font-medium text-info">⏱ {formatHoursDetailed(calcHours(editForm.checkIn, editForm.checkOut))}</p>
+                    </div>
+                  )}
                 </>
               )}
               <DialogFooter className="flex gap-2 sm:justify-center">
