@@ -513,7 +513,7 @@ export const addReturn = (r: ReturnRecord) => {
     returnRecord: r,
     actionBy: user?.name || 'غير معروف',
     actionDate: now.toISOString().split('T')[0],
-    actionTime: now.toLocaleTimeString('ar-EG'),
+    actionTime: now.toLocaleTimeString('ar-EG-u-nu-latn'),
   });
 };
 export const deleteReturn = (id: string) => {
@@ -528,7 +528,7 @@ export const deleteReturn = (id: string) => {
       returnRecord: deleted,
       actionBy: user?.name || 'غير معروف',
       actionDate: now.toISOString().split('T')[0],
-      actionTime: now.toLocaleTimeString('ar-EG'),
+      actionTime: now.toLocaleTimeString('ar-EG-u-nu-latn'),
     });
   }
   setLocal(STORAGE_KEYS.returns, returns.filter(r => r.id !== id));

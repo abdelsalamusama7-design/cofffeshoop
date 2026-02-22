@@ -361,7 +361,7 @@ const SalaryReportsSection = ({ workers, transactions }: { workers: Worker[]; tr
 
   const generateReportText = () => {
     let text = `📊 تقرير المرتبات - ${periodLabel}\n`;
-    text += `📅 ${today.toLocaleDateString('ar-EG')}\n`;
+    text += `📅 ${today.toLocaleDateString('ar-EG-u-nu-latn')}\n`;
     text += `━━━━━━━━━━━━━━━━━━\n\n`;
 
     report.forEach(r => {
@@ -672,7 +672,7 @@ const AttendanceReportSection = ({ workers }: { workers: Worker[] }) => {
 
   const generateReportText = () => {
     let text = `📋 تقرير الحضور والانصراف - ${periodLabel}\n`;
-    text += `📅 ${today.toLocaleDateString('ar-EG')}\n`;
+    text += `📅 ${today.toLocaleDateString('ar-EG-u-nu-latn')}\n`;
     text += `━━━━━━━━━━━━━━━━━━\n\n`;
 
     report.forEach(r => {

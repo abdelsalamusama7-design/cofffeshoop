@@ -27,7 +27,7 @@ const Login = () => {
     const now = new Date();
     const hour = now.getHours();
     const shift: 'morning' | 'evening' = hour < 14 ? 'morning' : 'evening';
-    const checkInTime = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+    const checkInTime = now.toLocaleTimeString('ar-EG-u-nu-latn', { hour: '2-digit', minute: '2-digit' });
 
     const newRecord = {
       id: Date.now().toString(),
@@ -46,7 +46,7 @@ const Login = () => {
     toast.success(
       `✅ بداية شيفت جديد!`, 
       { 
-        description: `مرحباً ${worker.name} — شيفت ${shift === 'morning' ? '☀️ صباحي' : '🌙 مسائي'}\nوقت الحضور: ${checkInTime}\nيوم: ${new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`,
+        description: `مرحباً ${worker.name} — شيفت ${shift === 'morning' ? '☀️ صباحي' : '🌙 مسائي'}\nوقت الحضور: ${checkInTime}\nيوم: ${new Date().toLocaleDateString('ar-EG-u-nu-latn', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`,
         duration: 6000 
       }
     );

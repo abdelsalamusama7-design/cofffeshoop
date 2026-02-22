@@ -196,7 +196,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
 
   const generateReportText = () => {
     if (!user) return '';
-    const todayDate = new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const todayDate = new Date().toLocaleDateString('ar-EG-u-nu-latn', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const todayStr = new Date().toISOString().slice(0, 10);
     const attendance = getAttendance();
     const todayAttendance = attendance.find(a => a.workerId === user.id && a.date === todayStr && a.type === 'present');
@@ -311,7 +311,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
 
   const shareEmail = () => {
     const text = generateReportText();
-    const subject = `تقرير شيفت ${user?.name} - ${new Date().toLocaleDateString('ar-EG')}`;
+    const subject = `تقرير شيفت ${user?.name} - ${new Date().toLocaleDateString('ar-EG-u-nu-latn')}`;
     window.open(`mailto:alameedbon1@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`, '_blank');
   };
 
@@ -376,7 +376,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                 <FileText size={20} />
                 تقرير الشيفت
               </DialogTitle>
-              <DialogDescription>{user?.name} — {new Date().toLocaleDateString('ar-EG')}</DialogDescription>
+              <DialogDescription>{user?.name} — {new Date().toLocaleDateString('ar-EG-u-nu-latn')}</DialogDescription>
             </DialogHeader>
 
             {/* Scroll Up Arrow */}
@@ -665,7 +665,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                     workerId: user.id,
                     workerName: user.name,
                     resetDate: today,
-                    resetTime: now.toLocaleTimeString('ar-EG'),
+                    resetTime: now.toLocaleTimeString('ar-EG-u-nu-latn'),
                     reportSummary: reportText,
                   });
 
@@ -676,7 +676,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
                         body: {
                           reportText,
                           workerName: user.name,
-                          date: new Date().toLocaleDateString('ar-EG'),
+                          date: new Date().toLocaleDateString('ar-EG-u-nu-latn'),
                         },
                       });
                       if (error) {
@@ -692,7 +692,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
 
                   // Auto check-out and KEEP attendance record (count as a worked day)
                   const now2 = new Date();
-                  const checkOutTime = now2.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+                  const checkOutTime = now2.toLocaleTimeString('ar-EG-u-nu-latn', { hour: '2-digit', minute: '2-digit' });
                   const attendance = getAttendance();
                   const finalAttendance = attendance.map(r => {
                     if (r.workerId === user.id && r.date === today && r.type === 'present' && r.checkIn && !r.checkOut) {

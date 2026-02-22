@@ -112,7 +112,7 @@ const SettingsPage = () => {
 
     return {
       title: `تقرير ${periodLabel} - بن العميد`,
-      date: `من ${start.toLocaleDateString('ar-EG')} إلى ${end.toLocaleDateString('ar-EG')}`,
+      date: `من ${start.toLocaleDateString('ar-EG-u-nu-latn')} إلى ${end.toLocaleDateString('ar-EG-u-nu-latn')}`,
       sections: [
         { label: '💰 إجمالي المبيعات', value: `${totalSales.toFixed(0)} ج.م`, detail: `${sales.length} عملية بيع` },
         { label: '📊 إجمالي المصروفات', value: `${totalExpenses.toFixed(0)} ج.م`, detail: `${expenses.length} مصروف` },
@@ -622,7 +622,7 @@ const SettingsPage = () => {
             </p>
             {getLastBackupTime() && (
               <p className="text-xs text-muted-foreground mt-1">
-                آخر نسخة: <span className="font-bold text-foreground">{new Date(getLastBackupTime()!).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                آخر نسخة: <span className="font-bold text-foreground">{new Date(getLastBackupTime()!).toLocaleString('ar-EG-u-nu-latn', { dateStyle: 'medium', timeStyle: 'short' })}</span>
               </p>
             )}
           </div>
@@ -702,7 +702,7 @@ const SettingsPage = () => {
                       {index === 0 ? '🟢 ' : ''}نسخة #{backupList.length - index}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(backup.created_at).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}
+                      {new Date(backup.created_at).toLocaleString('ar-EG-u-nu-latn', { dateStyle: 'medium', timeStyle: 'short' })}
                     </p>
                     <p className="text-xs text-muted-foreground/70">بواسطة: {backup.created_by}</p>
                   </div>
@@ -766,7 +766,7 @@ const SettingsPage = () => {
             <AlertDialogDescription className="text-right">
               {pendingRestore?._meta && (
                 <span className="block mb-2 text-sm">
-                  📅 تاريخ النسخة: {new Date(pendingRestore._meta.date).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  📅 تاريخ النسخة: {new Date(pendingRestore._meta.date).toLocaleDateString('ar-EG-u-nu-latn', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </span>
               )}
               هل أنت متأكد؟ ده هيستبدل كل البيانات الحالية بالبيانات من النسخة الاحتياطية. العملية دي مش ممكن التراجع عنها.

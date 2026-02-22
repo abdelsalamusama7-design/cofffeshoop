@@ -69,7 +69,7 @@ serve(async (req) => {
       });
     }
 
-    const today = new Date().toLocaleDateString('ar-EG', {
+    const today = new Date().toLocaleDateString('ar-EG-u-nu-latn', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
 

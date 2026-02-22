@@ -24,8 +24,8 @@ serve(async (req) => {
     // Yesterday's date (report for the previous day)
     const yesterday = new Date(Date.now() - 86400000);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
-    const todayAr = new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    const yesterdayAr = yesterday.toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const todayAr = new Date().toLocaleDateString('ar-EG-u-nu-latn', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const yesterdayAr = yesterday.toLocaleDateString('ar-EG-u-nu-latn', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
     // Fetch all needed data in parallel
     const [
