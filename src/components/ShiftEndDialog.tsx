@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Lock, Clock, ShoppingCart, Share2, Mail, FileText, MessageCircle, RotateCcw, Trash2, Package } from 'lucide-react';
 import { getCurrentUser, getSales, setSales, getAttendance, setAttendance, getWorkers, getReturns, setReturns, getReturnsLog, setReturnsLog, getInventory, getProducts, addShiftReset, getWorkerExpenses, setWorkerExpenses } from '@/lib/store';
 import { Sale, ReturnRecord, ReturnLogEntry, InventoryItem, WorkerExpense } from '@/lib/types';
+import { calcHoursWorked, formatHoursDetailed } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -206,7 +207,7 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
     text += `📅 التاريخ: ${todayDate}\n`;
     if (todayAttendance) {
       text += `⏰ الحضور: ${todayAttendance.checkIn || '—'} → ${todayAttendance.checkOut || 'لم يسجل'}\n`;
-      text += `🕐 ساعات العمل: ${todayAttendance.hoursWorked?.toFixed(1) || '0'} ساعة\n`;
+      text += `🕐 ساعات العمل: ${formatHoursDetailed(todayAttendance.hoursWorked || 0)}\n`;
       text += `📆 الشيفت: ${todayAttendance.shift === 'morning' ? 'صباحي ☀️' : 'مسائي 🌙'}\n`;
     }
     text += `━━━━━━━━━━━━━━━\n\n`;
@@ -692,31 +693,11 @@ const ShiftEndDialog = ({ open, onOpenChange }: ShiftEndDialogProps) => {
 
                   // Auto check-out and KEEP attendance record (count as a worked day)
                   const now2 = new Date();
-                  const checkOutTime = now2.toLocaleTimeString('ar-EG-u-nu-latn', { hour: '2-digit', minute: '2-digit' });
+                  const checkOutTime = `${String(now2.getHours()).padStart(2, '0')}:${String(now2.getMinutes()).padStart(2, '0')}:${String(now2.getSeconds()).padStart(2, '0')}`;
                   const attendance = getAttendance();
                   const finalAttendance = attendance.map(r => {
-                    if (r.workerId === user.id && r.date === today && r.type === 'present' && r.checkIn && !r.checkOut) {
-                      // Calculate hours worked
-                      const checkInParts = r.checkIn.match(/(\d+):(\d+)/);
-                      let hoursWorked = 0;
-                      if (checkInParts) {
-                        const startMinutes = parseInt(checkInParts[1]) * 60 + parseInt(checkInParts[2]);
-                        const endMinutes = now2.getHours() * 60 + now2.getMinutes();
-                        hoursWorked = Math.round(((endMinutes - startMinutes) / 60) * 10) / 10;
-                        if (hoursWorked < 0) hoursWorked += 24;
-                      }
-                      return { ...r, checkOut: checkOutTime, hoursWorked };
-                    }
-                    // For admin reset: also auto-checkout other workers
-                    if (user.role === 'admin' && r.date === today && r.type === 'present' && r.checkIn && !r.checkOut) {
-                      const checkInParts = r.checkIn.match(/(\d+):(\d+)/);
-                      let hoursWorked = 0;
-                      if (checkInParts) {
-                        const startMinutes = parseInt(checkInParts[1]) * 60 + parseInt(checkInParts[2]);
-                        const endMinutes = now2.getHours() * 60 + now2.getMinutes();
-                        hoursWorked = Math.round(((endMinutes - startMinutes) / 60) * 10) / 10;
-                        if (hoursWorked < 0) hoursWorked += 24;
-                      }
+                    if ((r.workerId === user.id || user.role === 'admin') && r.date === today && r.type === 'present' && r.checkIn && !r.checkOut) {
+                      const hoursWorked = calcHoursWorked(r.checkIn, checkOutTime);
                       return { ...r, checkOut: checkOutTime, hoursWorked };
                     }
                     return r;
