@@ -76,11 +76,16 @@ const AppLayout = ({ children }: LayoutProps) => {
   const [queueCount, setQueueCount] = useState(getQueueCount());
   const [isSyncing, setIsSyncing] = useState(false);
 
+  const [liveTime, setLiveTime] = useState(new Date());
+
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+
+    // Live clock
+    const clockInterval = setInterval(() => setLiveTime(new Date()), 1000);
 
     // Listen for queue changes
     const unsub = onQueueChange(() => setQueueCount(getQueueCount()));
@@ -88,6 +93,7 @@ const AppLayout = ({ children }: LayoutProps) => {
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      clearInterval(clockInterval);
       unsub();
     };
   }, []);
@@ -185,6 +191,10 @@ const AppLayout = ({ children }: LayoutProps) => {
                 <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-400' : 'bg-destructive'}`} />
                 {isOnline ? 'متصل' : 'غير متصل'}
               </div>
+              <div className="flex flex-col items-end text-[9px] text-sidebar-foreground/50 font-mono leading-tight">
+                <span>{liveTime.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span>
+                <span>{liveTime.toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -241,6 +251,11 @@ const AppLayout = ({ children }: LayoutProps) => {
             <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-medium ${isOnline ? 'bg-green-500/15 text-green-400' : 'bg-destructive/15 text-destructive'}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-400' : 'bg-destructive'}`} />
               {isOnline ? 'متصل' : 'غير متصل'}
+            </div>
+            <div className="flex items-center gap-1 text-[9px] text-sidebar-foreground/50 font-mono">
+              <span>{liveTime.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span>
+              <span>•</span>
+              <span>{liveTime.toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })}</span>
             </div>
             {queueCount > 0 && (
               <button
