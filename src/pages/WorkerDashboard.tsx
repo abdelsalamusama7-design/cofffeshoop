@@ -20,6 +20,7 @@ const WorkerDashboard = () => {
   const [resetPassword, setResetPassword] = useState('');
   const [resetError, setResetError] = useState('');
   const [detailType, setDetailType] = useState<'present' | 'absent' | 'partial' | 'leave' | 'hours' | 'sales' | 'items' | 'advances' | 'bonuses' | null>(null);
+  const [selectedShift, setSelectedShift] = useState<'morning' | 'evening'>('morning');
   const today = new Date().toISOString().split('T')[0];
   const now = new Date();
 
@@ -35,8 +36,10 @@ const WorkerDashboard = () => {
   const hasCheckedIn = !!todayRecord?.checkIn;
   const hasCheckedOut = !!todayRecord?.checkOut;
 
-  const handleCheckIn = (shift: 'morning' | 'evening') => {
-    const timeNow = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+  const handleCheckIn = (shift?: 'morning' | 'evening') => {
+    const shiftToUse = shift || selectedShift;
+    const currentTime = new Date();
+    const timeNow = `${String(currentTime.getHours()).padStart(2, '0')}:${String(currentTime.getMinutes()).padStart(2, '0')}:${String(currentTime.getSeconds()).padStart(2, '0')}`;
 
     if (todayRecord) {
       toast.error('لقد سجلت حضورك اليوم بالفعل');
@@ -50,14 +53,14 @@ const WorkerDashboard = () => {
       date: today,
       checkIn: timeNow,
       type: 'present',
-      shift,
+      shift: shiftToUse,
       hoursWorked: 0,
     };
 
     const updated = [...records, record];
     setRecords(updated);
     setAttendance(updated);
-    toast.success(`تم تسجيل الحضور - شيفت ${shift === 'morning' ? 'صباحي' : 'مسائي'} ☀️`);
+    toast.success(`تم تسجيل الحضور - شيفت ${shiftToUse === 'morning' ? 'صباحي ☀️' : 'مسائي 🌙'}`);
   };
 
   const handleCheckOut = () => {
@@ -151,54 +154,72 @@ const WorkerDashboard = () => {
           الحضور والانصراف
         </h2>
 
-        {!hasCheckedIn ? (
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">اختر الشيفت وسجّل حضورك</p>
-            <div className="grid grid-cols-2 gap-3">
+        {/* Shift selector */}
+        {!hasCheckedIn && (
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-muted-foreground">الشيفت:</p>
+            <div className="flex gap-2 flex-1">
               <Button
-                onClick={() => handleCheckIn('morning')}
-                className="cafe-gradient text-primary-foreground h-14 text-base"
+                size="sm"
+                variant={selectedShift === 'morning' ? 'default' : 'outline'}
+                className={selectedShift === 'morning' ? 'cafe-gradient text-primary-foreground flex-1' : 'flex-1'}
+                onClick={() => setSelectedShift('morning')}
               >
-                <LogIn size={20} className="ml-2" />
-                ☀️ شيفت صباحي
+                ☀️ صباحي
               </Button>
               <Button
-                onClick={() => handleCheckIn('evening')}
-                variant="outline"
-                className="h-14 text-base border-primary text-primary hover:bg-primary/10"
+                size="sm"
+                variant={selectedShift === 'evening' ? 'default' : 'outline'}
+                className={selectedShift === 'evening' ? 'cafe-gradient text-primary-foreground flex-1' : 'flex-1'}
+                onClick={() => setSelectedShift('evening')}
               >
-                <LogIn size={20} className="ml-2" />
-                🌙 شيفت مسائي
+                🌙 مسائي
               </Button>
             </div>
           </div>
-        ) : !hasCheckedOut ? (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between bg-success/10 rounded-xl p-3">
-              <div>
+        )}
+
+        {/* Status info */}
+        {hasCheckedIn && (
+          <div className={`rounded-xl p-3 text-center space-y-1 ${hasCheckedOut ? 'bg-muted/50' : 'bg-success/10'}`}>
+            {hasCheckedOut ? (
+              <>
+                <p className="text-sm font-medium text-foreground">✅ تم تسجيل حضورك وانصرافك اليوم</p>
+                <p className="text-xs text-muted-foreground">
+                  {todayRecord?.checkIn} → {todayRecord?.checkOut} • {todayRecord?.hoursWorked?.toFixed(1)} ساعة
+                </p>
+              </>
+            ) : (
+              <>
                 <p className="text-sm font-medium text-success">✅ أنت حاضر</p>
                 <p className="text-xs text-muted-foreground">
                   وقت الحضور: {todayRecord?.checkIn} • شيفت {todayRecord?.shift === 'morning' ? 'صباحي ☀️' : 'مسائي 🌙'}
                 </p>
-              </div>
-            </div>
-            <Button
-              onClick={handleCheckOut}
-              variant="destructive"
-              className="w-full h-14 text-base"
-            >
-              <LogOut size={20} className="ml-2" />
-              تسجيل الانصراف 👋
-            </Button>
-          </div>
-        ) : (
-          <div className="bg-muted/50 rounded-xl p-4 text-center space-y-2">
-            <p className="text-sm font-medium text-foreground">✅ تم تسجيل حضورك وانصرافك اليوم</p>
-            <p className="text-xs text-muted-foreground">
-              {todayRecord?.checkIn} → {todayRecord?.checkOut} • {todayRecord?.hoursWorked?.toFixed(1)} ساعة
-            </p>
+              </>
+            )}
           </div>
         )}
+
+        {/* Action buttons side by side */}
+        <div className="grid grid-cols-2 gap-3">
+          <Button
+            onClick={() => handleCheckIn()}
+            disabled={hasCheckedIn}
+            className="cafe-gradient text-primary-foreground h-14 text-base disabled:opacity-50"
+          >
+            <LogIn size={20} className="ml-2" />
+            تسجيل الحضور
+          </Button>
+          <Button
+            onClick={handleCheckOut}
+            disabled={!hasCheckedIn || hasCheckedOut}
+            variant="destructive"
+            className="h-14 text-base disabled:opacity-50"
+          >
+            <LogOut size={20} className="ml-2" />
+            تسجيل الانصراف
+          </Button>
+        </div>
       </motion.div>
 
       {/* Monthly Attendance Summary */}
