@@ -70,7 +70,8 @@ const WorkerDashboard = () => {
       return;
     }
 
-    const timeNow = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+    const currentTime = new Date();
+    const timeNow = `${String(currentTime.getHours()).padStart(2, '0')}:${String(currentTime.getMinutes()).padStart(2, '0')}:${String(currentTime.getSeconds()).padStart(2, '0')}`;
     const [h1, m1, s1 = 0] = todayRecord.checkIn!.split(':').map(Number);
     const [h2, m2, s2 = 0] = timeNow.split(':').map(Number);
     const hoursWorked = Math.max(0, Math.round(((h2 + m2 / 60 + s2 / 3600) - (h1 + m1 / 60 + s1 / 3600)) * 100) / 100);
